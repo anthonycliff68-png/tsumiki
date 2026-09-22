@@ -93,7 +93,9 @@ export default function CrewScreen() {
               {crew.streakCurrent}
             </Text>
             <Text style={[display(30, 30), styles.streakWord]}>
-              {crew.streakCurrent === 0 ? copy.crews.startToday : copy.crews.daysStrong}
+              {crew.streakCurrent === 0
+                ? copy.crews.startToday
+                : copy.crews.daysStrong(crew.streakCurrent)}
             </Text>
           </View>
 

@@ -215,7 +215,7 @@ export const copy = {
     title: 'Crews',
     groupStreak: 'Group streak',
     best: (days: number) => `Best: ${days}`,
-    daysStrong: 'Days strong',
+    daysStrong: (days: number) => (days === 1 ? 'Day strong' : 'Days strong'),
     startToday: 'Start it today',
     sameHabit: (habit: string) => `${habit}. Same habit, everyone\u2019s own anchor.`,
     crewLine: (inCount: number, total: number) => `Crew \u00b7 ${inCount} of ${total} in`,

@@ -88,7 +88,9 @@ export default function NudgeScreen() {
               <Text style={[display(72, 64), { color: nudge.habitColor }]}>
                 {crew?.streakCurrent ?? 0}
               </Text>
-              <Text style={[display(30, 30), styles.streakWord]}>{copy.crews.daysStrong}</Text>
+              <Text style={[display(30, 30), styles.streakWord]}>
+                {copy.crews.daysStrong(crew?.streakCurrent ?? 0)}
+              </Text>
             </View>
 
             <Text style={styles.body}>
