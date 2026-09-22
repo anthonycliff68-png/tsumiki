@@ -242,6 +242,15 @@ function HabitCard({
    * runOnJS keeps every callback on the JavaScript thread. The UI-thread path
    * runs through Reanimated's worklets, which segfault inside Expo Go.
    */
+  /**
+   * The check and the name are Tap gestures rather than Pressables: a
+   * GestureDetector claims the touch before React Native's press handling sees
+   * it, so a Pressable inside one never fires. Tap loses to Pan only once the
+   * long press has held, so a quick tap still lands.
+   */
+  const tapCheck = Gesture.Tap().runOnJS(true).onEnd(() => onToggle());
+  const tapEdit = Gesture.Tap().runOnJS(true).onEnd(() => onEdit());
+
   const pan = Gesture.Pan()
     .runOnJS(true)
     .activateAfterLongPress(220)
@@ -274,36 +283,40 @@ function HabitCard({
           ref={cardRef}
           style={[styles.card, { backgroundColor: habit.color }, carried && styles.carried]}
         >
-          <Pressable
-            style={styles.cardText}
-            accessibilityRole="button"
-            accessibilityLabel={copy.today.editLabel(habit.name)}
-            onPress={onEdit}
-          >
-            <Text style={styles.cardName} numberOfLines={1}>
-              {habit.name}
-            </Text>
-            <Text style={styles.cardSub} numberOfLines={1}>
-              {copy.myDay.solo} · {copy.myDay.everyDay}
-            </Text>
-          </Pressable>
+          <GestureDetector gesture={tapEdit}>
+            <View
+              style={styles.cardText}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={copy.today.editLabel(habit.name)}
+            >
+              <Text style={styles.cardName} numberOfLines={1}>
+                {habit.name}
+              </Text>
+              <Text style={styles.cardSub} numberOfLines={1}>
+                {copy.myDay.solo} · {copy.myDay.everyDay}
+              </Text>
+            </View>
+          </GestureDetector>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
-            }
-            onPress={onToggle}
-            style={styles.cardCheck}
-          >
-            {habit.checkedIn ? (
-              <View style={styles.doneCircle}>
-                <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
-              </View>
-            ) : (
-              <View style={styles.openCircle} />
-            )}
-          </Pressable>
+          <GestureDetector gesture={tapCheck}>
+            <View
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={
+                habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
+              }
+              style={styles.cardCheck}
+            >
+              {habit.checkedIn ? (
+                <View style={styles.doneCircle}>
+                  <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
+                </View>
+              ) : (
+                <View style={styles.openCircle} />
+              )}
+            </View>
+          </GestureDetector>
         </View>
       </Animated.View>
     </GestureDetector>
@@ -352,38 +365,26 @@ function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number)
       })
       .sort((a, b) => minutesOf(a.usual_time) - minutesOf(b.usual_time));
 
-    const loose = timed.filter(
-      (habit) =>
-        habit.sortKey >= start &&
-        habit.sortKey < end &&
-        !blocks.some((block) => habit.sortKey >= block.start && habit.sortKey < block.end),
-    );
+    // A timed habit belongs to the hour it was set to, block or no block: it
+    // was dropped there deliberately. The block's rail runs behind it, which
+    // is what shows it happens during work.
+    const loose = timed.filter((habit) => habit.sortKey >= start && habit.sortKey < end);
 
     const lines: Line[] = [];
-    // The hour's own tick, unless something already sits on the hour.
-    if (!moments.some((anchor) => minutesOf(anchor.usual_time) === start)) {
+    // The hour's own tick, unless something already sits on the hour and will
+    // print that time itself.
+    const onTheHour =
+      moments.some((anchor) => minutesOf(anchor.usual_time) === start) ||
+      loose.some((habit) => habit.sortKey === start);
+    if (!onTheHour) {
       lines.push({ kind: 'hour', time: label(start) });
     }
     for (const anchor of moments) {
-      const span = blocks.find((block) => block.anchor.id === anchor.id);
       lines.push({
         kind: 'moment',
         time: label(minutesOf(anchor.usual_time)),
         anchor,
-        habits: [
-          ...habits.filter((habit) => habit.anchorId === anchor.id),
-          // A block absorbs the timed habits inside its hours — they are
-          // filtered out of the loose list, so they have to land here or they
-          // disappear from the day altogether.
-          ...(span
-            ? timed.filter(
-                (habit) =>
-                  habit.anchorId !== anchor.id &&
-                  habit.sortKey >= span.start &&
-                  habit.sortKey < span.end,
-              )
-            : []),
-        ],
+        habits: habits.filter((habit) => habit.anchorId === anchor.id),
       });
     }
     for (const habit of loose) {
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
   cardText: { flex: 1, gap: 2 },
   cardName: { ...display(20, 20), color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
-  cardCheck: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  cardCheck: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   doneCircle: {
     width: 24,
     height: 24,
