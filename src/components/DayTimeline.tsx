@@ -22,6 +22,8 @@ type HourRow = {
   label: string;
   anchors: { anchor: Anchor; habits: TodayHabit[] }[];
   loose: TodayHabit[];
+  /** Blocks running through this hour, so a long one reads as one thing. */
+  spans: { id: string; color: string; isStart: boolean; isEnd: boolean }[];
   isNow: boolean;
   nowLabel: string;
 };
@@ -62,6 +64,13 @@ export function DayTimeline({
     () => buildHours(anchors, habits, nowMinutes),
     [anchors, habits, nowMinutes],
   );
+
+  // Reserve the same width on every row, or rows holding a block would sit
+  // indented from the rest and the timeline would step in and out.
+  const railWidth = useMemo(() => {
+    const most = rows.reduce((max, row) => Math.max(max, row.spans.length), 0);
+    return most === 0 ? 0 : most * 4 + (most - 1) * 3;
+  }, [rows]);
 
   const registerTarget = (key: string, target: DropTarget) => (node: View | null) => {
     if (node) nodes.current.set(key, { node, target });
@@ -130,6 +139,20 @@ export function DayTimeline({
           style={[styles.hourRow, hoveredKey === `hour-${row.hour}` && styles.hovered]}
         >
           <Text style={styles.hourLabel}>{row.label}</Text>
+
+          <View style={[styles.spans, { width: railWidth }]}>
+            {row.spans.map((span) => (
+              <View
+                key={span.id}
+                style={[
+                  styles.span,
+                  { backgroundColor: span.color },
+                  span.isStart && styles.spanStart,
+                  span.isEnd && styles.spanEnd,
+                ]}
+              />
+            ))}
+          </View>
 
           <View style={styles.hourBody}>
 
@@ -352,10 +375,32 @@ function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number)
   const first = all.length > 0 ? Math.min(...all) : 7;
   const last = all.length > 0 ? Math.max(...all) : 22;
 
+  const minutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return (h ?? 0) * 60 + (m ?? 0);
+  };
+  const blocks = anchors
+    .filter((anchor) => anchor.ends_at !== null)
+    .map((anchor) => ({
+      anchor,
+      start: minutes(anchor.usual_time),
+      end: minutes(anchor.ends_at as string),
+    }));
+
   const rows: HourRow[] = [];
   for (let hour = first; hour <= last; hour += 1) {
     const inHour = anchors.filter((anchor) => anchorHour(anchor) === hour);
+    const hourStart = hour * 60;
+    const hourEnd = hourStart + 60;
     rows.push({
+      spans: blocks
+        .filter((block) => block.start < hourEnd && block.end > hourStart)
+        .map((block) => ({
+          id: block.anchor.id,
+          color: anchorColor(block.anchor.label),
+          isStart: block.start >= hourStart,
+          isEnd: block.end <= hourEnd,
+        })),
       hour,
       label: formatTimeGutter(`${String(hour).padStart(2, '0')}:00`),
       anchors: inHour.map((anchor) => ({
@@ -398,6 +443,16 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     textAlign: 'right',
   },
+  /** Negative margin cancels the row's padding, so segments meet end to end. */
+  spans: {
+    flexDirection: 'row',
+    gap: 3,
+    alignSelf: 'stretch',
+    marginVertical: -6,
+  },
+  span: { width: 4, alignSelf: 'stretch', opacity: 0.85 },
+  spanStart: { borderTopLeftRadius: 2, borderTopRightRadius: 2, marginTop: 6 },
+  spanEnd: { borderBottomLeftRadius: 2, borderBottomRightRadius: 2, marginBottom: 6 },
   hourBody: { flex: 1, gap: 6, justifyContent: 'center' },
   emptyHour: { minHeight: 28 },
   hovered: { backgroundColor: alpha(habitColors[1], 0.22), borderRadius: radii.card },
