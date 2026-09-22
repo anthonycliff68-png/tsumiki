@@ -87,14 +87,15 @@ export function fromTimeString(value: string): Date {
 }
 
 /**
- * The timeline gutter. A bare "11:00" for 11pm reads as though the day has
- * gone backwards, so afternoon and evening times carry their suffix.
+ * The timeline gutter. Every time says whether it is morning or afternoon —
+ * a bare "11:00" sitting under "12:30" reads as though the day ran backwards.
+ * On the hour drops the minutes, since the gutter is narrow.
  */
 export function formatTimeGutter(value: string): string {
   const parts = value.split(':');
   const hours = Number(parts[0] ?? 0);
   const minutes = parts[1] ?? '00';
+  const suffix = hours >= 12 ? 'pm' : 'am';
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  if (hours < 12) return `${hour12}:${minutes}`;
-  return minutes === '00' ? `${hour12} pm` : `${hour12}:${minutes} pm`;
+  return minutes === '00' ? `${hour12} ${suffix}` : `${hour12}:${minutes} ${suffix}`;
 }

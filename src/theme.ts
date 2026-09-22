@@ -83,6 +83,15 @@ export const display = (size: number, lineHeight = size) =>
 type Rgb = { r: number; g: number; b: number };
 
 function hexToRgb(hex: string): Rgb {
+  // tint() and shade() return rgb() strings, so they have to read them back —
+  // composing them otherwise yields rgb(NaN, NaN, NaN), which React Native
+  // ignores silently and leaves the element its inherited colour.
+  const rgbMatch = /^rgba?\(([^)]+)\)/.exec(hex.trim());
+  if (rgbMatch) {
+    const [r, g, b] = (rgbMatch[1] ?? '').split(',').map((part) => Number(part.trim()));
+    return { r: r ?? 0, g: g ?? 0, b: b ?? 0 };
+  }
+
   const h = hex.replace('#', '');
   const full =
     h.length === 3
@@ -135,6 +144,23 @@ const COMPANIONS: Record<string, string> = {
 /** The hue that sits behind `color` in the bleed. */
 export function companionColor(color: string): string {
   return COMPANIONS[color.toUpperCase()] ?? tint(color, 0.4);
+}
+
+/**
+ * The colour of a moment in the day — wake up, coffee, work, bed.
+ *
+ * Moments are set in type rather than filled like habit cards, so the colour
+ * is lifted off the habit palette rather than darkened: a deep fill reads well
+ * behind white text but disappears as text on a near-black ground. Derived
+ * from the label, so a moment keeps its colour as long as it keeps its name.
+ */
+export function anchorColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % 100000;
+  }
+  const base = habitColors[hash % habitColors.length] ?? habitColors[0];
+  return tint(base, 0.22);
 }
 
 export const theme = {

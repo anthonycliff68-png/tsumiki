@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -13,7 +13,7 @@ import { copy } from '@/copy';
 import { formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import type { Anchor } from '@/lib/models';
-import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
 
 /** Every hour gets a row, so the day has a shape even where nothing happens. */
 const HOUR_ROW_MIN = 44;
@@ -55,28 +55,63 @@ export function DayTimeline({
   onMove,
   onDragChange,
 }: Props) {
-  // Where each droppable sits, measured as it lays out.
-  const targets = useRef<Map<string, { top: number; height: number; target: DropTarget }>>(
-    new Map(),
-  );
+  // Each droppable's view, so it can be measured in SCREEN coordinates when a
+  // drag starts. Layout positions are relative to the parent row, which is not
+  // the space a finger reports itself in.
+  const nodes = useRef(new Map<string, { node: View; target: DropTarget }>());
+  const rects = useRef<{ key: string; top: number; bottom: number; target: DropTarget }[]>([]);
+
   const [carried, setCarried] = useState<TodayHabit | null>(null);
-  const [hovered, setHovered] = useState<DropTarget | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const rows = useMemo(
     () => buildHours(anchors, habits, nowMinutes),
     [anchors, habits, nowMinutes],
   );
 
-  const measure = (key: string, target: DropTarget) => (event: LayoutChangeEvent) => {
-    const { y, height } = event.nativeEvent.layout;
-    targets.current.set(key, { top: y, height, target });
+  const registerTarget = (key: string, target: DropTarget) => (node: View | null) => {
+    if (node) nodes.current.set(key, { node, target });
+    else nodes.current.delete(key);
   };
 
-  const findTarget = (y: number): DropTarget | null => {
-    for (const entry of targets.current.values()) {
-      if (y >= entry.top && y < entry.top + entry.height) return entry.target;
-    }
-    return null;
+  /** Read every target's place on screen. Called once, as a card is lifted. */
+  const measureTargets = () => {
+    const found: typeof rects.current = [];
+    nodes.current.forEach(({ node, target }, key) => {
+      node.measureInWindow((_x, y, _width, height) => {
+        found.push({ key, top: y, bottom: y + height, target });
+        rects.current = found;
+      });
+    });
+  };
+
+  const findRect = (y: number) => rects.current.find((rect) => y >= rect.top && y < rect.bottom);
+
+  const hover = (y: number) => {
+    const key = findRect(y)?.key ?? null;
+    // Only re-render when the finger crosses into a different target.
+    setHoveredKey((current) => (current === key ? current : key));
+  };
+
+  const pickUp = (habit: TodayHabit) => {
+    measureTargets();
+    setCarried(habit);
+    onDragChange(true);
+  };
+
+  const drop = (habit: TodayHabit, y: number) => {
+    const target = findRect(y)?.target ?? null;
+    setCarried(null);
+    setHoveredKey(null);
+    onDragChange(false);
+    if (target) onMove(habit, target);
+  };
+
+  /** A gesture can be cancelled instead of ending. Never leave a card held. */
+  const release = () => {
+    setCarried(null);
+    setHoveredKey(null);
+    onDragChange(false);
   };
 
   return (
@@ -90,10 +125,10 @@ export function DayTimeline({
           <View style={styles.hourBody}>
             {row.anchors.length === 0 && row.loose.length === 0 && (
               <View
-                onLayout={measure(`hour-${row.hour}`, { kind: 'hour', hour: row.hour })}
+                ref={registerTarget(`hour-${row.hour}`, { kind: 'hour', hour: row.hour })}
                 style={[
                   styles.emptyHour,
-                  hovered?.kind === 'hour' && hovered.hour === row.hour && styles.hovered,
+                  hoveredKey === `hour-${row.hour}` && styles.hovered,
                 ]}
               />
             )}
@@ -101,16 +136,14 @@ export function DayTimeline({
             {row.anchors.map(({ anchor, habits: stacked }) => (
               <View
                 key={anchor.id}
-                onLayout={measure(`anchor-${anchor.id}`, {
+                ref={registerTarget(`anchor-${anchor.id}`, {
                   kind: 'anchor',
                   anchorId: anchor.id,
                   label: anchor.label,
                 })}
                 style={[
                   styles.anchorGroup,
-                  hovered?.kind === 'anchor' &&
-                    hovered.anchorId === anchor.id &&
-                    styles.hovered,
+                  hoveredKey === `anchor-${anchor.id}` && styles.hovered,
                 ]}
               >
                 <Pressable
@@ -119,8 +152,9 @@ export function DayTimeline({
                   onPress={() => onEditAnchor(anchor)}
                   style={styles.anchorHead}
                 >
-                  <View style={styles.node} />
-                  <Text style={styles.anchorLabel}>{anchor.label}</Text>
+                  <Text style={[styles.anchorLabel, { color: anchorColor(anchor.label) }]}>
+                    {anchor.label}
+                  </Text>
                   {/* The gutter already says the hour; only add minutes past it. */}
                   {anchor.ends_at ? (
                     <Text style={styles.anchorSpan}>
@@ -147,18 +181,10 @@ export function DayTimeline({
                     carried={carried?.id === habit.id}
                     onToggle={() => onToggle(habit)}
                     onEdit={() => onEditHabit(habit)}
-                    onPickUp={() => {
-                      setCarried(habit);
-                      onDragChange(true);
-                    }}
-                    onHover={(y) => setHovered(findTarget(y))}
-                    onDrop={(y) => {
-                      const target = findTarget(y);
-                      setCarried(null);
-                      setHovered(null);
-                      onDragChange(false);
-                      if (target) onMove(habit, target);
-                    }}
+                    onPickUp={() => pickUp(habit)}
+                    onHover={hover}
+                    onDrop={(y) => drop(habit, y)}
+                    onRelease={release}
                   />
                 ))}
               </View>
@@ -171,18 +197,10 @@ export function DayTimeline({
                 carried={carried?.id === habit.id}
                 onToggle={() => onToggle(habit)}
                 onEdit={() => onEditHabit(habit)}
-                onPickUp={() => {
-                  setCarried(habit);
-                  onDragChange(true);
-                }}
-                onHover={(y) => setHovered(findTarget(y))}
-                onDrop={(y) => {
-                  const target = findTarget(y);
-                  setCarried(null);
-                  setHovered(null);
-                  onDragChange(false);
-                  if (target) onMove(habit, target);
-                }}
+                onPickUp={() => pickUp(habit)}
+                onHover={hover}
+                onDrop={(y) => drop(habit, y)}
+                onRelease={release}
               />
             ))}
 
@@ -208,6 +226,7 @@ function HabitCard({
   onPickUp,
   onHover,
   onDrop,
+  onRelease,
 }: {
   habit: TodayHabit;
   carried: boolean;
@@ -216,6 +235,7 @@ function HabitCard({
   onPickUp: () => void;
   onHover: (y: number) => void;
   onDrop: (y: number) => void;
+  onRelease: () => void;
 }) {
   const offsetX = useSharedValue(0);
   const offsetY = useSharedValue(0);
@@ -235,9 +255,14 @@ function HabitCard({
     })
     .onEnd((event) => {
       runOnJS(onDrop)(event.absoluteY);
+    })
+    // Runs whether the gesture ended or was cancelled, so the card always
+    // springs home and the page always scrolls again.
+    .onFinalize(() => {
       offsetX.value = withSpring(0);
       offsetY.value = withSpring(0);
       lifted.value = withSpring(0);
+      runOnJS(onRelease)();
     });
 
   const style = useAnimatedStyle(() => ({
@@ -357,9 +382,8 @@ const styles = StyleSheet.create({
   emptyHour: { minHeight: 28, borderRadius: radii.card },
   hovered: { backgroundColor: alpha(habitColors[1], 0.18) },
   anchorGroup: { gap: 6, borderRadius: radii.card },
-  anchorHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 28 },
-  node: { width: 9, height: 9, borderRadius: 5, borderWidth: 1.5, borderColor: colors.textFaint },
-  anchorLabel: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textMuted },
+  anchorHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, minHeight: 28 },
+  anchorLabel: { ...display(19, 21) },
   anchorSpan: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   card: {
     flexDirection: 'row',

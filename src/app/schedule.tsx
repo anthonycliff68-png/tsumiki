@@ -12,7 +12,7 @@ import { useAnchors, useCreateAnchor, useDeleteAnchor, useUpdateAnchor } from '@
 import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
-import { colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
 
 type Draft = {
   id: string | null;
@@ -116,7 +116,9 @@ export default function ScheduleScreen() {
             style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
           >
             <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>{anchor.label}</Text>
+              <Text style={[styles.rowLabel, { color: anchorColor(anchor.label) }]}>
+                {anchor.label}
+              </Text>
               <Text style={styles.rowTime}>
                 {anchor.ends_at
                   ? copy.schedule.range(formatTime(anchor.usual_time), formatTime(anchor.ends_at))
@@ -257,9 +259,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   rowText: { flex: 1, gap: 2 },
-  rowLabel: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
+  rowLabel: { ...display(19, 21) },
   rowTime: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
-  blockMark: { width: 4, height: 28, borderRadius: 2, backgroundColor: habitColors[2] },
+  blockMark: { width: 4, height: 28, borderRadius: 2, backgroundColor: colors.border },
   editor: {
     gap: spacing.md,
     padding: spacing.lg,
