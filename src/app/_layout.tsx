@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { PushBridge } from '@/components/PushBridge';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { takePendingInvite } from '@/lib/invite';
 import { colors } from '@/theme';
@@ -70,26 +71,29 @@ function RootNavigator() {
   if (loading) return null;
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Stack.Protected guard={session !== null}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(onboarding)" />
-        <Stack.Screen name="new-habit" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="crew/[id]" />
-        <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
-      </Stack.Protected>
-      <Stack.Protected guard={session === null}>
-        <Stack.Screen name="(auth)/sign-in" />
-      </Stack.Protected>
-      {/* These two work signed in or out: the magic link, and an invite link. */}
-      <Stack.Screen name="auth-callback" />
-      <Stack.Screen name="j/[code]" />
-    </Stack>
+    <>
+      {session && <PushBridge />}
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Protected guard={session !== null}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="new-habit" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="crew/[id]" />
+          <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={session === null}>
+          <Stack.Screen name="(auth)/sign-in" />
+        </Stack.Protected>
+        {/* These two work signed in or out: the magic link, and an invite link. */}
+        <Stack.Screen name="auth-callback" />
+        <Stack.Screen name="j/[code]" />
+      </Stack>
+    </>
   );
 }

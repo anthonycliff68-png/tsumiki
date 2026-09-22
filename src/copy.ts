@@ -260,6 +260,22 @@ export const copy = {
     empty: 'Set your routine first and the day will fill in around it.',
   },
 
+  you: {
+    notifications: 'Notifications',
+    on: 'Reminders and nudges are on for this phone.',
+    simulator: 'Push needs a real phone; the simulator cannot receive it.',
+    denied: 'Notifications are turned off. Turn them on in Settings to get reminders.',
+    noProjectId:
+      'Push needs an Expo project id. Run `npx eas init` once, then rebuild the app.',
+    failed: 'Could not register this phone for push.',
+    expoGo:
+      'Expo Go cannot receive push at all \u2014 this needs a development build.',
+    enable: 'Turn on notifications',
+    turnOff: 'Stop notifications on this phone',
+    quietHours: (start: string, end: string) => `Quiet hours ${start} to ${end}`,
+    timezone: (zone: string) => `Times follow ${zone}`,
+  },
+
   placeholder: {
     /** Used by the screens that are still scaffolding in build step 1. */
     comingSoon: 'Coming in a later build step.',
