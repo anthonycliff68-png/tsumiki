@@ -118,6 +118,25 @@ export function shade(hex: string, amount: number): string {
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
+/**
+ * The second glow behind a screen is a different hue, not a lighter version of
+ * the first — that hue contrast is what gives the canvas screens their depth.
+ * The canvas pairs them by eye rather than by formula, so the pairs are listed.
+ */
+const COMPANIONS: Record<string, string> = {
+  '#3F5FA8': '#1F8A8C', // blue with teal
+  '#E8552B': '#3F5FA8', // orange with blue
+  '#1F8A8C': '#3F5FA8', // teal with blue
+  '#8A5A9E': '#C2306B', // purple with magenta
+  '#E0A526': '#E8552B', // gold with orange
+  '#C2306B': '#8A5A9E', // magenta with purple
+};
+
+/** The hue that sits behind `color` in the bleed. */
+export function companionColor(color: string): string {
+  return COMPANIONS[color.toUpperCase()] ?? tint(color, 0.4);
+}
+
 export const theme = {
   colors,
   habitColors,

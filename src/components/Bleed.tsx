@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { alpha, tint } from '@/theme';
+import { alpha, companionColor } from '@/theme';
 
 /** The canvas was drawn at 390 pt wide; the glows scale from that. */
 const DESIGN_WIDTH = 390;
@@ -16,28 +16,38 @@ type CircleSpec = {
   height: number;
   /** Alpha at the centre of the glow. */
   opacity: number;
-  /** How far the circle's colour is mixed towards white. */
-  lighten: number;
+  /** Which hue: the screen's own colour, or the one that sits behind it. */
+  hue: 'primary' | 'companion';
 };
 
-/** Three large soft glows, straight off the canvas. */
+/**
+ * Four glows, following the canvas: a big one bleeding off the top left, a
+ * second hue on the right, a low wash under the content, and a small one part
+ * way down the left edge. Geometry is in canvas points and scales with width.
+ */
 const CIRCLES: CircleSpec[] = [
-  { top: -264, left: -212, width: 644, height: 588, opacity: 0.42, lighten: 0 },
-  { top: -24, right: -224, width: 448, height: 448, opacity: 0.28, lighten: 0.35 },
-  { bottom: -212, left: -32, width: 504, height: 364, opacity: 0.14, lighten: 0 },
+  { top: -280, left: -220, width: 680, height: 620, opacity: 0.62, hue: 'primary' },
+  { top: -40, right: -230, width: 470, height: 470, opacity: 0.5, hue: 'companion' },
+  { bottom: -230, left: -40, width: 540, height: 400, opacity: 0.26, hue: 'primary' },
+  { top: 250, left: -160, width: 380, height: 380, opacity: 0.3, hue: 'companion' },
 ];
 
 /**
  * The canvas draws each glow as a solid circle under a 100px Gaussian blur.
  * React Native has no blur filter on iOS, so the same falloff is drawn directly
- * as a radial gradient — cheaper, and it does not need a native module.
+ * as a radial gradient.
+ *
+ * A blurred disc keeps a broad flat centre and falls away late — an even ramp
+ * reads as a weak vignette instead, which is what the first version looked
+ * like next to the canvas.
  */
 function glow(color: string, peak: number): string {
   return (
     `radial-gradient(ellipse closest-side at 50% 50%, ` +
     `${alpha(color, peak)} 0%, ` +
-    `${alpha(color, peak * 0.82)} 34%, ` +
-    `${alpha(color, peak * 0.34)} 66%, ` +
+    `${alpha(color, peak)} 28%, ` +
+    `${alpha(color, peak * 0.86)} 48%, ` +
+    `${alpha(color, peak * 0.42)} 72%, ` +
     `${alpha(color, 0)} 100%)`
   );
 }
@@ -97,7 +107,7 @@ export function Bleed({ color }: { color: string }) {
                 height: circle.height * scale,
                 borderRadius: (circle.width * scale) / 2,
                 experimental_backgroundImage: glow(
-                  circle.lighten > 0 ? tint(layer.color, circle.lighten) : layer.color,
+                  circle.hue === 'companion' ? companionColor(layer.color) : layer.color,
                   circle.opacity,
                 ),
               }}

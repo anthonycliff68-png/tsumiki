@@ -44,6 +44,9 @@ export const copy = {
     emptyTitle: 'Nothing stacked yet',
     emptyBody: 'Add your first habit and it will show up here, hanging off a moment you already have.',
     addHabit: 'Add a habit',
+    newHabit: 'New habit',
+    backToToday: 'Back to today',
+    viewingPast: 'You can still check in on a day you missed.',
     loadFailed: 'Could not load today. Pull down to try again.',
   },
 

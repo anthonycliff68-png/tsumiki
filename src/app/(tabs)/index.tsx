@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,7 +21,18 @@ export default function TodayScreen() {
   const { session } = useAuth();
   const userId = session?.user.id;
 
-  const { data: habits = [], isPending, isError, refetch, isRefetching } = useToday(userId);
+  // 0 is today; going back fills in a day that was missed.
+  const [dayOffset, setDayOffset] = useState(0);
+  const viewedDate = useMemo(() => addDays(new Date(), dayOffset), [dayOffset]);
+  const isToday = dayOffset === 0;
+
+  const {
+    data: habits = [],
+    isPending,
+    isError,
+    refetch,
+    isRefetching,
+  } = useToday(userId, viewedDate);
   const { data: nudges = [] } = useNudgesForMe(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
@@ -33,7 +44,6 @@ export default function TodayScreen() {
     }, [refetch]),
   );
 
-  const today = new Date();
   const done = habits.filter((habit) => habit.checkedIn).length;
 
   // The hero is the next habit still open; once everything is done it holds the
@@ -61,15 +71,42 @@ export default function TodayScreen() {
         }
       >
         <View style={styles.days}>
-          <Text style={styles.dayMuted}>{formatDayName(addDays(today, -1))}</Text>
-          <View style={styles.dayActive}>
-            <Text style={styles.dayActiveText}>{copy.dock.tabs.today}</Text>
-          </View>
-          <Text style={styles.dayMuted}>{formatDayName(addDays(today, 1))}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${formatDayName(addDays(viewedDate, -1))}, the day before`}
+            onPress={() => setDayOffset((offset) => offset - 1)}
+            style={styles.dayButton}
+          >
+            <Text style={styles.dayMuted}>{formatDayName(addDays(viewedDate, -1))}</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={isToday ? copy.dock.tabs.today : copy.today.backToToday}
+            disabled={isToday}
+            onPress={() => setDayOffset(0)}
+            style={styles.dayActive}
+          >
+            <Text style={styles.dayActiveText}>
+              {isToday ? copy.dock.tabs.today : formatDayName(viewedDate)}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${formatDayName(addDays(viewedDate, 1))}, the day after`}
+            disabled={isToday}
+            onPress={() => setDayOffset((offset) => Math.min(0, offset + 1))}
+            style={styles.dayButton}
+          >
+            <Text style={[styles.dayMuted, isToday && styles.dayDisabled]}>
+              {formatDayName(addDays(viewedDate, 1))}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.header}>
-          <Text style={display(76, 62)}>{formatBigDate(today)}</Text>
+          <Text style={display(76, 62)}>{formatBigDate(viewedDate)}</Text>
           <View style={styles.count}>
             <Text style={[display(30, 30), { color: tint(bleedColor, 0.55) }]}>
               {done}/{habits.length}
@@ -80,7 +117,9 @@ export default function TodayScreen() {
 
         {isError && <Text style={styles.notice}>{copy.today.loadFailed}</Text>}
 
-        {nudges.filter((nudge) => !nudge.checkedIn).map((nudge) => (
+        {!isToday && <Text style={styles.notice}>{copy.today.viewingPast}</Text>}
+
+        {isToday && nudges.filter((nudge) => !nudge.checkedIn).map((nudge) => (
           <Pressable
             key={nudge.id}
             accessibilityRole="button"
@@ -118,13 +157,13 @@ export default function TodayScreen() {
               habit={hero}
               onEdit={() => router.push({ pathname: '/new-habit', params: { id: hero.id } })}
               busy={checkIn.isPending}
-              onCheckIn={() => checkIn.mutate({ habitId: hero.id })}
-              onUndo={() => undo.mutate({ habitId: hero.id })}
+              onCheckIn={() => checkIn.mutate({ habitId: hero.id, date: viewedDate })}
+              onUndo={() => undo.mutate({ habitId: hero.id, date: viewedDate })}
             />
           </View>
         )}
 
-        {rest.length > 0 && (
+        {habits.length > 0 && (
           <>
             <View style={[styles.padded, styles.sectionHead]}>
               <Text style={styles.sectionTitle}>{copy.today.upNext}</Text>
@@ -139,11 +178,20 @@ export default function TodayScreen() {
             >
               {rest.map((habit) => (
                 <UpNextTile
-                key={habit.id}
-                habit={habit}
-                onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
-              />
+                  key={habit.id}
+                  habit={habit}
+                  onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
+                />
               ))}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.today.newHabit}
+                onPress={() => router.push('/new-habit')}
+                style={({ pressed }) => [styles.addTile, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.addPlus}>+</Text>
+                <Text style={styles.addLabel}>{copy.today.newHabit}</Text>
+              </Pressable>
             </ScrollView>
           </>
         )}
@@ -161,14 +209,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  dayButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
   dayMuted: {
-    minHeight: 36,
-    paddingHorizontal: 14,
-    paddingTop: 9,
     fontFamily: fonts.bodyBold,
     fontSize: 13,
     color: colors.textFaint,
   },
+  dayDisabled: { opacity: 0.35 },
   dayActive: {
     minHeight: 36,
     justifyContent: 'center',
@@ -224,6 +275,19 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
   },
+  addTile: {
+    width: 120,
+    flexShrink: 0,
+    gap: spacing.sm,
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: radii.bigCard,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+  },
+  addPlus: { ...display(30, 30), color: colors.textMuted },
+  addLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.textMuted },
   nudgeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
