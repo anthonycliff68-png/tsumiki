@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Screen, Stub, Title } from '@/components/Screen';
 import { TextButton } from '@/components/Button';
 import { APP_NAME, APP_TAGLINE } from '@/constants/brand';
 import { copy } from '@/copy';
-import { useMyProfile } from '@/lib/api';
+import { useDeleteAccount, useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatTime } from '@/data/defaults';
 import { registerForPush, unregisterPush, type PushRegistration } from '@/lib/push';
@@ -18,6 +18,9 @@ export default function YouScreen() {
   const userId = session?.user.id;
   const { data: profile, refetch } = useMyProfile(userId);
   const [push, setPush] = useState<PushRegistration | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const deleteAccount = useDeleteAccount();
 
   const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -75,6 +78,37 @@ export default function YouScreen() {
       <View style={{ paddingTop: spacing.md }}>
         <TextButton label={copy.auth.signOut} onPress={() => void signOut()} />
       </View>
+
+      {confirming ? (
+        <View style={styles.danger}>
+          <Text style={styles.dangerTitle}>{copy.auth.deleteTitle}</Text>
+          <Text style={styles.dangerBody}>{copy.auth.deleteBody}</Text>
+          <Text style={styles.dangerBody}>{copy.auth.deleteCrews}</Text>
+          {error && <Text style={styles.error}>{error}</Text>}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.auth.deleteConfirm}
+            disabled={deleteAccount.isPending}
+            onPress={() =>
+              deleteAccount.mutate(undefined, {
+                // The account is gone; drop the session so the app returns to
+                // sign-in rather than holding a token for a user that no
+                // longer exists.
+                onSuccess: () => void signOut(),
+                onError: () => setError(copy.auth.deleteFailed),
+              })
+            }
+            style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.dangerButtonText}>{copy.auth.deleteConfirm}</Text>
+          </Pressable>
+
+          <TextButton label={copy.auth.cancel} onPress={() => setConfirming(false)} />
+        </View>
+      ) : (
+        <TextButton label={copy.auth.deleteAction} onPress={() => setConfirming(true)} />
+      )}
     </Screen>
   );
 }
@@ -89,4 +123,22 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   meta: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
+  danger: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dangerTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
+  dangerBody: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textMuted },
+  dangerButton: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    backgroundColor: habitColors[1],
+  },
+  dangerButtonText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.white },
+  error: { fontFamily: fonts.bodyMedium, fontSize: 13, color: habitColors[4] },
 });

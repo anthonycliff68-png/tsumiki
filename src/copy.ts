@@ -77,6 +77,15 @@ export const copy = {
     signingIn: 'Signing you in\u2026',
     linkExpired: 'That link has already been used, or it expired. Ask for a new one.',
     signOut: 'Sign out',
+    deleteTitle: 'Delete your account',
+    deleteBody:
+      'Removes your account and everything in it: habits, routine, check-ins, nudges and crew memberships. There is no undo and no way to get it back.',
+    deleteCrews:
+      'A crew you started ends for everyone in it, because it is built on your habit. Crews you joined carry on without you.',
+    deleteAction: 'Delete my account',
+    deleteConfirm: 'Yes, delete everything',
+    deleteFailed: 'Could not delete the account. Try again.',
+    cancel: 'Cancel',
   },
 
   onboarding: {

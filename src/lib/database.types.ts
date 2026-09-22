@@ -182,7 +182,7 @@ export type Database = {
       crews: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           habit_id: string
           id: string
           name: string
@@ -192,7 +192,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           habit_id: string
           id?: string
           name: string
@@ -202,7 +202,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           habit_id?: string
           id?: string
           name?: string
@@ -664,6 +664,7 @@ export type Database = {
         Returns: string
       }
       create_invite: { Args: { p_crew_id: string }; Returns: string }
+      delete_my_account: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       get_invite: {
         Args: { p_code: string }

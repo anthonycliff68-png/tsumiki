@@ -1068,3 +1068,16 @@ export function useResetHistory(userId: string | undefined) {
     },
   });
 }
+
+/**
+ * Delete the account and everything hanging off it. There is no undo and no
+ * grace period: the row goes, and the cascade takes the rest.
+ */
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+    },
+  });
+}
