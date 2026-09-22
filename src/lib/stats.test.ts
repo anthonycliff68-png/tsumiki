@@ -6,12 +6,14 @@ import { describe, it } from 'node:test';
 
 import {
   bestRun,
+  calendarFor,
   currentRun,
   datesBetween,
   isDue,
   overallOf,
   statsFor,
   weekdayOf,
+  weeklyFor,
   windowStart,
   type HabitInput,
 } from './stats.ts';
@@ -243,5 +245,62 @@ describe('everything together', () => {
 
   it('reports nothing rather than zero on an empty window', () => {
     assert.deepEqual(overallOf([]), { due: 0, done: 0, rate: null });
+  });
+});
+
+describe('the calendar', () => {
+  it('tells a miss apart from a day that was never on', () => {
+    const cal = calendarFor(
+      habit({ daysOfWeek: WEEKDAYS, checkedOn: ['2026-09-21'] }),
+      '2026-09-21',
+      '2026-09-27',
+    );
+    assert.equal(cal.find((d) => d.date === '2026-09-21')?.state, 'done');
+    assert.equal(cal.find((d) => d.date === '2026-09-22')?.state, 'missed');
+    // Saturday: a weekday habit never owed you this one.
+    assert.equal(cal.find((d) => d.date === '2026-09-26')?.state, 'not-due');
+  });
+
+  it('covers every day in the window, not just the due ones', () => {
+    const cal = calendarFor(habit({ daysOfWeek: [1] }), '2026-09-21', '2026-09-27');
+    assert.equal(cal.length, 7);
+  });
+});
+
+describe('weekly buckets', () => {
+  it('groups due days into weeks starting on Sunday', () => {
+    const weeks = weeklyFor(
+      habit({ checkedOn: ['2026-09-21', '2026-09-22'] }),
+      '2026-09-20',
+      '2026-09-28',
+    );
+    // 20 Sep is a Sunday, so it opens a week running to Saturday the 26th;
+    // the 27th starts the next one.
+    assert.equal(weeks.length, 2);
+    assert.equal(weeks[0]?.weekStart, '2026-09-20');
+    assert.equal(weeks[0]?.due, 7);
+    assert.equal(weeks[0]?.done, 2);
+    assert.equal(weeks[1]?.weekStart, '2026-09-27');
+    assert.equal(weeks[1]?.due, 2);
+  });
+
+  it('reports a rate per week', () => {
+    const weeks = weeklyFor(
+      habit({ checkedOn: ['2026-09-21', '2026-09-22'] }),
+      '2026-09-21',
+      '2026-09-26',
+    );
+    assert.equal(weeks[0]?.due, 6);
+    assert.equal(weeks[0]?.done, 2);
+    assert.equal(weeks[0]?.rate, 2 / 6);
+  });
+
+  it('skips weeks where nothing was ever due', () => {
+    const weeks = weeklyFor(
+      habit({ daysOfWeek: [1], createdOn: '2026-09-21' }),
+      '2026-09-21',
+      '2026-09-27',
+    );
+    assert.equal(weeks.length, 1);
   });
 });

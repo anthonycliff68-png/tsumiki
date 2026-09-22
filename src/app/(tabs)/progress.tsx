@@ -6,14 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { copy } from '@/copy';
+import { HabitCalendar } from '@/components/HabitCalendar';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
 import {
   bestRun,
+  calendarFor,
   currentRun,
   overallOf,
   statsFor,
+  weeklyFor,
   windowStart,
   type StatsWindow,
 } from '@/lib/stats';
@@ -81,7 +84,11 @@ export default function ProgressScreen() {
 
   const stats = useMemo(() => {
     return history
-      .map((habit) => statsFor(habit, from, today))
+      .map((habit) => ({
+        ...statsFor(habit, from, today),
+        calendar: calendarFor(habit, from, today),
+        weeks: weeklyFor(habit, from, today),
+      }))
       .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
   }, [history, from, today]);
 
@@ -178,6 +185,15 @@ export default function ProgressScreen() {
                 {copy.stats.best} {bestRun(habit)}
               </Text>
 
+              <View style={styles.calendar}>
+                <HabitCalendar
+                  window={window}
+                  color={habit.color}
+                  days={habit.calendar}
+                  weeks={habit.weeks}
+                />
+              </View>
+
               {open && (
                 <View style={styles.detail}>
                   <Text style={styles.label}>{copy.stats.byWeekday}</Text>
@@ -202,23 +218,6 @@ export default function ProgressScreen() {
                         </View>
                       );
                     })}
-                  </View>
-
-                  <Text style={styles.label}>{copy.stats.days}</Text>
-                  <View style={styles.grid}>
-                    {habit.days.map((day) => (
-                      <View
-                        key={day.date}
-                        style={[
-                          styles.cell,
-                          {
-                            backgroundColor: day.done
-                              ? habit.color
-                              : alpha(colors.white, 0.08),
-                          },
-                        ]}
-                      />
-                    ))}
                   </View>
                 </View>
               )}
@@ -307,8 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textFaint,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  cell: { width: 14, height: 14, borderRadius: 3 },
+  calendar: { paddingTop: spacing.sm },
   footer: { gap: spacing.md, paddingTop: spacing.lg },
   storage: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.textFaint },
   confirm: {

@@ -153,3 +153,49 @@ export function bestRun(stats: HabitStats): number {
   }
   return best;
 }
+
+export type DayState = 'done' | 'missed' | 'not-due';
+
+/**
+ * Every date in the window, including the ones the habit never owed you, so a
+ * calendar can tell "you missed it" apart from "it was never on".
+ */
+export function calendarFor(
+  habit: HabitInput,
+  from: string,
+  to: string,
+): { date: string; state: DayState }[] {
+  const checked = new Set(habit.checkedOn);
+  return datesBetween(from, to).map((date) => ({
+    date,
+    state: checked.has(date) ? 'done' : isDue(habit, date) ? 'missed' : 'not-due',
+  }));
+}
+
+export type WeekBucket = { weekStart: string; due: number; done: number; rate: number | null };
+
+/**
+ * One bucket per week, oldest first. Weeks start on Sunday, matching the
+ * weekday numbering used everywhere else.
+ */
+export function weeklyFor(habit: HabitInput, from: string, to: string): WeekBucket[] {
+  const buckets = new Map<string, { due: number; done: number }>();
+
+  for (const date of datesBetween(from, to)) {
+    if (!isDue(habit, date)) continue;
+    const weekStart = shiftDate(date, -weekdayOf(date));
+    const bucket = buckets.get(weekStart) ?? { due: 0, done: 0 };
+    bucket.due += 1;
+    if (habit.checkedOn.includes(date)) bucket.done += 1;
+    buckets.set(weekStart, bucket);
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([weekStart, bucket]) => ({
+      weekStart,
+      due: bucket.due,
+      done: bucket.done,
+      rate: bucket.due === 0 ? null : bucket.done / bucket.due,
+    }));
+}

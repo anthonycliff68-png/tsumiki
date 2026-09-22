@@ -293,6 +293,8 @@ export const copy = {
     best: 'Best',
     rate: 'Done',
     days: 'Every due day',
+    perWeek: (count: number) => `${count} week${count === 1 ? '' : 's'}, one bar each`,
+    notDue: 'grey = not due',
     notYet: 'Not due yet',
     resetTitle: 'Reset your history',
     resetBody:
