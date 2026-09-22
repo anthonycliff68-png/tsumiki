@@ -1,12 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 
 import { CheckIcon } from '@/components/icons';
 import { copy } from '@/copy';
@@ -243,59 +237,65 @@ function HabitCard({
   onDrop: (y: number) => void;
   onRelease: () => void;
 }) {
-  const offsetX = useSharedValue(0);
-  const offsetY = useSharedValue(0);
-  const lifted = useSharedValue(0);
+  const offset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const scale = useRef(new Animated.Value(1)).current;
   /**
    * How far the card's middle sits from the finger holding it. People aim with
-   * the card they can see, not with the fingertip underneath it.
+   * the card they can see, not the fingertip underneath it.
    */
-  const aimOffset = useSharedValue(0);
+  const aimOffset = useRef(0);
   const cardRef = useRef<View>(null);
 
-  // A press-and-hold lifts the card; a plain drag still scrolls the page.
+  const measureAim = (fingerY: number) => {
+    cardRef.current?.measureInWindow((_x, y, _width, height) => {
+      aimOffset.current = y + height / 2 - fingerY;
+    });
+  };
+
+  const springHome = () => {
+    Animated.spring(offset, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  };
+
+  /**
+   * runOnJS keeps every callback on the JavaScript thread. The UI-thread path
+   * runs through Reanimated's worklets, which segfault inside Expo Go — and
+   * this gesture is cheap enough that the JS thread keeps up with it.
+   */
   const pan = Gesture.Pan()
+    .runOnJS(true)
     .activateAfterLongPress(220)
     .onStart((event) => {
-      lifted.value = withSpring(1);
-      runOnJS(measureAim)(event.absoluteY);
-      runOnJS(onPickUp)();
+      measureAim(event.absoluteY);
+      Animated.spring(scale, { toValue: 1.03, useNativeDriver: true }).start();
+      onPickUp();
     })
     .onUpdate((event) => {
-      offsetX.value = event.translationX;
-      offsetY.value = event.translationY;
-      runOnJS(onHover)(event.absoluteY + aimOffset.value);
+      offset.setValue({ x: event.translationX, y: event.translationY });
+      onHover(event.absoluteY + aimOffset.current);
     })
     .onEnd((event) => {
-      runOnJS(onDrop)(event.absoluteY + aimOffset.value);
+      onDrop(event.absoluteY + aimOffset.current);
     })
     // Runs whether the gesture ended or was cancelled, so the card always
     // springs home and the page always scrolls again.
     .onFinalize(() => {
-      offsetX.value = withSpring(0);
-      offsetY.value = withSpring(0);
-      lifted.value = withSpring(0);
-      runOnJS(onRelease)();
+      springHome();
+      onRelease();
     });
-
-  const measureAim = (fingerY: number) => {
-    cardRef.current?.measureInWindow((_x, y, _width, height) => {
-      aimOffset.value = y + height / 2 - fingerY;
-    });
-  };
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: offsetX.value },
-      { translateY: offsetY.value },
-      { scale: 1 + lifted.value * 0.03 },
-    ],
-    zIndex: lifted.value > 0 ? 10 : 0,
-  }));
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={style}>
+      <Animated.View
+        style={{
+          transform: [
+            { translateX: offset.x },
+            { translateY: offset.y },
+            { scale },
+          ],
+          zIndex: carried ? 10 : 0,
+        }}
+      >
         <View
           ref={cardRef}
           style={[
