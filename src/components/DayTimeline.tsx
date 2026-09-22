@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { EditIcon } from '@/components/icons';
+import { LinesIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
@@ -325,12 +325,12 @@ function HabitCard({
               accessible
               accessibilityRole="button"
               accessibilityLabel={copy.today.editLabel(habit.name)}
-              style={[
-                styles.cardEdit,
-                { borderColor: habit.checkedIn ? 'rgba(255,255,255,0.45)' : colors.border },
-              ]}
+              style={styles.cardEdit}
             >
-              <EditIcon size={16} color={habit.checkedIn ? colors.white : colors.textMuted} />
+              <LinesIcon
+                size={18}
+                color={habit.checkedIn ? 'rgba(0,0,0,0.5)' : colors.textFaint}
+              />
             </View>
           </GestureDetector>
         </View>
@@ -449,7 +449,9 @@ const styles = StyleSheet.create({
   railLayer: { position: 'absolute', top: 0, bottom: 0, flexDirection: 'row', gap: 3 },
   span: { width: 4, opacity: 0.9 },
   line: { flexDirection: 'row', minHeight: 30, paddingVertical: 2 },
-  railCell: { alignItems: 'flex-end', justifyContent: 'center' },
+  // Left-aligned with the same gap the block rail uses, so a moment's tick and
+  // a block's rail land in one column rather than two.
+  railCell: { alignItems: 'flex-start', justifyContent: 'center', paddingLeft: RAIL_GAP },
   tick: { width: 4, height: 22, borderRadius: 2 },
   gutter: {
     width: GUTTER,
@@ -477,14 +479,7 @@ const styles = StyleSheet.create({
   cardName: { ...display(20, 20), color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   cardSubDone: { color: 'rgba(255,255,255,0.8)' },
-  cardEdit: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 17,
-    borderWidth: 1,
-  },
+  cardEdit: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
   nowLine: { flex: 1, height: 1, backgroundColor: habitColors[1] },

@@ -99,6 +99,11 @@ export function FlameIcon(props: IconProps) {
   );
 }
 
+/** Three stacked lines: the handle you tap to edit a habit. */
+export function LinesIcon(props: IconProps) {
+  return <StrokeIcon {...props} d="M5 8h14M5 12h14M5 16h14" />;
+}
+
 /** A pencil, for the small edit affordance on a habit. */
 export function EditIcon(props: IconProps) {
   return <StrokeIcon {...props} d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM14 6l4 4" />;

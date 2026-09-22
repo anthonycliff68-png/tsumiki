@@ -11,7 +11,6 @@
     "expo-apple-authentication": "~57.0.2",
     "expo-blur": "~57.0.3",
     "expo-constants": "~57.0.19",
-    "expo-dev-client": "~57.0.19",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
     "expo-linking": "~57.0.10",
@@ -35,7 +34,7 @@
   },
   "scripts": {
     "start": "expo start",
-    "go": "expo start --go",
+    "go": "expo start",
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
