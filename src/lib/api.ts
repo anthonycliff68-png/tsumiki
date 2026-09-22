@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { EVERY_DAY } from '@/data/defaults';
-import { localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
-import type { Anchor, Habit, ScheduleMode } from '@/lib/models';
+import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
+import type { Anchor, CrewRole, Habit, ScheduleMode } from '@/lib/models';
 import { supabase } from '@/lib/supabase';
+import { habitColors } from '@/theme';
 
 /** Row Level Security already limits every query below to the signed-in user. */
 
@@ -343,6 +344,217 @@ export function useArchiveHabit(userId: string | undefined) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+// --- crews -----------------------------------------------------------------
+
+export type CrewSummary = {
+  id: string;
+  name: string;
+  habitId: string;
+  habitName: string;
+  habitColor: string;
+  streakCurrent: number;
+  streakBest: number;
+  memberCount: number;
+};
+
+/** Every crew you are in, with its habit and how many people are in it. */
+export function useCrews(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['crews', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<CrewSummary[]> => {
+      const { data, error } = await supabase
+        .from('crew_members')
+        .select(
+          'crews!inner(id, name, habit_id, streak_current, streak_best, habits!crews_habit_id_fkey(name, color))',
+        )
+        .eq('user_id', userId ?? '');
+      if (error) throw error;
+
+      const rows = data as unknown as {
+        crews: {
+          id: string;
+          name: string;
+          habit_id: string;
+          streak_current: number;
+          streak_best: number;
+          habits: { name: string; color: string } | null;
+        };
+      }[];
+
+      const crews = rows.map((row) => row.crews);
+      if (crews.length === 0) return [];
+
+      const { data: members, error: memberError } = await supabase
+        .from('crew_members')
+        .select('crew_id')
+        .in('crew_id', crews.map((crew) => crew.id));
+      if (memberError) throw memberError;
+
+      return crews.map((crew) => ({
+        id: crew.id,
+        name: crew.name,
+        habitId: crew.habit_id,
+        habitName: crew.habits?.name ?? '',
+        habitColor: crew.habits?.color ?? habitColors[0],
+        streakCurrent: crew.streak_current,
+        streakBest: crew.streak_best,
+        memberCount: (members ?? []).filter((m) => m.crew_id === crew.id).length,
+      }));
+    },
+  });
+}
+
+export type CrewMemberState = {
+  userId: string;
+  displayName: string;
+  avatarColor: string;
+  role: CrewRole;
+  graceUsed: boolean;
+  /** Checked in for the date being shown. */
+  checkedIn: boolean;
+  /** Their own moment for this habit. */
+  anchorLabel: string | null;
+  atTime: string | null;
+  mode: ScheduleMode | null;
+};
+
+export type CrewDetail = {
+  id: string;
+  name: string;
+  habitId: string;
+  habitName: string;
+  habitColor: string;
+  streakCurrent: number;
+  streakBest: number;
+  members: CrewMemberState[];
+  /** Oldest first: did the whole crew get through each of the last 7 days? */
+  lastSevenDays: { date: string; complete: boolean; isToday: boolean }[];
+};
+
+/** One crew, with every member's state for today and the week behind it. */
+export function useCrew(crewId: string | undefined, date: Date = new Date()) {
+  const localDate = localDateString(date);
+
+  return useQuery({
+    queryKey: ['crew', crewId, localDate],
+    enabled: Boolean(crewId),
+    queryFn: async (): Promise<CrewDetail> => {
+      const { data: crew, error: crewError } = await supabase
+        .from('crews')
+        .select('id, name, habit_id, streak_current, streak_best, habits!crews_habit_id_fkey(name, color)')
+        .eq('id', crewId ?? '')
+        .single();
+      if (crewError) throw crewError;
+
+      const habit = (crew as unknown as { habits: { name: string; color: string } | null }).habits;
+
+      const [memberRows, profileRows, scheduleRows, checkinRows] = await Promise.all([
+        supabase.from('crew_members').select('user_id, role, grace_used').eq('crew_id', crewId ?? ''),
+        supabase.from('crew_profiles').select('id, display_name, avatar_color'),
+        supabase.from('habit_schedules').select('user_id, mode, at_time, anchors(label)').eq('habit_id', crew.habit_id),
+        supabase
+          .from('checkins')
+          .select('user_id, local_date')
+          .eq('habit_id', crew.habit_id)
+          .gte('local_date', localDateString(addDays(date, -6)))
+          .lte('local_date', localDate),
+      ]);
+
+      if (memberRows.error) throw memberRows.error;
+      if (profileRows.error) throw profileRows.error;
+      if (scheduleRows.error) throw scheduleRows.error;
+      if (checkinRows.error) throw checkinRows.error;
+
+      const profiles = new Map((profileRows.data ?? []).map((p) => [p.id, p]));
+      const schedules = new Map(
+        (scheduleRows.data as unknown as {
+          user_id: string;
+          mode: ScheduleMode;
+          at_time: string | null;
+          anchors: { label: string } | null;
+        }[]).map((s) => [s.user_id, s]),
+      );
+      const checkins = checkinRows.data ?? [];
+      const doneToday = new Set(
+        checkins.filter((c) => c.local_date === localDate).map((c) => c.user_id),
+      );
+
+      const members: CrewMemberState[] = (memberRows.data ?? []).map((member) => {
+        const schedule = schedules.get(member.user_id);
+        return {
+          userId: member.user_id,
+          displayName: profiles.get(member.user_id)?.display_name ?? 'Someone',
+          avatarColor: profiles.get(member.user_id)?.avatar_color ?? habitColors[0],
+          role: member.role,
+          graceUsed: member.grace_used,
+          checkedIn: doneToday.has(member.user_id),
+          anchorLabel: schedule?.anchors?.label ?? null,
+          atTime: schedule?.at_time ?? null,
+          mode: schedule?.mode ?? null,
+        };
+      });
+
+      // A day counts only when everyone got through it.
+      const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+        const day = localDateString(addDays(date, index - 6));
+        const inOnThatDay = new Set(
+          checkins.filter((c) => c.local_date === day).map((c) => c.user_id),
+        );
+        return {
+          date: day,
+          complete: members.length > 0 && members.every((m) => inOnThatDay.has(m.userId)),
+          isToday: day === localDate,
+        };
+      });
+
+      return {
+        id: crew.id,
+        name: crew.name,
+        habitId: crew.habit_id,
+        habitName: habit?.name ?? '',
+        habitColor: habit?.color ?? habitColors[0],
+        streakCurrent: crew.streak_current,
+        streakBest: crew.streak_best,
+        members,
+        lastSevenDays,
+      };
+    },
+  });
+}
+
+/** Turn one of your solo habits into a crew. Atomic, server side. */
+export function useCreateCrew(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ habitId, name }: { habitId: string; name: string }): Promise<string> => {
+      const { data, error } = await supabase.rpc('create_crew', { p_habit_id: habitId, p_name: name });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+export function useLeaveCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (crewId: string) => {
+      const { error } = await supabase.rpc('leave_crew', { p_crew_id: crewId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
       void queryClient.invalidateQueries({ queryKey: ['today'] });
     },
   });

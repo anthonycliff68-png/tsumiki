@@ -614,6 +614,10 @@ export type Database = {
     }
     Functions: {
       can_read_habit: { Args: { p_habit: string }; Returns: boolean }
+      create_crew: {
+        Args: { p_habit_id: string; p_name: string }
+        Returns: string
+      }
       is_crew_member: {
         Args: { p_crew: string; p_user?: string }
         Returns: boolean
@@ -622,6 +626,7 @@ export type Database = {
         Args: { p_crew: string; p_user?: string }
         Returns: boolean
       }
+      leave_crew: { Args: { p_crew_id: string }; Returns: undefined }
       shares_crew_with: { Args: { p_user: string }; Returns: boolean }
     }
     Enums: {
