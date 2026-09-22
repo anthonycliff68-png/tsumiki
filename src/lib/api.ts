@@ -944,3 +944,40 @@ export function useDeleteAnchor() {
     },
   });
 }
+
+/**
+ * Move a habit to a different moment. Only the schedule changes — the habit
+ * keeps its name, colour and history.
+ */
+export function useMoveHabit(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      habitId,
+      mode,
+      anchorId,
+      atTime,
+    }: {
+      habitId: string;
+      mode: ScheduleMode;
+      anchorId?: string | null;
+      atTime?: string | null;
+    }) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase
+        .from('habit_schedules')
+        .update({
+          mode,
+          anchor_id: mode === 'after' ? (anchorId ?? null) : null,
+          at_time: mode === 'at' ? (atTime ?? null) : null,
+        })
+        .eq('habit_id', habitId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+    },
+  });
+}

@@ -284,6 +284,10 @@ export const copy = {
     solo: 'Solo',
     everyDay: 'every day',
     empty: 'Set your routine first and the day will fill in around it.',
+    dragHint: 'Hold a habit to move it to another moment.',
+    dropOnMoment: (label: string) => `after ${label.toLowerCase()}`,
+    dropAtHour: (hour: string) => `at ${hour}`,
+    moveFailed: 'Could not move it. Try again.',
   },
 
   you: {

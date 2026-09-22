@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,9 +35,24 @@ export default function ScheduleScreen() {
   const updateAnchor = useUpdateAnchor(userId);
   const deleteAnchor = useDeleteAnchor();
 
+  const { id: openId } = useLocalSearchParams<{ id?: string }>();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [picking, setPicking] = useState<'start' | 'end' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Opened from My Day by tapping a moment: start on that one.
+  useEffect(() => {
+    if (!openId || draft) return;
+    const anchor = anchors.find((item) => item.id === openId);
+    if (anchor) {
+      setDraft({
+        id: anchor.id,
+        label: anchor.label,
+        usualTime: anchor.usual_time.slice(0, 5),
+        endsAt: anchor.ends_at ? anchor.ends_at.slice(0, 5) : null,
+      });
+    }
+  }, [openId, anchors, draft]);
 
   const sorted = [...anchors].sort(
     (a, b) => minutesOfDay(a.usual_time) - minutesOfDay(b.usual_time),
