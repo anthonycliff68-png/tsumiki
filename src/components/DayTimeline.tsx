@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { CheckIcon } from '@/components/icons';
+import { CheckIcon, EditIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
@@ -248,7 +248,7 @@ function HabitCard({
    * it, so a Pressable inside one never fires. Tap loses to Pan only once the
    * long press has held, so a quick tap still lands.
    */
-  const tapCheck = Gesture.Tap().runOnJS(true).onEnd(() => onToggle());
+  const tapCard = Gesture.Tap().runOnJS(true).onEnd(() => onToggle());
   const tapEdit = Gesture.Tap().runOnJS(true).onEnd(() => onEdit());
 
   const pan = Gesture.Pan()
@@ -272,7 +272,7 @@ function HabitCard({
     });
 
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={Gesture.Exclusive(pan, tapCard)}>
       <Animated.View
         style={{
           transform: [{ translateX: offset.x }, { translateY: offset.y }, { scale }],
@@ -281,42 +281,44 @@ function HabitCard({
       >
         <View
           ref={cardRef}
+          accessible
+          accessibilityRole="button"
+          accessibilityState={{ checked: habit.checkedIn }}
+          accessibilityLabel={
+            habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
+          }
           style={[styles.card, { backgroundColor: habit.color }, carried && styles.carried]}
         >
+          <View style={styles.cardText}>
+            <Text style={styles.cardName} numberOfLines={1}>
+              {habit.name}
+            </Text>
+            <Text style={styles.cardSub} numberOfLines={1}>
+              {copy.myDay.solo} · {copy.myDay.everyDay}
+            </Text>
+          </View>
+
+          {/* The card checks in; editing keeps its own small target. */}
           <GestureDetector gesture={tapEdit}>
             <View
-              style={styles.cardText}
               accessible
               accessibilityRole="button"
               accessibilityLabel={copy.today.editLabel(habit.name)}
+              style={styles.cardEdit}
             >
-              <Text style={styles.cardName} numberOfLines={1}>
-                {habit.name}
-              </Text>
-              <Text style={styles.cardSub} numberOfLines={1}>
-                {copy.myDay.solo} · {copy.myDay.everyDay}
-              </Text>
+              <EditIcon size={16} color="rgba(255,255,255,0.85)" />
             </View>
           </GestureDetector>
 
-          <GestureDetector gesture={tapCheck}>
-            <View
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={
-                habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
-              }
-              style={styles.cardCheck}
-            >
-              {habit.checkedIn ? (
-                <View style={styles.doneCircle}>
-                  <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
-                </View>
-              ) : (
-                <View style={styles.openCircle} />
-              )}
-            </View>
-          </GestureDetector>
+          <View style={styles.cardCheck}>
+            {habit.checkedIn ? (
+              <View style={styles.doneCircle}>
+                <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
+              </View>
+            ) : (
+              <View style={styles.openCircle} />
+            )}
+          </View>
         </View>
       </Animated.View>
     </GestureDetector>
@@ -456,7 +458,16 @@ const styles = StyleSheet.create({
   cardText: { flex: 1, gap: 2 },
   cardName: { ...display(20, 20), color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
-  cardCheck: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  cardEdit: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  cardCheck: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   doneCircle: {
     width: 24,
     height: 24,

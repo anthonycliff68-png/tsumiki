@@ -7,7 +7,7 @@ import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
 import { HeroCard } from '@/components/HeroCard';
-import { UpNextTile } from '@/components/UpNextTile';
+import { DayList } from '@/components/DayList';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -64,10 +64,10 @@ export default function TodayScreen() {
     () => upcoming[0] ?? missed[0] ?? habits[habits.length - 1],
     [upcoming, missed, habits],
   );
-  const rest = useMemo(
-    () => habits.filter((habit) => habit.id !== hero?.id && !missed.includes(habit)),
-    [habits, hero, missed],
-  );
+  const toggle = (habit: { id: string; checkedIn: boolean }) =>
+    habit.checkedIn
+      ? undo.mutate({ habitId: habit.id, date: viewedDate })
+      : checkIn.mutate({ habitId: habit.id, date: viewedDate });
 
   const bleedColor = hero?.color ?? habitColors[0];
 
@@ -172,49 +172,45 @@ export default function TodayScreen() {
               habit={hero}
               onEdit={() => router.push({ pathname: '/new-habit', params: { id: hero.id } })}
               busy={checkIn.isPending}
-              onCheckIn={() => checkIn.mutate({ habitId: hero.id, date: viewedDate })}
-              onUndo={() => undo.mutate({ habitId: hero.id, date: viewedDate })}
+              onCheckIn={() => toggle({ id: hero.id, checkedIn: false })}
+              onUndo={() => toggle({ id: hero.id, checkedIn: true })}
             />
           </View>
         )}
 
         {habits.length > 0 && (
-          <>
-            <View style={[styles.padded, styles.sectionHead]}>
-              <Text style={styles.sectionTitle}>{copy.today.upNext}</Text>
+          <View style={[styles.padded, styles.listBlock]}>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>{copy.today.everything}</Text>
               <Text style={styles.sectionLink} onPress={() => router.push('/crews')}>
                 {copy.today.allCrews}
               </Text>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tiles}
+
+            <DayList
+              habits={habits}
+              nowMinutes={isToday ? nowMinutes : null}
+              onToggle={toggle}
+              onEdit={(habit) =>
+                router.push({ pathname: '/new-habit', params: { id: habit.id } })
+              }
+            />
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.today.newHabit}
+              onPress={() => router.push('/new-habit')}
+              style={({ pressed }) => [
+                styles.addRow,
+                { borderColor: tint(bleedColor, 0.3), backgroundColor: alpha(bleedColor, 0.22) },
+                pressed && { opacity: 0.85 },
+              ]}
             >
-              {rest.map((habit) => (
-                <UpNextTile
-                  key={habit.id}
-                  habit={habit}
-                  onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
-                />
-              ))}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copy.today.newHabit}
-                onPress={() => router.push('/new-habit')}
-                style={({ pressed }) => [
-                  styles.addTile,
-                  { borderColor: tint(bleedColor, 0.3), backgroundColor: alpha(bleedColor, 0.22) },
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <Text style={[styles.addPlus, { color: tint(bleedColor, 0.55) }]}>+</Text>
-                <Text style={[styles.addLabel, { color: tint(bleedColor, 0.55) }]}>
-                  {copy.today.newHabit}
-                </Text>
-              </Pressable>
-            </ScrollView>
-          </>
+              <Text style={[styles.addLabel, { color: tint(bleedColor, 0.55) }]}>
+                + {copy.today.newHabit}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -273,7 +269,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
   sectionLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: tint(habitColors[0], 0.55) },
-  tiles: { gap: 12, paddingHorizontal: spacing.xl },
+  listBlock: { gap: spacing.md },
+  addRow: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   notice: {
     marginHorizontal: spacing.xl,
     fontFamily: fonts.body,
@@ -296,18 +300,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
   },
-  addTile: {
-    width: 120,
-    flexShrink: 0,
-    gap: spacing.sm,
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: radii.bigCard,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  addPlus: { ...display(30, 30) },
-  addLabel: { fontFamily: fonts.bodyBold, fontSize: 13 },
+  addLabel: { fontFamily: fonts.bodyBold, fontSize: 15 },
   missedBlock: { gap: spacing.sm },
   missedRow: {
     flexDirection: 'row',
