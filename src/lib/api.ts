@@ -867,3 +867,80 @@ export function useJoinCrew() {
     },
   });
 }
+
+// --- the day's own schedule ------------------------------------------------
+
+export type AnchorInput = {
+  label: string;
+  /** "HH:MM". */
+  usualTime: string;
+  /** "HH:MM", or null for a moment with no duration. */
+  endsAt?: string | null;
+};
+
+/** Add a moment or a block to the day. */
+export function useCreateAnchor(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AnchorInput): Promise<Anchor> => {
+      if (!userId) throw new Error('Not signed in.');
+      const { data, error } = await supabase
+        .from('anchors')
+        .insert({
+          user_id: userId,
+          label: input.label.trim(),
+          usual_time: input.usualTime,
+          ends_at: input.endsAt ?? null,
+          sort_order: minutesOfDay(input.usualTime),
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['anchors'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+export function useUpdateAnchor(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: AnchorInput & { id: string }) => {
+      const { error } = await supabase
+        .from('anchors')
+        .update({
+          label: input.label.trim(),
+          usual_time: input.usualTime,
+          ends_at: input.endsAt ?? null,
+          sort_order: minutesOfDay(input.usualTime),
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['anchors'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+/**
+ * Remove a moment. Any habit stacked on it keeps existing — habit_schedules
+ * sets anchor_id to null — so nothing is lost, it just needs a new moment.
+ */
+export function useDeleteAnchor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('anchors').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['anchors'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}

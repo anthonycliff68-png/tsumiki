@@ -247,6 +247,29 @@ export const copy = {
     cancel: 'Cancel',
   },
 
+  schedule: {
+    title: 'Your day',
+    blurb:
+      'The moments your habits stack onto. Give one an end time and it becomes a block, so the gaps around it are real.',
+    add: 'Add a moment',
+    label: 'What is it?',
+    labelPlaceholder: 'Work',
+    starts: 'Starts',
+    ends: 'Ends',
+    lasts: 'It lasts a while',
+    lastsHint: 'A block like a work day or a school run.',
+    noEnd: 'Just a moment',
+    save: 'Save',
+    delete: 'Remove',
+    deleteHint: 'Habits stacked on it keep going; they just need a new moment.',
+    needLabel: 'Give it a name.',
+    needLaterEnd: 'It has to end after it starts.',
+    empty: 'Nothing in your day yet.',
+    done: 'Done',
+    /** e.g. "9:00 – 5:30 pm" */
+    range: (start: string, end: string) => `${start} \u2013 ${end}`,
+  },
+
   myDay: {
     title: 'My day',
     editRoutine: 'Edit routine',

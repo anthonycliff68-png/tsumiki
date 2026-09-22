@@ -7,7 +7,7 @@ import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { CheckIcon } from '@/components/icons';
 import { copy } from '@/copy';
-import { formatTimeShort } from '@/data/defaults';
+import { formatTimeGutter } from '@/data/defaults';
 import { useAnchors, useCheckIn, useToday, useUndoCheckIn, type TodayHabit } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
@@ -18,11 +18,22 @@ import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/th
 const FREE_GAP = 120;
 
 type Row =
-  | { kind: 'anchor'; key: string; minutes: number; label: string; habits: TodayHabit[] }
-  | { kind: 'habit'; key: string; minutes: number; habit: TodayHabit }
-  | { kind: 'now'; key: string; minutes: number }
-  | { kind: 'free'; key: string; minutes: number; hours: number }
-  | { kind: 'anytime'; key: string; minutes: number; habits: TodayHabit[] };
+  | {
+      kind: 'anchor';
+      key: string;
+      minutes: number;
+      /** Where it finishes: the same minute for a moment, later for a block. */
+      endMinutes: number;
+      label: string;
+      isBlock: boolean;
+      startLabel: string;
+      endLabel: string | null;
+      habits: TodayHabit[];
+    }
+  | { kind: 'habit'; key: string; minutes: number; endMinutes: number; habit: TodayHabit }
+  | { kind: 'now'; key: string; minutes: number; endMinutes: number }
+  | { kind: 'free'; key: string; minutes: number; endMinutes: number; hours: number }
+  | { kind: 'anytime'; key: string; minutes: number; endMinutes: number; habits: TodayHabit[] };
 
 /** My Day. Artboard: MyDay. */
 export default function MyDayScreen() {
@@ -77,7 +88,7 @@ export default function MyDayScreen() {
           </View>
           <Text
             style={[styles.pillText, styles.link]}
-            onPress={() => router.push('/routine')}
+            onPress={() => router.push('/schedule')}
             accessibilityRole="button"
           >
             {copy.myDay.editRoutine}
@@ -110,52 +121,92 @@ export default function MyDayScreen() {
   );
 }
 
-/** Anchors, their stacked habits, timed habits, the NOW line and the gaps. */
+/**
+ * The day as rows: blocks and moments in order, the habits each one holds, the
+ * NOW line, and the gaps between them.
+ *
+ * A block absorbs habits — one stacked onto it, and any timed habit that falls
+ * inside its hours — rather than fencing them out. That is also what makes the
+ * free-time rows honest: the gap is measured from where a block actually ends.
+ */
 function buildDay(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number): Row[] {
-  const rows: Row[] = [];
+  const blocks = anchors.map((anchor) => ({
+    anchor,
+    start: minutesOfDay(anchor.usual_time),
+    end: anchor.ends_at ? minutesOfDay(anchor.ends_at) : minutesOfDay(anchor.usual_time),
+  }));
 
-  for (const anchor of anchors) {
-    rows.push({
+  const timed = habits.filter((habit) => habit.mode === 'at');
+  const absorbed = new Set<string>();
+
+  const rows: Row[] = blocks.map(({ anchor, start, end }) => {
+    const stacked = habits.filter((habit) => habit.anchorId === anchor.id);
+    // A timed habit inside a block's hours belongs to it.
+    const inside = anchor.ends_at
+      ? timed.filter((habit) => habit.sortKey >= start && habit.sortKey < end)
+      : [];
+    for (const habit of inside) absorbed.add(habit.id);
+
+    return {
       kind: 'anchor',
       key: `anchor-${anchor.id}`,
-      minutes: minutesOfDay(anchor.usual_time),
+      minutes: start,
+      endMinutes: end,
       label: anchor.label,
-      habits: habits.filter((habit) => habit.anchorId === anchor.id),
-    });
-  }
+      isBlock: anchor.ends_at !== null,
+      startLabel: formatTimeGutter(anchor.usual_time),
+      endLabel: anchor.ends_at ? formatTimeGutter(anchor.ends_at) : null,
+      habits: [...stacked, ...inside],
+    };
+  });
 
-  for (const habit of habits.filter((h) => h.mode === 'at')) {
-    rows.push({ kind: 'habit', key: `habit-${habit.id}`, minutes: habit.sortKey, habit });
+  for (const habit of timed) {
+    if (absorbed.has(habit.id)) continue;
+    rows.push({
+      kind: 'habit',
+      key: `habit-${habit.id}`,
+      minutes: habit.sortKey,
+      endMinutes: habit.sortKey,
+      habit,
+    });
   }
 
   rows.sort((a, b) => a.minutes - b.minutes);
 
-  // The NOW line, dropped in where the clock currently sits.
   const withNow: Row[] = [];
   let placed = false;
   for (const row of rows) {
     if (!placed && row.minutes > nowMinutes) {
-      withNow.push({ kind: 'now', key: 'now', minutes: nowMinutes });
+      withNow.push({ kind: 'now', key: 'now', minutes: nowMinutes, endMinutes: nowMinutes });
       placed = true;
     }
     withNow.push(row);
   }
-  if (!placed) withNow.push({ kind: 'now', key: 'now', minutes: nowMinutes });
+  if (!placed) {
+    withNow.push({ kind: 'now', key: 'now', minutes: nowMinutes, endMinutes: nowMinutes });
+  }
 
-  // Offer to fill any stretch of the day with nothing in it.
+  // Free time runs from the last thing to finish — not the last row, because a
+  // long block is often still running underneath the moments inside it. Lunch
+  // at 12:30 does not make the rest of a 9-to-5 free.
   const withGaps: Row[] = [];
+  let occupiedUntil = 0;
   for (let i = 0; i < withNow.length; i += 1) {
     const row = withNow[i];
     if (!row) continue;
     withGaps.push(row);
+    if (row.kind !== 'now' && row.endMinutes !== Number.MAX_SAFE_INTEGER) {
+      occupiedUntil = Math.max(occupiedUntil, row.endMinutes);
+    }
     const next = withNow[i + 1];
     if (!next || row.kind === 'now' || next.kind === 'now') continue;
-    const gap = next.minutes - row.minutes;
+    const gap = next.minutes - occupiedUntil;
     if (gap >= FREE_GAP) {
       withGaps.push({
         kind: 'free',
         key: `free-${row.key}`,
-        minutes: row.minutes + gap / 2,
+        minutes: occupiedUntil,
+        endMinutes: next.minutes,
         hours: Math.floor(gap / 60),
       });
     }
@@ -163,7 +214,13 @@ function buildDay(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number): 
 
   const anytime = habits.filter((h) => h.mode === 'any');
   if (anytime.length > 0) {
-    withGaps.push({ kind: 'anytime', key: 'anytime', minutes: Number.MAX_SAFE_INTEGER, habits: anytime });
+    withGaps.push({
+      kind: 'anytime',
+      key: 'anytime',
+      minutes: Number.MAX_SAFE_INTEGER,
+      endMinutes: Number.MAX_SAFE_INTEGER,
+      habits: anytime,
+    });
   }
 
   return withGaps;
@@ -176,12 +233,20 @@ function renderRow(row: Row, toggle: ToggleHabit) {
     case 'anchor':
       return (
         <View key={row.key} style={styles.row}>
-          <Text style={styles.time}>{formatMinutes(row.minutes)}</Text>
+          <Text style={styles.time}>{row.startLabel}</Text>
           <View style={styles.track}>
             <View style={styles.node} />
+            {row.isBlock && <View style={styles.blockBar} />}
           </View>
           <View style={styles.rowBody}>
-            <Text style={styles.anchorLabel}>{row.label}</Text>
+            <View style={styles.anchorHead}>
+              <Text style={styles.anchorLabel}>{row.label}</Text>
+              {row.endLabel && (
+                <Text style={styles.anchorSpan}>
+                  {copy.schedule.range(row.startLabel, row.endLabel)}
+                </Text>
+              )}
+            </View>
             {row.habits.map((habit) => (
               <HabitCard key={habit.id} habit={habit} toggle={toggle} />
             ))}
@@ -290,7 +355,7 @@ function HabitCard({ habit, toggle }: { habit: TodayHabit; toggle: ToggleHabit }
 function formatMinutes(minutes: number): string {
   const hh = Math.floor(minutes / 60);
   const mm = minutes % 60;
-  return formatTimeShort(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+  return formatTimeGutter(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
 }
 
 const styles = StyleSheet.create({
@@ -314,7 +379,7 @@ const styles = StyleSheet.create({
   timeline: { gap: spacing.md },
   row: { flexDirection: 'row', gap: spacing.md, minHeight: 34 },
   time: {
-    width: 46,
+    width: 58,
     paddingTop: 2,
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
@@ -322,6 +387,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   track: { width: 12, alignItems: 'center', paddingTop: 5 },
+  blockBar: {
+    flex: 1,
+    width: 3,
+    marginTop: 4,
+    marginBottom: 2,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+  },
+  anchorHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  anchorSpan: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   node: {
     width: 10,
     height: 10,

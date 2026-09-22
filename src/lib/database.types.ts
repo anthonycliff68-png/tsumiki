@@ -42,6 +42,7 @@ export type Database = {
       anchors: {
         Row: {
           created_at: string
+          ends_at: string | null
           id: string
           is_default: boolean
           label: string
@@ -51,6 +52,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          ends_at?: string | null
           id?: string
           is_default?: boolean
           label: string
@@ -60,6 +62,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          ends_at?: string | null
           id?: string
           is_default?: boolean
           label?: string
@@ -394,6 +397,48 @@ export type Database = {
           },
         ]
       }
+      notification_sends: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          local_date: string
+          ref_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          local_date: string
+          ref_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          local_date?: string
+          ref_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nudges: {
         Row: {
           created_at: string
@@ -651,6 +696,8 @@ export type Database = {
         Returns: string
       }
       leave_crew: { Args: { p_crew_id: string }; Returns: undefined }
+      run_notify_job: { Args: never; Returns: undefined }
+      run_streak_job: { Args: never; Returns: undefined }
       shares_crew_with: { Args: { p_user: string }; Returns: boolean }
     }
     Enums: {
