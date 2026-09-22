@@ -187,6 +187,21 @@ export default function TodayScreen() {
               </Text>
             </View>
 
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.today.newHabit}
+              onPress={() => router.push('/new-habit')}
+              style={({ pressed }) => [
+                styles.addRow,
+                { borderColor: tint(bleedColor, 0.35), backgroundColor: alpha(bleedColor, 0.28) },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={[styles.addLabel, { color: tint(bleedColor, 0.6) }]}>
+                + {copy.today.newHabit}
+              </Text>
+            </Pressable>
+
             <DayList
               habits={habits}
               nowMinutes={isToday ? nowMinutes : null}
@@ -195,21 +210,6 @@ export default function TodayScreen() {
                 router.push({ pathname: '/new-habit', params: { id: habit.id } })
               }
             />
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={copy.today.newHabit}
-              onPress={() => router.push('/new-habit')}
-              style={({ pressed }) => [
-                styles.addRow,
-                { borderColor: tint(bleedColor, 0.3), backgroundColor: alpha(bleedColor, 0.22) },
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={[styles.addLabel, { color: tint(bleedColor, 0.55) }]}>
-                + {copy.today.newHabit}
-              </Text>
-            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   sectionLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: tint(habitColors[0], 0.55) },
   listBlock: { gap: spacing.md },
   addRow: {
-    minHeight: 52,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.card,

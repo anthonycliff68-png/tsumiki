@@ -156,7 +156,17 @@ export function DayTimeline({
               <Text style={[styles.gutter, line.kind === 'now' && styles.gutterNow]}>
                 {line.time}
               </Text>
-              <View style={{ width: railWidth + RAIL_GAP * 2 }} />
+
+              {/* A block runs its rail behind the whole hour; a moment with no
+                  duration marks just its own slot, so every moment reads the
+                  same way in the rail column. */}
+              <View style={[styles.railCell, { width: railWidth + RAIL_GAP * 2 }]}>
+                {line.kind === 'moment' && line.anchor.ends_at === null && (
+                  <View
+                    style={[styles.tick, { backgroundColor: anchorColor(line.anchor.label) }]}
+                  />
+                )}
+              </View>
 
               <View style={styles.lineBody}>
                 {line.kind === 'moment' && (
@@ -439,6 +449,8 @@ const styles = StyleSheet.create({
   railLayer: { position: 'absolute', top: 0, bottom: 0, flexDirection: 'row', gap: 3 },
   span: { width: 4, opacity: 0.9 },
   line: { flexDirection: 'row', minHeight: 30, paddingVertical: 2 },
+  railCell: { alignItems: 'flex-end', justifyContent: 'center' },
+  tick: { width: 4, height: 22, borderRadius: 2 },
   gutter: {
     width: GUTTER,
     paddingTop: 3,
