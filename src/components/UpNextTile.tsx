@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CheckIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
@@ -26,7 +27,7 @@ export function UpNextTile({ habit, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
-        { backgroundColor: habit.checkedIn ? colors.surfaceRaised : habit.color },
+        { backgroundColor: habit.color },
         pressed && styles.pressed,
       ]}
     >
@@ -36,6 +37,11 @@ export function UpNextTile({ habit, onPress }: Props) {
       </Text>
       <View style={styles.footer}>
         <Text style={styles.status}>{habit.checkedIn ? copy.today.done : copy.today.open}</Text>
+        {habit.checkedIn && (
+          <View style={styles.doneMark}>
+            <CheckIcon size={13} color={habit.color} strokeWidth={3.4} />
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -69,6 +75,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 12,
     color: colors.white,
+  },
+  doneMark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
   },
   pressed: {
     opacity: 0.85,

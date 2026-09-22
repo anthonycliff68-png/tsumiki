@@ -9,23 +9,24 @@ import type { TodayHabit } from '@/lib/api';
 import type { Anchor } from '@/lib/models';
 import { alpha, anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
 
-/** Every hour gets a row, so the day has a shape even where nothing happens. */
-const HOUR_ROW_MIN = 44;
 const GUTTER = 58;
+const RAIL_GAP = 8;
 
 export type DropTarget =
   | { kind: 'anchor'; anchorId: string; label: string }
   | { kind: 'hour'; hour: number };
 
+/** One line of the day: a bare hour, a moment, a timed habit, or the now line. */
+type Line =
+  | { kind: 'hour'; time: string }
+  | { kind: 'moment'; time: string; anchor: Anchor; habits: TodayHabit[] }
+  | { kind: 'habit'; time: string; habit: TodayHabit }
+  | { kind: 'now'; time: string };
+
 type HourRow = {
   hour: number;
-  label: string;
-  anchors: { anchor: Anchor; habits: TodayHabit[] }[];
-  loose: TodayHabit[];
-  /** Blocks running through this hour, so a long one reads as one thing. */
-  spans: { id: string; color: string; isStart: boolean; isEnd: boolean }[];
-  isNow: boolean;
-  nowLabel: string;
+  lines: Line[];
+  spans: { id: string; color: string }[];
 };
 
 type Props = {
@@ -36,7 +37,6 @@ type Props = {
   onEditHabit: (habit: TodayHabit) => void;
   onEditAnchor: (anchor: Anchor) => void;
   onMove: (habit: TodayHabit, target: DropTarget) => void;
-  /** Stops the page scrolling while a card is in the air. */
   onDragChange: (dragging: boolean) => void;
 };
 
@@ -51,9 +51,6 @@ export function DayTimeline({
   onMove,
   onDragChange,
 }: Props) {
-  // Each droppable's view, so it can be measured in SCREEN coordinates when a
-  // drag starts. Layout positions are relative to the parent row, which is not
-  // the space a finger reports itself in.
   const nodes = useRef(new Map<string, { node: View; target: DropTarget }>());
   const rects = useRef<{ key: string; top: number; bottom: number; target: DropTarget }[]>([]);
 
@@ -65,8 +62,8 @@ export function DayTimeline({
     [anchors, habits, nowMinutes],
   );
 
-  // Reserve the same width on every row, or rows holding a block would sit
-  // indented from the rest and the timeline would step in and out.
+  // The rail column is the same width on every row, or rows holding a block
+  // would sit indented and the timeline would step in and out.
   const railWidth = useMemo(() => {
     const most = rows.reduce((max, row) => Math.max(max, row.spans.length), 0);
     return most === 0 ? 0 : most * 4 + (most - 1) * 3;
@@ -77,7 +74,6 @@ export function DayTimeline({
     else nodes.current.delete(key);
   };
 
-  /** Read every target's place on screen. Called once, as a card is lifted. */
   const measureTargets = () => {
     const found: typeof rects.current = [];
     nodes.current.forEach(({ node, target }, key) => {
@@ -88,11 +84,7 @@ export function DayTimeline({
     });
   };
 
-  /**
-   * The smallest box containing the point. Hour rows cover the whole day so a
-   * drop never lands nowhere; a moment sitting inside one is the tighter match
-   * and wins.
-   */
+  /** The smallest box containing the point, so a moment beats its hour. */
   const findRect = (y: number) => {
     const hits = rects.current.filter((rect) => y >= rect.top && y < rect.bottom);
     if (hits.length === 0) return undefined;
@@ -103,7 +95,6 @@ export function DayTimeline({
 
   const hover = (y: number) => {
     const key = findRect(y)?.key ?? null;
-    // Only re-render when the finger crosses into a different target.
     setHoveredKey((current) => (current === key ? current : key));
   };
 
@@ -121,15 +112,28 @@ export function DayTimeline({
     if (target) onMove(habit, target);
   };
 
-  /** A gesture can be cancelled instead of ending. Never leave a card held. */
   const release = () => {
     setCarried(null);
     setHoveredKey(null);
     onDragChange(false);
   };
 
+  const cardFor = (habit: TodayHabit) => (
+    <HabitCard
+      key={habit.id}
+      habit={habit}
+      carried={carried?.id === habit.id}
+      onToggle={() => onToggle(habit)}
+      onEdit={() => onEditHabit(habit)}
+      onPickUp={() => pickUp(habit)}
+      onHover={hover}
+      onDrop={(y) => drop(habit, y)}
+      onRelease={release}
+    />
+  );
+
   return (
-    <View style={styles.timeline}>
+    <View>
       <Text style={styles.hint}>{copy.myDay.dragHint}</Text>
 
       {rows.map((row) => (
@@ -138,103 +142,61 @@ export function DayTimeline({
           ref={registerTarget(`hour-${row.hour}`, { kind: 'hour', hour: row.hour })}
           style={[styles.hourRow, hoveredKey === `hour-${row.hour}` && styles.hovered]}
         >
-          <Text style={styles.hourLabel}>{row.label}</Text>
+          {/* Blocks run behind the lines, so a long one stays unbroken. */}
+          {row.spans.length > 0 && (
+            <View style={[styles.railLayer, { left: GUTTER + RAIL_GAP }]} pointerEvents="none">
+              {row.spans.map((span) => (
+                <View key={span.id} style={[styles.span, { backgroundColor: span.color }]} />
+              ))}
+            </View>
+          )}
 
-          <View style={[styles.spans, { width: railWidth }]}>
-            {row.spans.map((span) => (
-              <View
-                key={span.id}
-                style={[
-                  styles.span,
-                  { backgroundColor: span.color },
-                  span.isStart && styles.spanStart,
-                  span.isEnd && styles.spanEnd,
-                ]}
-              />
-            ))}
-          </View>
+          {row.lines.map((line, index) => (
+            <View key={`${row.hour}-${index}`} style={styles.line}>
+              <Text style={[styles.gutter, line.kind === 'now' && styles.gutterNow]}>
+                {line.time}
+              </Text>
+              <View style={{ width: railWidth + RAIL_GAP * 2 }} />
 
-          <View style={styles.hourBody}>
-
-            {row.anchors.map(({ anchor, habits: stacked }) => (
-              <View
-                key={anchor.id}
-                ref={registerTarget(`anchor-${anchor.id}`, {
-                  kind: 'anchor',
-                  anchorId: anchor.id,
-                  label: anchor.label,
-                })}
-                style={[
-                  styles.anchorGroup,
-                  hoveredKey === `anchor-${anchor.id}` && styles.hovered,
-                ]}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${anchor.label}, edit`}
-                  onPress={() => onEditAnchor(anchor)}
-                  style={styles.anchorHead}
-                >
-                  <Text style={[styles.anchorLabel, { color: anchorColor(anchor.label) }]}>
-                    {anchor.label}
-                  </Text>
-                  {/* The gutter already says the hour; only add minutes past it. */}
-                  {anchor.ends_at ? (
-                    <Text style={styles.anchorSpan}>
-                      {copy.schedule.range(
-                        formatTimeGutter(anchor.usual_time),
-                        formatTimeGutter(anchor.ends_at),
-                      )}
-                    </Text>
-                  ) : (
-                    !anchor.usual_time.startsWith(
-                      `${String(row.hour).padStart(2, '0')}:00`,
-                    ) && (
-                      <Text style={styles.anchorSpan}>
-                        {formatTimeGutter(anchor.usual_time)}
+              <View style={styles.lineBody}>
+                {line.kind === 'moment' && (
+                  <View
+                    ref={registerTarget(`anchor-${line.anchor.id}`, {
+                      kind: 'anchor',
+                      anchorId: line.anchor.id,
+                      label: line.anchor.label,
+                    })}
+                    style={[
+                      styles.momentGroup,
+                      hoveredKey === `anchor-${line.anchor.id}` && styles.hovered,
+                    ]}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${line.anchor.label}, edit`}
+                      onPress={() => onEditAnchor(line.anchor)}
+                    >
+                      <Text
+                        style={[styles.momentLabel, { color: anchorColor(line.anchor.label) }]}
+                      >
+                        {line.anchor.label}
                       </Text>
-                    )
-                  )}
-                </Pressable>
+                    </Pressable>
+                    {line.habits.map(cardFor)}
+                  </View>
+                )}
 
-                {stacked.map((habit) => (
-                  <HabitCard
-                    key={habit.id}
-                    habit={habit}
-                    carried={carried?.id === habit.id}
-                    onToggle={() => onToggle(habit)}
-                    onEdit={() => onEditHabit(habit)}
-                    onPickUp={() => pickUp(habit)}
-                    onHover={hover}
-                    onDrop={(y) => drop(habit, y)}
-                    onRelease={release}
-                  />
-                ))}
+                {line.kind === 'habit' && cardFor(line.habit)}
+
+                {line.kind === 'now' && (
+                  <View style={styles.nowRow}>
+                    <View style={styles.nowDot} />
+                    <View style={styles.nowLine} />
+                  </View>
+                )}
               </View>
-            ))}
-
-            {row.loose.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                carried={carried?.id === habit.id}
-                onToggle={() => onToggle(habit)}
-                onEdit={() => onEditHabit(habit)}
-                onPickUp={() => pickUp(habit)}
-                onHover={hover}
-                onDrop={(y) => drop(habit, y)}
-                onRelease={release}
-              />
-            ))}
-
-            {row.isNow && (
-              <View style={styles.nowRow}>
-                <View style={styles.nowDot} />
-                <View style={styles.nowLine} />
-                <Text style={styles.nowLabel}>{copy.myDay.now}</Text>
-              </View>
-            )}
-          </View>
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -262,10 +224,6 @@ function HabitCard({
 }) {
   const offset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const scale = useRef(new Animated.Value(1)).current;
-  /**
-   * How far the card's middle sits from the finger holding it. People aim with
-   * the card they can see, not the fingertip underneath it.
-   */
   const aimOffset = useRef(0);
   const cardRef = useRef<View>(null);
 
@@ -282,8 +240,7 @@ function HabitCard({
 
   /**
    * runOnJS keeps every callback on the JavaScript thread. The UI-thread path
-   * runs through Reanimated's worklets, which segfault inside Expo Go — and
-   * this gesture is cheap enough that the JS thread keeps up with it.
+   * runs through Reanimated's worklets, which segfault inside Expo Go.
    */
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -300,8 +257,6 @@ function HabitCard({
     .onEnd((event) => {
       onDrop(event.absoluteY + aimOffset.current);
     })
-    // Runs whether the gesture ended or was cancelled, so the card always
-    // springs home and the page always scrolls again.
     .onFinalize(() => {
       springHome();
       onRelease();
@@ -311,23 +266,13 @@ function HabitCard({
     <GestureDetector gesture={pan}>
       <Animated.View
         style={{
-          transform: [
-            { translateX: offset.x },
-            { translateY: offset.y },
-            { scale },
-          ],
+          transform: [{ translateX: offset.x }, { translateY: offset.y }, { scale }],
           zIndex: carried ? 10 : 0,
         }}
       >
         <View
           ref={cardRef}
-          style={[
-            styles.card,
-            habit.checkedIn
-              ? { backgroundColor: alpha(habit.color, 0.55) }
-              : { backgroundColor: habit.color },
-            carried && styles.carried,
-          ]}
+          style={[styles.card, { backgroundColor: habit.color }, carried && styles.carried]}
         >
           <Pressable
             style={styles.cardText}
@@ -352,7 +297,9 @@ function HabitCard({
             style={styles.cardCheck}
           >
             {habit.checkedIn ? (
-              <CheckIcon size={18} color={colors.white} strokeWidth={3} />
+              <View style={styles.doneCircle}>
+                <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
+              </View>
             ) : (
               <View style={styles.openCircle} />
             )}
@@ -363,64 +310,113 @@ function HabitCard({
   );
 }
 
-/** One row per hour, from the first moment of the day to the last. */
+function minutesOf(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+function label(minutes: number): string {
+  return formatTimeGutter(
+    `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`,
+  );
+}
+
+/** One row per hour; inside it, a line per thing, each with its own time. */
 function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number): HourRow[] {
-  const anchorHour = (anchor: Anchor) => Number(anchor.usual_time.split(':')[0] ?? 0);
-  const hours = anchors.map(anchorHour);
-  const timedHours = habits
-    .filter((habit) => habit.mode === 'at' && habit.time)
-    .map((habit) => Math.floor(habit.sortKey / 60));
-
-  const all = [...hours, ...timedHours, Math.floor(nowMinutes / 60)];
-  const first = all.length > 0 ? Math.min(...all) : 7;
-  const last = all.length > 0 ? Math.max(...all) : 22;
-
-  const minutes = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    return (h ?? 0) * 60 + (m ?? 0);
-  };
+  const timed = habits.filter((habit) => habit.mode === 'at' && habit.time);
   const blocks = anchors
     .filter((anchor) => anchor.ends_at !== null)
     .map((anchor) => ({
       anchor,
-      start: minutes(anchor.usual_time),
-      end: minutes(anchor.ends_at as string),
+      start: minutesOf(anchor.usual_time),
+      end: minutesOf(anchor.ends_at as string),
     }));
+
+  const marks = [
+    ...anchors.map((anchor) => Math.floor(minutesOf(anchor.usual_time) / 60)),
+    ...timed.map((habit) => Math.floor(habit.sortKey / 60)),
+    Math.floor(nowMinutes / 60),
+  ];
+  const first = marks.length > 0 ? Math.min(...marks) : 7;
+  const last = marks.length > 0 ? Math.max(...marks) : 22;
 
   const rows: HourRow[] = [];
   for (let hour = first; hour <= last; hour += 1) {
-    const inHour = anchors.filter((anchor) => anchorHour(anchor) === hour);
-    const hourStart = hour * 60;
-    const hourEnd = hourStart + 60;
-    rows.push({
-      spans: blocks
-        .filter((block) => block.start < hourEnd && block.end > hourStart)
-        .map((block) => ({
-          id: block.anchor.id,
-          color: anchorColor(block.anchor.label),
-          isStart: block.start >= hourStart,
-          isEnd: block.end <= hourEnd,
-        })),
-      hour,
-      label: formatTimeGutter(`${String(hour).padStart(2, '0')}:00`),
-      anchors: inHour.map((anchor) => ({
+    const start = hour * 60;
+    const end = start + 60;
+
+    const moments = anchors
+      .filter((anchor) => {
+        const at = minutesOf(anchor.usual_time);
+        return at >= start && at < end;
+      })
+      .sort((a, b) => minutesOf(a.usual_time) - minutesOf(b.usual_time));
+
+    const loose = timed.filter(
+      (habit) =>
+        habit.sortKey >= start &&
+        habit.sortKey < end &&
+        !blocks.some((block) => habit.sortKey >= block.start && habit.sortKey < block.end),
+    );
+
+    const lines: Line[] = [];
+    // The hour's own tick, unless something already sits on the hour.
+    if (!moments.some((anchor) => minutesOf(anchor.usual_time) === start)) {
+      lines.push({ kind: 'hour', time: label(start) });
+    }
+    for (const anchor of moments) {
+      const span = blocks.find((block) => block.anchor.id === anchor.id);
+      lines.push({
+        kind: 'moment',
+        time: label(minutesOf(anchor.usual_time)),
         anchor,
-        habits: habits.filter((habit) => habit.anchorId === anchor.id),
-      })),
-      loose: habits.filter(
-        (habit) => habit.mode === 'at' && Math.floor(habit.sortKey / 60) === hour,
-      ),
-      isNow: Math.floor(nowMinutes / 60) === hour,
-      nowLabel: formatTimeGutter(
-        `${String(Math.floor(nowMinutes / 60)).padStart(2, '0')}:${String(nowMinutes % 60).padStart(2, '0')}`,
-      ),
+        habits: [
+          ...habits.filter((habit) => habit.anchorId === anchor.id),
+          // A block absorbs the timed habits inside its hours — they are
+          // filtered out of the loose list, so they have to land here or they
+          // disappear from the day altogether.
+          ...(span
+            ? timed.filter(
+                (habit) =>
+                  habit.anchorId !== anchor.id &&
+                  habit.sortKey >= span.start &&
+                  habit.sortKey < span.end,
+              )
+            : []),
+        ],
+      });
+    }
+    for (const habit of loose) {
+      lines.push({ kind: 'habit', time: label(habit.sortKey), habit });
+    }
+    if (Math.floor(nowMinutes / 60) === hour) {
+      lines.push({ kind: 'now', time: label(nowMinutes) });
+    }
+
+    // Everything in an hour reads in time order, the now line included.
+    lines.sort((a, b) => order(a) - order(b));
+
+    rows.push({
+      hour,
+      lines,
+      spans: blocks
+        .filter((block) => block.start < end && block.end > start)
+        .map((block) => ({ id: block.anchor.id, color: anchorColor(block.anchor.label) })),
     });
   }
   return rows;
 }
 
+function order(line: Line): number {
+  const [clock, suffix] = line.time.split(' ');
+  const [h, m] = (clock ?? '0').split(':').map(Number);
+  let hour = h ?? 0;
+  if (suffix === 'pm' && hour !== 12) hour += 12;
+  if (suffix === 'am' && hour === 12) hour = 0;
+  return hour * 60 + (m ?? 0);
+}
+
 const styles = StyleSheet.create({
-  timeline: { gap: 0 },
   hint: {
     fontFamily: fonts.body,
     fontSize: 12,
@@ -428,38 +424,26 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   hourRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: HOUR_ROW_MIN,
     borderTopWidth: 1,
     borderTopColor: colors.hairline,
     paddingVertical: 6,
   },
-  hourLabel: {
+  hovered: { backgroundColor: alpha(habitColors[1], 0.22), borderRadius: radii.card },
+  railLayer: { position: 'absolute', top: 0, bottom: 0, flexDirection: 'row', gap: 3 },
+  span: { width: 4, opacity: 0.9 },
+  line: { flexDirection: 'row', minHeight: 30, paddingVertical: 2 },
+  gutter: {
     width: GUTTER,
-    paddingTop: 2,
+    paddingTop: 3,
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.textFaint,
     textAlign: 'right',
   },
-  /** Negative margin cancels the row's padding, so segments meet end to end. */
-  spans: {
-    flexDirection: 'row',
-    gap: 3,
-    alignSelf: 'stretch',
-    marginVertical: -6,
-  },
-  span: { width: 4, alignSelf: 'stretch', opacity: 0.85 },
-  spanStart: { borderTopLeftRadius: 2, borderTopRightRadius: 2, marginTop: 6 },
-  spanEnd: { borderBottomLeftRadius: 2, borderBottomRightRadius: 2, marginBottom: 6 },
-  hourBody: { flex: 1, gap: 6, justifyContent: 'center' },
-  emptyHour: { minHeight: 28 },
-  hovered: { backgroundColor: alpha(habitColors[1], 0.22), borderRadius: radii.card },
-  anchorGroup: { gap: 6, borderRadius: radii.card },
-  anchorHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, minHeight: 28 },
-  anchorLabel: { ...display(19, 21) },
-  anchorSpan: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+  gutterNow: { fontFamily: fonts.bodyBold, color: habitColors[1] },
+  lineBody: { flex: 1, gap: 6, justifyContent: 'center' },
+  momentGroup: { gap: 6, borderRadius: radii.card },
+  momentLabel: { ...display(19, 21) },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -472,21 +456,22 @@ const styles = StyleSheet.create({
   cardName: { ...display(20, 20), color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   cardCheck: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  doneCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
   openCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: 'rgba(255,255,255,0.55)',
   },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
   nowLine: { flex: 1, height: 1, backgroundColor: habitColors[1] },
-  nowLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: habitColors[1],
-  },
 });

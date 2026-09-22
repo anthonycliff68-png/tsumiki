@@ -12,7 +12,7 @@ import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
-import { colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
+import { alpha, colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
 
 /** Today. Artboard: TodayDark. */
 export default function TodayScreen() {
@@ -44,15 +44,30 @@ export default function TodayScreen() {
     }, [refetch]),
   );
 
+  const today = new Date();
   const done = habits.filter((habit) => habit.checkedIn).length;
 
-  // The hero is the next habit still open; once everything is done it holds the
-  // last one, so the screen never goes blank on a finished day.
-  const hero = useMemo(
-    () => habits.find((habit) => !habit.checkedIn) ?? habits[habits.length - 1],
-    [habits],
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+
+  // The hero is the next one still to come. A habit whose moment has already
+  // passed is not "up next" — it goes to Missed, where it can still be done.
+  const open = useMemo(() => habits.filter((habit) => !habit.checkedIn), [habits]);
+  const missed = useMemo(
+    () => (isToday ? open.filter((habit) => habit.sortKey < nowMinutes) : []),
+    [open, isToday, nowMinutes],
   );
-  const rest = useMemo(() => habits.filter((habit) => habit.id !== hero?.id), [habits, hero]);
+  const upcoming = useMemo(
+    () => open.filter((habit) => !missed.includes(habit)),
+    [open, missed],
+  );
+  const hero = useMemo(
+    () => upcoming[0] ?? missed[0] ?? habits[habits.length - 1],
+    [upcoming, missed, habits],
+  );
+  const rest = useMemo(
+    () => habits.filter((habit) => habit.id !== hero?.id && !missed.includes(habit)),
+    [habits, hero, missed],
+  );
 
   const bleedColor = hero?.color ?? habitColors[0];
 
@@ -187,10 +202,16 @@ export default function TodayScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={copy.today.newHabit}
                 onPress={() => router.push('/new-habit')}
-                style={({ pressed }) => [styles.addTile, pressed && { opacity: 0.85 }]}
+                style={({ pressed }) => [
+                  styles.addTile,
+                  { borderColor: tint(bleedColor, 0.3), backgroundColor: alpha(bleedColor, 0.22) },
+                  pressed && { opacity: 0.85 },
+                ]}
               >
-                <Text style={styles.addPlus}>+</Text>
-                <Text style={styles.addLabel}>{copy.today.newHabit}</Text>
+                <Text style={[styles.addPlus, { color: tint(bleedColor, 0.55) }]}>+</Text>
+                <Text style={[styles.addLabel, { color: tint(bleedColor, 0.55) }]}>
+                  {copy.today.newHabit}
+                </Text>
               </Pressable>
             </ScrollView>
           </>
@@ -284,10 +305,23 @@ const styles = StyleSheet.create({
     borderRadius: radii.bigCard,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.border,
   },
-  addPlus: { ...display(30, 30), color: colors.textMuted },
-  addLabel: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.textMuted },
+  addPlus: { ...display(30, 30) },
+  addLabel: { fontFamily: fonts.bodyBold, fontSize: 13 },
+  missedBlock: { gap: spacing.sm },
+  missedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  missedDot: { width: 10, height: 10, borderRadius: 5 },
+  missedName: { flex: 1, ...display(20, 20) },
+  missedWhen: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.textFaint },
   nudgeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
