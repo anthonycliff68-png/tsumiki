@@ -4,7 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CrewsIcon, MyDayIcon, TodayIcon, YouIcon, type IconProps } from '@/components/icons';
+import {
+  CrewsIcon,
+  MyDayIcon,
+  ProgressIcon,
+  TodayIcon,
+  YouIcon,
+  type IconProps,
+} from '@/components/icons';
 import { CheckInOrb } from '@/components/CheckInOrb';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
@@ -23,6 +30,7 @@ const TABS: Record<string, { label: string; Icon: TabIcon }> = {
   index: { label: copy.dock.tabs.today, Icon: TodayIcon },
   'my-day': { label: copy.dock.tabs.myDay, Icon: MyDayIcon },
   crews: { label: copy.dock.tabs.crews, Icon: CrewsIcon },
+  progress: { label: copy.dock.tabs.progress, Icon: ProgressIcon },
   you: { label: copy.dock.tabs.you, Icon: YouIcon },
 };
 
@@ -225,14 +233,17 @@ const styles = StyleSheet.create({
     borderTopColor: colors.hairline,
   },
   tab: {
-    minWidth: 60,
+    // Five across a phone: narrower than the canvas's four, but still over the
+    // 44pt floor once the row's own padding counts.
+    minWidth: 52,
     minHeight: 44,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
   },
   tabLabel: {
     fontFamily: fonts.bodyBold,
-    fontSize: 11,
+    fontSize: 10,
   },
 });

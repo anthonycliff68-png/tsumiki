@@ -84,6 +84,11 @@ export function CheckIcon({ size = 24, color, strokeWidth = 2.8 }: IconProps) {
   );
 }
 
+/** Rising bars: the progress tab. */
+export function ProgressIcon(props: IconProps) {
+  return <StrokeIcon {...props} d="M4 20V13M10 20V7M16 20V10M20.5 20h-17" />;
+}
+
 /** The streak flame. */
 export function FlameIcon(props: IconProps) {
   return (

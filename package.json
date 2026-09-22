@@ -44,7 +44,7 @@
     "db:types": "supabase gen types typescript --linked > src/lib/database.types.ts",
     "tunnel": "expo start --go --tunnel",
     "build:dev": "eas build --profile development --platform ios",
-    "test": "node --test --experimental-strip-types supabase/functions/_shared/*.test.ts",
+    "test": "node --test --experimental-strip-types \"supabase/functions/_shared/*.test.ts\" \"src/lib/*.test.ts\"",
     "sim": "xcrun simctl boot Tsumiki 2>/dev/null; open -a Simulator; xcrun simctl openurl Tsumiki exp://127.0.0.1:8081"
   },
   "private": true

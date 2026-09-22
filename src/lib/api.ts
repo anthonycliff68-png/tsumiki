@@ -981,3 +981,81 @@ export function useMoveHabit(userId: string | undefined) {
     },
   });
 }
+
+// --- stats -----------------------------------------------------------------
+
+/**
+ * Everything the analytics screen needs, in one go: each habit's schedule, when
+ * it started and stopped, and every check-in against it. The arithmetic itself
+ * is in @/lib/stats, under test.
+ */
+export function useHabitHistory(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['history', userId],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      const [schedules, checkins] = await Promise.all([
+        supabase
+          .from('habit_schedules')
+          .select('habit_id, days_of_week, habits!inner(id, name, color, created_at, archived_at)')
+          .eq('user_id', userId ?? ''),
+        supabase
+          .from('checkins')
+          .select('habit_id, local_date')
+          .eq('user_id', userId ?? '')
+          .order('local_date', { ascending: true }),
+      ]);
+      if (schedules.error) throw schedules.error;
+      if (checkins.error) throw checkins.error;
+
+      const rows = schedules.data as unknown as {
+        habit_id: string;
+        days_of_week: number[];
+        habits: {
+          id: string;
+          name: string;
+          color: string;
+          created_at: string;
+          archived_at: string | null;
+        };
+      }[];
+
+      const checkedByHabit = new Map<string, string[]>();
+      for (const row of checkins.data ?? []) {
+        const list = checkedByHabit.get(row.habit_id) ?? [];
+        list.push(row.local_date);
+        checkedByHabit.set(row.habit_id, list);
+      }
+
+      return rows.map((row) => ({
+        habitId: row.habits.id,
+        name: row.habits.name,
+        color: row.habits.color,
+        daysOfWeek: row.days_of_week,
+        createdOn: row.habits.created_at.slice(0, 10),
+        archivedOn: row.habits.archived_at ? row.habits.archived_at.slice(0, 10) : null,
+        checkedOn: checkedByHabit.get(row.habits.id) ?? [],
+      }));
+    },
+  });
+}
+
+/**
+ * Wipe every check-in. The habits and the routine stay; only the history goes.
+ * There is no undo, so the screen asks twice.
+ */
+export function useResetHistory(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase.from('checkins').delete().eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+    },
+  });
+}

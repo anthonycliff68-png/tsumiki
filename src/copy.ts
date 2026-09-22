@@ -22,6 +22,7 @@ export const copy = {
       today: 'Today',
       myDay: 'My Day',
       crews: 'Crews',
+      progress: 'Progress',
       you: 'You',
     },
   },
@@ -275,6 +276,30 @@ export const copy = {
     done: 'Done',
     /** e.g. "9:00 – 5:30 pm" */
     range: (start: string, end: string) => `${start} \u2013 ${end}`,
+  },
+
+  stats: {
+    title: 'Progress',
+    week: 'Week',
+    month: 'Month',
+    all: 'All time',
+    doneOf: (done: number, due: number) => `${done} of ${due} due`,
+    noneDue: 'Nothing was due yet in this window.',
+    empty: 'Once you have checked a habit in, this fills up.',
+    byWeekday: 'By weekday',
+    run: 'Run',
+    best: 'Best',
+    rate: 'Done',
+    days: 'Every due day',
+    notYet: 'Not due yet',
+    resetTitle: 'Reset your history',
+    resetBody:
+      'Deletes every check-in you have ever made. Your habits, routine and crews stay. There is no undo.',
+    reset: 'Reset history',
+    resetConfirm: 'Yes, delete every check-in',
+    cancel: 'Cancel',
+    storage:
+      'Your habits and check-ins live in your Tsumiki account, not on this phone. Deleting the app signs you out; everything comes back when you sign in again.',
   },
 
   myDay: {

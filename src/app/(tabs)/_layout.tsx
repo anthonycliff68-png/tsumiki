@@ -39,6 +39,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="my-day" />
       <Tabs.Screen name="crews" />
+      <Tabs.Screen name="progress" />
       <Tabs.Screen name="you" />
     </Tabs>
   );
