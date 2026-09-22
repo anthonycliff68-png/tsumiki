@@ -145,6 +145,42 @@ export const copy = {
     previewAny: (name: string) => `Anytime today \u2192 ${name}`,
   },
 
+  nudge: {
+    /** The presets from the brief, in order. */
+    presets: ['Walk time!', 'You\u2019re the last one', 'Don\u2019t leave us hanging', 'Streak\u2019s on you'],
+    sendTitle: (name: string) => `Nudge ${name}`,
+    sendSub: (moment: string, left: number) =>
+      `${moment} \u00b7 ${left} left to keep the streak`,
+    pick: 'Pick a nudge',
+    writeYourOwn: 'Write your own',
+    customPlaceholder: 'Say something short',
+    rule: 'One nudge per friend per day. It lands at their moment, not before.',
+    send: 'Send nudge',
+    sent: 'Nudge sent',
+    already: 'You have already nudged them today.',
+    notAllowed: 'They have checked in already \u2014 nothing to nudge about.',
+    nudge: 'Nudge',
+    nudged: 'Nudged',
+    cancel: 'Cancel',
+
+    /** The received side. */
+    inbox: (count: number) => `${count} nudge${count === 1 ? '' : 's'} for you`,
+    from: (name: string) => `${name} nudged you`,
+    openTitle: (name: string) => `${name}, the streak\u2019s on you.`,
+    didIt: 'Did it? Check in',
+    headingOut: 'Heading out now',
+    onTheWay: (name: string) => `${name}\u2019s on the way`,
+    youAreOnTheWay: 'You\u2019re on the way',
+    skipToday: 'Skip today',
+    streakSaved: 'Streak saved',
+    thanks: 'Say thanks',
+    thanksForPush: 'Thanks for the push',
+    sameTimeTomorrow: 'Same time tmrw',
+    thanked: 'Thanks sent',
+    pushLater:
+      'Push notifications arrive in a later build step; nudges show up in the app for now.',
+  },
+
   crews: {
     title: 'Crews',
     groupStreak: 'Group streak',

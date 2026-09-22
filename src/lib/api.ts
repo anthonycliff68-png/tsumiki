@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { EVERY_DAY } from '@/data/defaults';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
-import type { Anchor, CrewRole, Habit, ScheduleMode } from '@/lib/models';
+import type { Anchor, CrewRole, Habit, ReactionKind, ScheduleMode } from '@/lib/models';
 import { supabase } from '@/lib/supabase';
 import { habitColors } from '@/theme';
 
@@ -556,6 +556,221 @@ export function useLeaveCrew() {
       void queryClient.invalidateQueries({ queryKey: ['crews'] });
       void queryClient.invalidateQueries({ queryKey: ['crew'] });
       void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+// --- nudges ----------------------------------------------------------------
+
+export const NUDGE_MAX_LENGTH = 60;
+
+export type ReceivedNudge = {
+  id: string;
+  crewId: string;
+  crewName: string;
+  habitId: string;
+  habitName: string;
+  habitColor: string;
+  fromUserId: string;
+  fromName: string;
+  fromColor: string;
+  message: string;
+  checkedIn: boolean;
+  /** A thanks already sent for this nudge. */
+  reactionKind: ReactionKind | null;
+};
+
+/** Nudges pointed at you today, with whether you have since checked in. */
+export function useNudgesForMe(userId: string | undefined, date: Date = new Date()) {
+  const localDate = localDateString(date);
+
+  return useQuery({
+    queryKey: ['nudges', userId, localDate],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<ReceivedNudge[]> => {
+      const { data, error } = await supabase
+        .from('nudges')
+        .select('id, crew_id, from_user, message, crews!inner(name, habit_id, habits!crews_habit_id_fkey(name, color))')
+        .eq('to_user', userId ?? '')
+        .eq('local_date', localDate)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      const rows = data as unknown as {
+        id: string;
+        crew_id: string;
+        from_user: string;
+        message: string;
+        crews: { name: string; habit_id: string; habits: { name: string; color: string } | null };
+      }[];
+      if (rows.length === 0) return [];
+
+      const [profiles, checkins, reactions] = await Promise.all([
+        supabase.from('crew_profiles').select('id, display_name, avatar_color'),
+        supabase
+          .from('checkins')
+          .select('habit_id')
+          .eq('user_id', userId ?? '')
+          .eq('local_date', localDate),
+        supabase.from('reactions').select('nudge_id, kind').eq('from_user', userId ?? ''),
+      ]);
+      if (profiles.error) throw profiles.error;
+      if (checkins.error) throw checkins.error;
+      if (reactions.error) throw reactions.error;
+
+      const byId = new Map((profiles.data ?? []).map((p) => [p.id, p]));
+      const done = new Set((checkins.data ?? []).map((c) => c.habit_id));
+      const thanked = new Map((reactions.data ?? []).map((r) => [r.nudge_id, r.kind]));
+
+      return rows.map((row) => ({
+        id: row.id,
+        crewId: row.crew_id,
+        crewName: row.crews.name,
+        habitId: row.crews.habit_id,
+        habitName: row.crews.habits?.name ?? '',
+        habitColor: row.crews.habits?.color ?? habitColors[0],
+        fromUserId: row.from_user,
+        fromName: byId.get(row.from_user)?.display_name ?? 'Someone',
+        fromColor: byId.get(row.from_user)?.avatar_color ?? habitColors[0],
+        message: row.message,
+        checkedIn: done.has(row.crews.habit_id),
+        reactionKind: thanked.get(row.id) ?? null,
+      }));
+    },
+  });
+}
+
+/** Who I have already nudged today, so the crew screen can grey them out. */
+export function useNudgesSentToday(userId: string | undefined, date: Date = new Date()) {
+  const localDate = localDateString(date);
+  return useQuery({
+    queryKey: ['nudges-sent', userId, localDate],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from('nudges')
+        .select('to_user')
+        .eq('from_user', userId ?? '')
+        .eq('local_date', localDate);
+      if (error) throw error;
+      return (data ?? []).map((row) => row.to_user);
+    },
+  });
+}
+
+export class NudgeAlreadySentError extends Error {}
+export class NudgeNotAllowedError extends Error {}
+
+/**
+ * One nudge per sender → recipient per local day, and only while they still
+ * have the habit open. Both rules live in the database; this turns the codes
+ * it raises into something worth reading.
+ */
+export function useSendNudge(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      crewId,
+      toUser,
+      message,
+      date = new Date(),
+    }: {
+      crewId: string;
+      toUser: string;
+      message: string;
+      date?: Date;
+    }) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase.from('nudges').insert({
+        crew_id: crewId,
+        from_user: userId,
+        to_user: toUser,
+        message: message.trim().slice(0, NUDGE_MAX_LENGTH),
+        local_date: localDateString(date),
+      });
+      if (error) {
+        if (error.code === '23505') throw new NudgeAlreadySentError(error.message);
+        // The insert policy refuses once they have checked in.
+        if (error.code === '42501') throw new NudgeNotAllowedError(error.message);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['nudges-sent'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+    },
+  });
+}
+
+/** Say thanks for a nudge. */
+export function useSendReaction(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ nudgeId, kind }: { nudgeId: string; kind: ReactionKind }) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase
+        .from('reactions')
+        .insert({ nudge_id: nudgeId, from_user: userId, kind });
+      if (error && error.code !== '23505') throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nudges'] }),
+  });
+}
+
+/**
+ * "Heading out now": the crew sees it for half an hour, and reminders and
+ * nudges to you hold off for the same window.
+ */
+export function useHeadingOut(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (crewId: string) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase.from('status_events').insert({
+        crew_id: crewId,
+        user_id: userId,
+        kind: 'heading_out',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['statuses'] });
+    },
+  });
+}
+
+/** Who in the crew is on the way right now. */
+export function useCrewStatuses(crewId: string | undefined) {
+  return useQuery({
+    queryKey: ['statuses', crewId],
+    enabled: Boolean(crewId),
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from('status_events')
+        .select('user_id, expires_at')
+        .eq('crew_id', crewId ?? '')
+        .gt('expires_at', new Date().toISOString());
+      if (error) throw error;
+      return (data ?? []).map((row) => row.user_id);
+    },
+  });
+}
+
+/** Your own profile row — name, colour, timezone, quiet hours. */
+export function useMyProfile(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['profile', userId],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId ?? '')
+        .single();
+      if (error) throw error;
+      return data;
     },
   });
 }

@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -9,7 +9,7 @@ import { useDockClearance } from '@/components/Dock';
 import { HeroCard } from '@/components/HeroCard';
 import { UpNextTile } from '@/components/UpNextTile';
 import { copy } from '@/copy';
-import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
+import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
 import { colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
@@ -22,6 +22,7 @@ export default function TodayScreen() {
   const userId = session?.user.id;
 
   const { data: habits = [], isPending, isError, refetch, isRefetching } = useToday(userId);
+  const { data: nudges = [] } = useNudgesForMe(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
 
@@ -78,6 +79,30 @@ export default function TodayScreen() {
         </View>
 
         {isError && <Text style={styles.notice}>{copy.today.loadFailed}</Text>}
+
+        {nudges.filter((nudge) => !nudge.checkedIn).map((nudge) => (
+          <Pressable
+            key={nudge.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${copy.nudge.from(nudge.fromName)}: ${nudge.message}`}
+            onPress={() => router.push({ pathname: '/nudge/[id]', params: { id: nudge.id } })}
+            style={({ pressed }) => [
+              styles.nudgeBanner,
+              { borderColor: nudge.habitColor },
+              pressed && { opacity: 0.9 },
+            ]}
+          >
+            <View style={[styles.nudgeAvatar, { backgroundColor: nudge.fromColor }]}>
+              <Text style={styles.nudgeInitials}>{nudge.fromName.slice(0, 2).toUpperCase()}</Text>
+            </View>
+            <View style={styles.nudgeText}>
+              <Text style={styles.nudgeFrom}>{copy.nudge.from(nudge.fromName)}</Text>
+              <Text style={styles.nudgeMessage} numberOfLines={2}>
+                “{nudge.message}”
+              </Text>
+            </View>
+          </Pressable>
+        ))}
 
         {!isPending && habits.length === 0 && (
           <View style={styles.empty}>
@@ -199,4 +224,25 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
   },
+  nudgeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.xl,
+    padding: 14,
+    borderRadius: radii.bigCard,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  nudgeAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeInitials: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.white },
+  nudgeText: { flex: 1, gap: 2 },
+  nudgeFrom: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
+  nudgeMessage: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
 });

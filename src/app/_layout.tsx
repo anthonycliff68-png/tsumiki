@@ -72,6 +72,7 @@ function RootNavigator() {
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="new-habit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="crew/[id]" />
+        <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="(auth)/sign-in" />

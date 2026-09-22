@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,7 +8,17 @@ import { TextButton } from '@/components/Button';
 import { CheckIcon, FlameIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
-import { useCheckIn, useCrew, useLeaveCrew, useUndoCheckIn, type CrewMemberState } from '@/lib/api';
+import {
+  useCheckIn,
+  useCrew,
+  useCrewStatuses,
+  useHeadingOut,
+  useLeaveCrew,
+  useNudgesSentToday,
+  useUndoCheckIn,
+  type CrewMemberState,
+} from '@/lib/api';
+import { NudgeSheet } from '@/components/NudgeSheet';
 import { useAuth } from '@/lib/auth';
 import { alpha, colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
 
@@ -22,9 +32,13 @@ export default function CrewScreen() {
   const userId = session?.user.id;
 
   const { data: crew, isPending, refetch } = useCrew(id);
+  const { data: onTheWay = [] } = useCrewStatuses(id);
+  const { data: nudgedToday = [] } = useNudgesSentToday(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
+  const headingOut = useHeadingOut(userId);
   const leaveCrew = useLeaveCrew();
+  const [nudging, setNudging] = useState<CrewMemberState | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,6 +56,7 @@ export default function CrewScreen() {
 
   const inCount = crew.members.filter((member) => member.checkedIn).length;
   const me = crew.members.find((member) => member.userId === userId);
+  const remaining = crew.members.length - inCount;
 
   return (
     <View style={styles.root}>
@@ -116,6 +131,9 @@ export default function CrewScreen() {
               member={member}
               isMe={member.userId === userId}
               habitColor={crew.habitColor}
+              onTheWay={onTheWay.includes(member.userId)}
+              alreadyNudged={nudgedToday.includes(member.userId)}
+              onNudge={() => setNudging(member)}
               onToggle={() => {
                 if (member.userId !== userId) return;
                 if (member.checkedIn) undo.mutate({ habitId: crew.habitId });
@@ -125,37 +143,65 @@ export default function CrewScreen() {
           ))}
         </View>
 
+        {me && !me.checkedIn && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => headingOut.mutate(crew.id)}
+            style={({ pressed }) => [styles.headingOut, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.headingOutText}>{copy.nudge.headingOut}</Text>
+          </Pressable>
+        )}
+
         {me?.graceUsed && <Text style={styles.grace}>{copy.crews.graceUsed}</Text>}
 
         <Text style={styles.hint}>{copy.crews.invitesLater}</Text>
-        <Text style={styles.hint}>{copy.crews.nudgesLater}</Text>
+        <Text style={styles.hint}>{copy.nudge.pushLater}</Text>
 
         <TextButton
           label={copy.crews.leave}
           onPress={() => leaveCrew.mutate(crew.id, { onSuccess: () => router.back() })}
         />
       </ScrollView>
+
+      <NudgeSheet
+        visible={nudging !== null}
+        crewId={crew.id}
+        member={nudging}
+        remaining={remaining}
+        moment={momentOf(nudging)}
+        onClose={() => setNudging(null)}
+      />
     </View>
   );
+}
+
+/** "After lunch", "6:30 pm", or anytime — how someone describes their moment. */
+function momentOf(member: CrewMemberState | null): string {
+  if (!member) return '';
+  if (member.mode === 'after' && member.anchorLabel) return `After ${member.anchorLabel.toLowerCase()}`;
+  if (member.mode === 'at' && member.atTime) return formatTime(member.atTime);
+  return copy.today.anytime;
 }
 
 function MemberTile({
   member,
   isMe,
   habitColor,
+  onTheWay,
+  alreadyNudged,
+  onNudge,
   onToggle,
 }: {
   member: CrewMemberState;
   isMe: boolean;
   habitColor: string;
+  onTheWay: boolean;
+  alreadyNudged: boolean;
+  onNudge: () => void;
   onToggle: () => void;
 }) {
-  const moment =
-    member.mode === 'after' && member.anchorLabel
-      ? `After ${member.anchorLabel.toLowerCase()}`
-      : member.mode === 'at' && member.atTime
-        ? formatTime(member.atTime)
-        : copy.today.anytime;
+  const moment = momentOf(member);
 
   return (
     <View style={styles.member}>
@@ -168,7 +214,11 @@ function MemberTile({
         {isMe ? copy.crews.you : member.displayName}
       </Text>
       <Text style={styles.memberMoment} numberOfLines={2}>
-        {moment}
+        {onTheWay
+          ? isMe
+            ? copy.nudge.youAreOnTheWay
+            : copy.nudge.onTheWay(member.displayName)
+          : moment}
       </Text>
 
       {isMe ? (
@@ -198,10 +248,23 @@ function MemberTile({
             {copy.crews.memberIn}
           </Text>
         </View>
-      ) : (
-        <Text style={[styles.memberButtonText, { color: tint(habitColor, 0.4) }]}>
-          {copy.crews.memberNotYet}
+      ) : alreadyNudged ? (
+        <Text style={[styles.memberButtonText, { color: colors.textFaint }]}>
+          {copy.nudge.nudged}
         </Text>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copy.nudge.sendTitle(member.displayName)}
+          onPress={onNudge}
+          style={({ pressed }) => [
+            styles.memberButton,
+            { backgroundColor: habitColors[1] },
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Text style={[styles.memberButtonText, { color: colors.white }]}>{copy.nudge.nudge}</Text>
+        </Pressable>
       )}
     </View>
   );
@@ -288,5 +351,15 @@ const styles = StyleSheet.create({
   memberButtonText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   memberIn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36 },
   grace: { fontFamily: fonts.bodyMedium, fontSize: 13, color: habitColors[4] },
+  headingOut: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  headingOutText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
 });
