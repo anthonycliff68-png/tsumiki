@@ -62,9 +62,34 @@ export function YouIcon(props: IconProps) {
   );
 }
 
+/** Back. */
+export function ChevronLeftIcon(props: IconProps) {
+  return <StrokeIcon strokeWidth={2.4} {...props} d="M15 5l-7 7 7 7" />;
+}
+
+/** Forward, on primary buttons. */
+export function ArrowRightIcon(props: IconProps) {
+  return <StrokeIcon strokeWidth={2.6} {...props} d="M5 12h14M13 6l6 6-6 6" />;
+}
+
+/** Add, on the dashed chips. */
+export function PlusIcon(props: IconProps) {
+  return <StrokeIcon strokeWidth={2.6} {...props} d="M12 5v14M5 12h14" />;
+}
+
 /** The check-in tick. */
 export function CheckIcon({ size = 24, color, strokeWidth = 2.8 }: IconProps) {
   return (
     <StrokeIcon size={size} color={color} strokeWidth={strokeWidth} d="M5 12.5l4.5 4.5L19 7.5" />
+  );
+}
+
+/** The streak flame. */
+export function FlameIcon(props: IconProps) {
+  return (
+    <StrokeIcon
+      {...props}
+      d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.2-3.8 2.5-5 0 2 1 3 2.2 3.2C11.5 8.5 11 6 12 3z"
+    />
   );
 }

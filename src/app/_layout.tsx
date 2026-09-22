@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,6 +8,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { colors } from '@/theme';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // A phone loses the network constantly; one retry, then show what we have.
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // The splash screen was already hidden — nothing to do.
@@ -26,14 +37,20 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
 
-/** Signed in: the tabs. Signed out: the sign-in screen. Nothing in between. */
+/**
+ * Signed in: the tabs, plus onboarding when the routine is still empty — the
+ * tabs layout does that redirect, because it is the thing that needs anchors.
+ * Signed out: the sign-in screen.
+ */
 function RootNavigator() {
   const { session, loading } = useAuth();
 
@@ -52,6 +69,7 @@ function RootNavigator() {
     >
       <Stack.Protected guard={session !== null}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="(auth)/sign-in" />

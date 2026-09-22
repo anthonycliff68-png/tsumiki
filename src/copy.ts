@@ -31,6 +31,18 @@ export const copy = {
     upNext: 'Up next',
     allCrews: 'All crews',
     checkIn: 'Check in',
+    checkedIn: 'Checked in',
+    checkInLabel: (habit: string) => `Check in: ${habit}`,
+    undoCheckIn: 'Undo check-in',
+    anytime: 'Anytime today',
+    done: 'Done',
+    open: 'Not yet',
+    streakDays: (days: number) => `${days} day${days === 1 ? '' : 's'}`,
+    allDone: 'Everything done today. Nice stack.',
+    emptyTitle: 'Nothing stacked yet',
+    emptyBody: 'Add your first habit and it will show up here, hanging off a moment you already have.',
+    addHabit: 'Add a habit',
+    loadFailed: 'Could not load today. Pull down to try again.',
   },
 
   auth: {
@@ -52,6 +64,65 @@ export const copy = {
     signingIn: 'Signing you in\u2026',
     linkExpired: 'That link has already been used, or it expired. Ask for a new one.',
     signOut: 'Sign out',
+  },
+
+  onboarding: {
+    back: 'Back',
+    skip: 'Skip',
+    progress: (step: number, total: number) => `Step ${step} of ${total}`,
+
+    routine: {
+      eyebrow: 'Step 1 · Your routine',
+      title: 'What does your\nday look like?',
+      blurb: 'These are the moments your habits will stack onto. Rough times are fine.',
+      addOwn: 'Your own',
+      ownPlaceholder: 'Name this moment',
+      timeLabel: (label: string) => `Change the time for ${label}`,
+      removeLabel: (label: string) => `Remove ${label}`,
+      next: 'Looks right',
+      saving: 'Saving\u2026',
+      failed: 'Could not save your routine. Try again.',
+      pickTime: 'Pick a time',
+      done: 'Done',
+    },
+
+    habit: {
+      eyebrow: 'Step 2 · First habit',
+      title: 'Start with\none.',
+      blurb: 'Small beats ambitious. We matched each one to a moment in your day.',
+      after: (anchor: string) => `After ${anchor}`,
+      makeOwn: 'Make my own instead',
+      add: (habit: string) => `Add ${habit}`,
+      adding: 'Adding\u2026',
+      failed: 'Could not add that habit. Try again.',
+    },
+
+    crew: {
+      eyebrow: 'Step 3 · Your crew',
+      title: 'It\u2019s in\nyour day.',
+      justYou: 'Just you, for now',
+      isNew: 'New',
+      pitch: 'People who start with friends are way more likely to follow through',
+      pitchBlurb: 'Invite 1\u20134 friends. Each picks their own moment. You all keep one streak.',
+      invite: 'Invite friends',
+      solo: 'Start solo for now',
+      you: 'You',
+    },
+  },
+
+  myDay: {
+    title: 'My day',
+    editRoutine: 'Edit routine',
+    habitCount: (count: number) => `${count} habit${count === 1 ? '' : 's'}`,
+    breakdown: (stacked: number, solo: number) =>
+      `${stacked} stacked \u00b7 ${solo} timed`,
+    now: 'Now',
+    anytime: 'Anytime today',
+    freeHours: (hours: number) => `${hours} free hour${hours === 1 ? '' : 's'}`,
+    addHabit: 'Add a habit',
+    solo: 'Solo',
+    everyDay: 'every day',
+    empty: 'Set your routine first and the day will fill in around it.',
   },
 
   placeholder: {

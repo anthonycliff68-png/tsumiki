@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CrewsIcon, MyDayIcon, TodayIcon, YouIcon, type IconProps } from '@/components/icons';
 import { CheckInOrb } from '@/components/CheckInOrb';
 import { copy } from '@/copy';
-import { fakeProgress, fakeUpNext } from '@/data/fake';
+import { formatTime } from '@/data/defaults';
+import { useCheckIn, useToday } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { alpha, colors, display, fonts, radii, tint } from '@/theme';
 
 /** Row heights from the canvas: 12 + 56 + 12, then 4 + 44 + 10. */
@@ -40,24 +42,34 @@ function dockBottom(safeBottom: number): number {
  */
 export function Dock({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const habit = fakeUpNext;
+  const { session } = useAuth();
+  const userId = session?.user.id;
 
-  // Fake check-in state until the real check-in lands in build step 4.
-  const [checkedIn, setCheckedIn] = useState(habit.checkedIn);
-  const done = fakeProgress.done + (checkedIn && !habit.checkedIn ? 1 : 0);
+  const { data: habits = [] } = useToday(userId);
+  const checkIn = useCheckIn(userId);
 
-  const accent = tint(habit.color, 0.55);
+  const done = habits.filter((h) => h.checkedIn).length;
+  const total = habits.length;
 
-  const whenLabel =
-    habit.mode === 'after' && habit.anchorLabel
+  // Up next is the first habit still open; on a finished day the dock keeps
+  // showing the last one so the row does not collapse.
+  const habit = useMemo(
+    () => habits.find((h) => !h.checkedIn) ?? habits[habits.length - 1],
+    [habits],
+  );
+
+  const accent = habit ? tint(habit.color, 0.55) : tint(colors.textMuted, 0.2);
+
+  const whenLabel = !habit
+    ? ''
+    : habit.mode === 'after' && habit.anchorLabel
       ? copy.dock.upNextAnchor(habit.anchorLabel)
-      : habit.mode === 'at' && habit.atTime
-        ? copy.dock.upNextTime(habit.atTime)
+      : habit.mode === 'at' && habit.time
+        ? copy.dock.upNextTime(formatTime(habit.time))
         : copy.dock.upNextAnytime;
 
-  const statusLabel = habit.crewName
-    ? copy.dock.crewProgress(habit.crewName, done, fakeProgress.total)
-    : copy.dock.soloProgress(done, fakeProgress.total);
+  const statusLabel =
+    done === total && total > 0 ? copy.dock.allDone : copy.dock.soloProgress(done, total);
 
   return (
     <View
@@ -70,6 +82,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
       ]}
     >
       <BlurView intensity={24} tint="dark" style={styles.glass}>
+        {habit && (
         <View style={styles.upNextRow}>
           <View
             style={[
@@ -91,23 +104,26 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
               {habit.name}
             </Text>
             <Text style={styles.upNextStatus} numberOfLines={1}>
-              {checkedIn && done >= fakeProgress.total ? copy.dock.allDone : statusLabel}
+              {statusLabel}
             </Text>
           </Pressable>
 
           <CheckInOrb
             color={habit.color}
             done={done}
-            total={fakeProgress.total}
-            checkedIn={checkedIn}
+            total={total}
+            checkedIn={habit.checkedIn}
             accessibilityLabel={
-              checkedIn
+              habit.checkedIn
                 ? copy.dock.checkedInLabel(habit.name)
                 : copy.dock.checkInLabel(habit.name)
             }
-            onPress={() => setCheckedIn((v) => !v)}
+            onPress={() => {
+              if (!habit.checkedIn) checkIn.mutate({ habitId: habit.id });
+            }}
           />
         </View>
+        )}
 
         <View style={styles.tabRow}>
           {state.routes.map((route, index) => {
