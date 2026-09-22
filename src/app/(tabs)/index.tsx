@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +24,13 @@ export default function TodayScreen() {
   const { data: habits = [], isPending, isError, refetch, isRefetching } = useToday(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
+
+  // Whatever wrote while we were away, pick it up on the way back in.
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
 
   const today = new Date();
   const done = habits.filter((habit) => habit.checkedIn).length;

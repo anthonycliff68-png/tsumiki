@@ -62,7 +62,11 @@ export function useSaveRoutine(userId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['anchors'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['anchors'] });
+      // Anchor labels and times are what Today and My Day lay the day out by.
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
   });
 }
 
@@ -104,6 +108,7 @@ export function useCreateFirstHabit(userId: string | undefined) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['habits'] });
       void queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
     },
   });
 }

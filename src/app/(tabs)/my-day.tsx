@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,6 +35,13 @@ export default function MyDayScreen() {
   const { data: habits = [], refetch, isRefetching } = useToday(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
+
+  // Whatever wrote while we were away, pick it up on the way back in.
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
