@@ -224,3 +224,121 @@ export function useUndoCheckIn(userId: string | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['today'] }),
   });
 }
+
+// --- creating and editing habits -------------------------------------------
+
+export type HabitInput = {
+  name: string;
+  color: string;
+  mode: ScheduleMode;
+  /** Required when mode is 'after'. */
+  anchorId?: string | null;
+  /** "HH:MM", required when mode is 'at'. */
+  atTime?: string | null;
+  daysOfWeek?: number[];
+};
+
+/** A habit plus the caller's own schedule for it, for the edit form. */
+export function useHabitWithSchedule(userId: string | undefined, habitId: string | undefined) {
+  return useQuery({
+    queryKey: ['habit', userId, habitId],
+    enabled: Boolean(userId && habitId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('habit_schedules')
+        .select('mode, at_time, anchor_id, days_of_week, habits!inner(id, name, color, crew_id)')
+        .eq('user_id', userId ?? '')
+        .eq('habit_id', habitId ?? '')
+        .single();
+      if (error) throw error;
+      return data as unknown as {
+        mode: ScheduleMode;
+        at_time: string | null;
+        anchor_id: string | null;
+        days_of_week: number[];
+        habits: { id: string; name: string; color: string; crew_id: string | null };
+      };
+    },
+  });
+}
+
+function scheduleFields(input: HabitInput) {
+  return {
+    mode: input.mode,
+    anchor_id: input.mode === 'after' ? (input.anchorId ?? null) : null,
+    at_time: input.mode === 'at' ? (input.atTime ?? null) : null,
+    days_of_week: input.daysOfWeek ?? EVERY_DAY,
+  };
+}
+
+export function useCreateHabit(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: HabitInput): Promise<Habit> => {
+      if (!userId) throw new Error('Not signed in.');
+
+      const { data: habit, error: habitError } = await supabase
+        .from('habits')
+        .insert({ owner_id: userId, name: input.name.trim(), color: input.color })
+        .select()
+        .single();
+      if (habitError) throw habitError;
+
+      const { error: scheduleError } = await supabase
+        .from('habit_schedules')
+        .insert({ habit_id: habit.id, user_id: userId, ...scheduleFields(input) });
+      if (scheduleError) throw scheduleError;
+
+      return habit;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+export function useUpdateHabit(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ habitId, ...input }: HabitInput & { habitId: string }) => {
+      if (!userId) throw new Error('Not signed in.');
+
+      const { error: habitError } = await supabase
+        .from('habits')
+        .update({ name: input.name.trim(), color: input.color })
+        .eq('id', habitId);
+      if (habitError) throw habitError;
+
+      const { error: scheduleError } = await supabase
+        .from('habit_schedules')
+        .update(scheduleFields(input))
+        .eq('habit_id', habitId)
+        .eq('user_id', userId);
+      if (scheduleError) throw scheduleError;
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['habit', userId, variables.habitId] });
+    },
+  });
+}
+
+/** Habits are archived, never deleted — the check-in history stays intact. */
+export function useArchiveHabit(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (habitId: string) => {
+      const { error } = await supabase
+        .from('habits')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', habitId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}

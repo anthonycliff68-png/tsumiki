@@ -14,10 +14,12 @@ type Props = {
   busy?: boolean;
   onCheckIn: () => void;
   onUndo: () => void;
+  /** Tapping the habit's name opens it for editing. */
+  onEdit?: () => void;
 };
 
 /** The big card on Today: the one habit that is up next. Artboard: TodayDark. */
-export function HeroCard({ habit, crewName, streakDays, busy, onCheckIn, onUndo }: Props) {
+export function HeroCard({ habit, crewName, streakDays, busy, onCheckIn, onUndo, onEdit }: Props) {
   const when =
     habit.mode === 'after' && habit.anchorLabel
       ? habit.anchorLabel
@@ -39,7 +41,14 @@ export function HeroCard({ habit, crewName, streakDays, busy, onCheckIn, onUndo 
         )}
       </View>
 
-      <Text style={styles.name}>{habit.name}</Text>
+      <Text
+        style={styles.name}
+        accessibilityRole={onEdit ? 'button' : 'text'}
+        accessibilityLabel={onEdit ? copy.today.editLabel(habit.name) : undefined}
+        onPress={onEdit}
+      >
+        {habit.name}
+      </Text>
 
       {crewName && <Text style={styles.crew}>{crewName}</Text>}
 
@@ -52,6 +61,7 @@ export function HeroCard({ habit, crewName, streakDays, busy, onCheckIn, onUndo 
         >
           <CheckIcon size={22} color={colors.success} strokeWidth={2.6} />
           <Text style={[styles.buttonText, { color: colors.success }]}>{copy.today.checkedIn}</Text>
+          <Text style={styles.undoHint}>{copy.today.undo}</Text>
         </Pressable>
       ) : (
         <Pressable
@@ -125,6 +135,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 17,
     color: colors.white,
+  },
+  undoHint: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
   },
   pressed: {
     opacity: 0.85,

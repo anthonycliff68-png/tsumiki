@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -8,7 +8,7 @@ import { useDockClearance } from '@/components/Dock';
 import { CheckIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTimeShort } from '@/data/defaults';
-import { useAnchors, useCheckIn, useToday, type TodayHabit } from '@/lib/api';
+import { useAnchors, useCheckIn, useToday, useUndoCheckIn, type TodayHabit } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
@@ -34,11 +34,14 @@ export default function MyDayScreen() {
   const { data: anchors = [] } = useAnchors(userId);
   const { data: habits = [], refetch, isRefetching } = useToday(userId);
   const checkIn = useCheckIn(userId);
+  const undo = useUndoCheckIn(userId);
 
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const rows = useMemo(() => buildDay(anchors, habits, nowMinutes), [anchors, habits, nowMinutes]);
+  const toggle = (habit: TodayHabit) =>
+    habit.checkedIn ? undo.mutate({ habitId: habit.id }) : checkIn.mutate({ habitId: habit.id });
 
   const stacked = habits.filter((h) => h.mode === 'after').length;
   const timed = habits.filter((h) => h.mode === 'at').length;
@@ -86,7 +89,15 @@ export default function MyDayScreen() {
 
         {anchors.length === 0 && <Text style={styles.empty}>{copy.myDay.empty}</Text>}
 
-        <View style={styles.timeline}>{rows.map((row) => renderRow(row, checkIn))}</View>
+        <View style={styles.timeline}>{rows.map((row) => renderRow(row, toggle))}</View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/new-habit')}
+          style={({ pressed }) => [styles.newHabit, pressed && { opacity: 0.85 }]}
+        >
+          <Text style={styles.newHabitText}>+ {copy.myDay.newHabit}</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -151,9 +162,9 @@ function buildDay(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number): 
   return withGaps;
 }
 
-type CheckInMutation = ReturnType<typeof useCheckIn>;
+type ToggleHabit = (habit: TodayHabit) => void;
 
-function renderRow(row: Row, checkIn: CheckInMutation) {
+function renderRow(row: Row, toggle: ToggleHabit) {
   switch (row.kind) {
     case 'anchor':
       return (
@@ -165,7 +176,7 @@ function renderRow(row: Row, checkIn: CheckInMutation) {
           <View style={styles.rowBody}>
             <Text style={styles.anchorLabel}>{row.label}</Text>
             {row.habits.map((habit) => (
-              <HabitCard key={habit.id} habit={habit} checkIn={checkIn} />
+              <HabitCard key={habit.id} habit={habit} toggle={toggle} />
             ))}
           </View>
         </View>
@@ -178,7 +189,7 @@ function renderRow(row: Row, checkIn: CheckInMutation) {
             <View style={[styles.node, { borderColor: row.habit.color }]} />
           </View>
           <View style={styles.rowBody}>
-            <HabitCard habit={row.habit} checkIn={checkIn} />
+            <HabitCard habit={row.habit} toggle={toggle} />
           </View>
         </View>
       );
@@ -206,7 +217,7 @@ function renderRow(row: Row, checkIn: CheckInMutation) {
               <Text
                 style={styles.freeLink}
                 accessibilityRole="button"
-                onPress={() => router.push('/habit')}
+                onPress={() => router.push('/new-habit')}
               >
                 {copy.myDay.addHabit}
               </Text>
@@ -224,7 +235,7 @@ function renderRow(row: Row, checkIn: CheckInMutation) {
           <View style={styles.rowBody}>
             <Text style={styles.anchorLabel}>{copy.myDay.anytime}</Text>
             {row.habits.map((habit) => (
-              <HabitCard key={habit.id} habit={habit} checkIn={checkIn} />
+              <HabitCard key={habit.id} habit={habit} toggle={toggle} />
             ))}
           </View>
         </View>
@@ -232,7 +243,7 @@ function renderRow(row: Row, checkIn: CheckInMutation) {
   }
 }
 
-function HabitCard({ habit, checkIn }: { habit: TodayHabit; checkIn: CheckInMutation }) {
+function HabitCard({ habit, toggle }: { habit: TodayHabit; toggle: ToggleHabit }) {
   return (
     <View
       style={[
@@ -242,20 +253,25 @@ function HabitCard({ habit, checkIn }: { habit: TodayHabit; checkIn: CheckInMuta
           : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: habit.color, borderWidth: 1 },
       ]}
     >
-      <View style={styles.habitText}>
+      <Pressable
+        style={styles.habitText}
+        accessibilityRole="button"
+        accessibilityLabel={copy.today.editLabel(habit.name)}
+        onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
+      >
         <Text style={styles.habitName} numberOfLines={1}>
           {habit.name}
         </Text>
         <Text style={styles.habitSub} numberOfLines={1}>
           {copy.myDay.solo} · {copy.myDay.everyDay}
         </Text>
-      </View>
+      </Pressable>
       <Text
         accessibilityRole="button"
-        accessibilityLabel={copy.today.checkInLabel(habit.name)}
-        onPress={() => {
-          if (!habit.checkedIn) checkIn.mutate({ habitId: habit.id });
-        }}
+        accessibilityLabel={
+          habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
+        }
+        onPress={() => toggle(habit)}
         style={styles.habitCheck}
       >
         {habit.checkedIn ? <CheckIcon size={18} color={colors.white} strokeWidth={3} /> : <View style={styles.openCircle} />}
@@ -350,4 +366,14 @@ const styles = StyleSheet.create({
   },
   freeText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
   freeLink: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
+  newHabit: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  newHabitText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
 });

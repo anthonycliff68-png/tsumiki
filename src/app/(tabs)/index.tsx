@@ -76,7 +76,7 @@ export default function TodayScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{copy.today.emptyTitle}</Text>
             <Text style={styles.emptyBody}>{copy.today.emptyBody}</Text>
-            <PrimaryButton label={copy.today.addHabit} onPress={() => router.push('/habit')} />
+            <PrimaryButton label={copy.today.addHabit} onPress={() => router.push('/new-habit')} />
           </View>
         )}
 
@@ -84,6 +84,7 @@ export default function TodayScreen() {
           <View style={styles.padded}>
             <HeroCard
               habit={hero}
+              onEdit={() => router.push({ pathname: '/new-habit', params: { id: hero.id } })}
               busy={checkIn.isPending}
               onCheckIn={() => checkIn.mutate({ habitId: hero.id })}
               onUndo={() => undo.mutate({ habitId: hero.id })}
@@ -105,7 +106,11 @@ export default function TodayScreen() {
               contentContainerStyle={styles.tiles}
             >
               {rest.map((habit) => (
-                <UpNextTile key={habit.id} habit={habit} onPress={() => router.push('/my-day')} />
+                <UpNextTile
+                key={habit.id}
+                habit={habit}
+                onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
+              />
               ))}
             </ScrollView>
           </>

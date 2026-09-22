@@ -8,7 +8,7 @@ import { CrewsIcon, MyDayIcon, TodayIcon, YouIcon, type IconProps } from '@/comp
 import { CheckInOrb } from '@/components/CheckInOrb';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
-import { useCheckIn, useToday } from '@/lib/api';
+import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, colors, display, fonts, radii, tint } from '@/theme';
 
@@ -47,6 +47,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
 
   const { data: habits = [] } = useToday(userId);
   const checkIn = useCheckIn(userId);
+  const undo = useUndoCheckIn(userId);
 
   const done = habits.filter((h) => h.checkedIn).length;
   const total = habits.length;
@@ -119,7 +120,9 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
                 : copy.dock.checkInLabel(habit.name)
             }
             onPress={() => {
-              if (!habit.checkedIn) checkIn.mutate({ habitId: habit.id });
+              // Tapping a done orb takes it back — mis-taps happen.
+              if (habit.checkedIn) undo.mutate({ habitId: habit.id });
+              else checkIn.mutate({ habitId: habit.id });
             }}
           />
         </View>

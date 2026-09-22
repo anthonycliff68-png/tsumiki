@@ -60,12 +60,19 @@ export const spacing = {
 /** Minimum touch target, in dp. Nothing tappable goes under this. */
 export const HIT_SIZE = 44;
 
-/** Display type: Archivo condensed black, uppercase, tight. */
+/**
+ * Display type: Archivo condensed black, uppercase, tight.
+ *
+ * React Native crops each line to its line box — unlike CSS, where a glyph
+ * happily overflows a short line-height. The canvas leading goes as tight as
+ * 0.82, which slices the bottoms off the letters on device, so the line height
+ * never drops below the font size here.
+ */
 export const display = (size: number, lineHeight = size) =>
   ({
     fontFamily: fonts.display,
     fontSize: size,
-    lineHeight,
+    lineHeight: Math.max(lineHeight, size),
     letterSpacing: -1,
     textTransform: 'uppercase',
     color: colors.text,
