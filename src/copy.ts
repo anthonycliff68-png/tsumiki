@@ -48,7 +48,9 @@ export const copy = {
     invalidEmail: 'That does not look like an email address.',
     genericError: 'Something went wrong. Try again in a moment.',
     notConfigured:
-      'Supabase is not connected yet. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server.',
+      'Supabase is not connected yet. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY to .env.local, then restart the dev server.',
+    signingIn: 'Signing you in\u2026',
+    linkExpired: 'That link has already been used, or it expired. Ask for a new one.',
     signOut: 'Sign out',
   },
 

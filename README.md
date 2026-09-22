@@ -44,8 +44,10 @@ To set it up:
 
 1. Create a project at [supabase.com](https://supabase.com/dashboard) (any region near you).
 2. Copy `.env.example` to `.env.local` and fill in the **Project URL** and the
-   **anon / public** key from Project Settings → Data API. Never put the service
-   role key in this file — `EXPO_PUBLIC_*` values are baked into the app bundle.
+   **publishable key** (`sb_publishable_…`) from Project Settings → API Keys.
+   Never put the secret key in this file — `EXPO_PUBLIC_*` values are baked into
+   the app bundle. Older projects show a legacy `anon` key starting `eyJ`
+   instead; that works too, as `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
 3. Link the CLI and push the migrations:
 
    ```bash
@@ -70,6 +72,20 @@ To set it up:
 
 Restart the dev server after changing `.env.local` — Expo inlines those values
 at bundle time.
+
+## Cloud builds (EAS)
+
+`eas.json` has the build profiles but no environment values — the Supabase URL
+and key are deliberately kept out of git. Before a cloud build, set them on the
+EAS side:
+
+```bash
+npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_URL --value <url> --environment development
+npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value <key> --environment development
+```
+
+iOS builds for a physical device need a paid Apple Developer account. The
+`simulator` profile does not.
 
 ## Checks
 

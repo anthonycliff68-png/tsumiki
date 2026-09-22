@@ -56,6 +56,8 @@ function RootNavigator() {
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="(auth)/sign-in" />
       </Stack.Protected>
+      {/* The magic link lands here whether or not there is a session yet. */}
+      <Stack.Screen name="auth-callback" />
     </Stack>
   );
 }

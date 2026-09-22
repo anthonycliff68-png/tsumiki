@@ -13,6 +13,10 @@ type AuthState = {
   session: Session | null;
   /** True until the stored session has been read back from disk. */
   loading: boolean;
+  /** True while a magic-link code is being exchanged for a session. */
+  exchanging: boolean;
+  /** Set when the exchange fails, so the callback screen can say so. */
+  authError: string | null;
   signInWithEmail: (email: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -34,6 +38,8 @@ function deviceTimezone(): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exchanging, setExchanging] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const url = Linking.useURL();
 
   useEffect(() => {
@@ -60,7 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { queryParams } = Linking.parse(url);
     const code = queryParams?.code;
     if (typeof code !== 'string') return;
-    void supabase.auth.exchangeCodeForSession(code);
+
+    setExchanging(true);
+    setAuthError(null);
+    supabase.auth
+      .exchangeCodeForSession(code)
+      .then(({ error }) => {
+        if (error) setAuthError(error.message);
+      })
+      .finally(() => setExchanging(false));
   }, [url]);
 
   // Keep the profile's time zone in step with the device, so "today" means the
@@ -73,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id]);
 
   const signInWithEmail = useCallback(async (email: string) => {
+    setAuthError(null);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: authRedirectTo },
@@ -113,8 +128,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ session, loading, signInWithEmail, signInWithApple, signOut }),
-    [session, loading, signInWithEmail, signInWithApple, signOut],
+    () => ({
+      session,
+      loading,
+      exchanging,
+      authError,
+      signInWithEmail,
+      signInWithApple,
+      signOut,
+    }),
+    [session, loading, exchanging, authError, signInWithEmail, signInWithApple, signOut],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

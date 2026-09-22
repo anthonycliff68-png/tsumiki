@@ -1,341 +1,770 @@
-/**
- * Database types.
- *
- * Regenerate after every migration:
- *   npx supabase gen types typescript --project-id <your-project-ref> > src/lib/database.types.ts
- *
- * Written by hand for now, matching supabase/migrations exactly, because the
- * project has not been created yet.
- */
-
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string;
-          display_name: string;
-          avatar_color: string;
-          timezone: string;
-          push_token: string | null;
-          quiet_start: string;
-          quiet_end: string;
-          created_at: string;
-        };
-        Insert: {
-          id: string;
-          display_name?: string;
-          avatar_color?: string;
-          timezone?: string;
-          push_token?: string | null;
-          quiet_start?: string;
-          quiet_end?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          display_name?: string;
-          avatar_color?: string;
-          timezone?: string;
-          push_token?: string | null;
-          quiet_start?: string;
-          quiet_end?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
       anchors: {
         Row: {
-          id: string;
-          user_id: string;
-          label: string;
-          usual_time: string;
-          sort_order: number;
-          is_default: boolean;
-          created_at: string;
-        };
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          sort_order: number
+          user_id: string
+          usual_time: string
+        }
         Insert: {
-          id?: string;
-          user_id: string;
-          label: string;
-          usual_time: string;
-          sort_order?: number;
-          is_default?: boolean;
-          created_at?: string;
-        };
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          sort_order?: number
+          user_id: string
+          usual_time: string
+        }
         Update: {
-          id?: string;
-          user_id?: string;
-          label?: string;
-          usual_time?: string;
-          sort_order?: number;
-          is_default?: boolean;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      habits: {
-        Row: {
-          id: string;
-          owner_id: string;
-          name: string;
-          color: string;
-          crew_id: string | null;
-          created_at: string;
-          archived_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          owner_id: string;
-          name: string;
-          color: string;
-          crew_id?: string | null;
-          created_at?: string;
-          archived_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          owner_id?: string;
-          name?: string;
-          color?: string;
-          crew_id?: string | null;
-          created_at?: string;
-          archived_at?: string | null;
-        };
-        Relationships: [];
-      };
-      habit_schedules: {
-        Row: {
-          id: string;
-          habit_id: string;
-          user_id: string;
-          mode: Database['public']['Enums']['schedule_mode'];
-          anchor_id: string | null;
-          at_time: string | null;
-          days_of_week: number[];
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          habit_id: string;
-          user_id: string;
-          mode: Database['public']['Enums']['schedule_mode'];
-          anchor_id?: string | null;
-          at_time?: string | null;
-          days_of_week?: number[];
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          habit_id?: string;
-          user_id?: string;
-          mode?: Database['public']['Enums']['schedule_mode'];
-          anchor_id?: string | null;
-          at_time?: string | null;
-          days_of_week?: number[];
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      crews: {
-        Row: {
-          id: string;
-          name: string;
-          habit_id: string;
-          created_by: string;
-          created_at: string;
-          streak_current: number;
-          streak_best: number;
-          streak_updated_on: string | null;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          habit_id: string;
-          created_by: string;
-          created_at?: string;
-          streak_current?: number;
-          streak_best?: number;
-          streak_updated_on?: string | null;
-        };
-        Update: {
-          /** Only `name` is writable by the app; streak fields are service-role only. */
-          name?: string;
-        };
-        Relationships: [];
-      };
-      crew_members: {
-        Row: {
-          crew_id: string;
-          user_id: string;
-          joined_at: string;
-          role: Database['public']['Enums']['crew_role'];
-          grace_used: boolean;
-        };
-        Insert: {
-          crew_id: string;
-          user_id: string;
-          joined_at?: string;
-          role?: Database['public']['Enums']['crew_role'];
-          grace_used?: boolean;
-        };
-        Update: never;
-        Relationships: [];
-      };
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          sort_order?: number
+          user_id?: string
+          usual_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anchors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anchors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkins: {
         Row: {
-          id: string;
-          habit_id: string;
-          user_id: string;
-          local_date: string;
-          created_at: string;
-        };
+          created_at: string
+          habit_id: string
+          id: string
+          local_date: string
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          habit_id: string;
-          user_id: string;
-          local_date: string;
-          created_at?: string;
-        };
-        Update: never;
-        Relationships: [];
-      };
-      nudges: {
+          created_at?: string
+          habit_id: string
+          id?: string
+          local_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          habit_id?: string
+          id?: string
+          local_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_members: {
         Row: {
-          id: string;
-          crew_id: string;
-          from_user: string;
-          to_user: string;
-          message: string;
-          local_date: string;
-          created_at: string;
-          status: Database['public']['Enums']['nudge_status'];
-        };
+          crew_id: string
+          grace_used: boolean
+          joined_at: string
+          role: Database["public"]["Enums"]["crew_role"]
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          crew_id: string;
-          from_user: string;
-          to_user: string;
-          message: string;
-          local_date: string;
-          created_at?: string;
-          status?: Database['public']['Enums']['nudge_status'];
-        };
-        Update: never;
-        Relationships: [];
-      };
-      reactions: {
+          crew_id: string
+          grace_used?: boolean
+          joined_at?: string
+          role?: Database["public"]["Enums"]["crew_role"]
+          user_id: string
+        }
+        Update: {
+          crew_id?: string
+          grace_used?: boolean
+          joined_at?: string
+          role?: Database["public"]["Enums"]["crew_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_members_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crews: {
         Row: {
-          id: string;
-          nudge_id: string;
-          from_user: string;
-          kind: Database['public']['Enums']['reaction_kind'];
-          created_at: string;
-        };
+          created_at: string
+          created_by: string
+          habit_id: string
+          id: string
+          name: string
+          streak_best: number
+          streak_current: number
+          streak_updated_on: string | null
+        }
         Insert: {
-          id?: string;
-          nudge_id: string;
-          from_user: string;
-          kind: Database['public']['Enums']['reaction_kind'];
-          created_at?: string;
-        };
-        Update: never;
-        Relationships: [];
-      };
+          created_at?: string
+          created_by: string
+          habit_id: string
+          id?: string
+          name: string
+          streak_best?: number
+          streak_current?: number
+          streak_updated_on?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          habit_id?: string
+          id?: string
+          name?: string
+          streak_best?: number
+          streak_current?: number
+          streak_updated_on?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crews_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_schedules: {
+        Row: {
+          anchor_id: string | null
+          at_time: string | null
+          created_at: string
+          days_of_week: number[]
+          habit_id: string
+          id: string
+          mode: Database["public"]["Enums"]["schedule_mode"]
+          user_id: string
+        }
+        Insert: {
+          anchor_id?: string | null
+          at_time?: string | null
+          created_at?: string
+          days_of_week?: number[]
+          habit_id: string
+          id?: string
+          mode: Database["public"]["Enums"]["schedule_mode"]
+          user_id: string
+        }
+        Update: {
+          anchor_id?: string | null
+          at_time?: string | null
+          created_at?: string
+          days_of_week?: number[]
+          habit_id?: string
+          id?: string
+          mode?: Database["public"]["Enums"]["schedule_mode"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_schedules_anchor_id_fkey"
+            columns: ["anchor_id"]
+            isOneToOne: false
+            referencedRelation: "anchors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_schedules_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_schedules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_schedules_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          archived_at: string | null
+          color: string
+          created_at: string
+          crew_id: string | null
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          color: string
+          created_at?: string
+          crew_id?: string | null
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          color?: string
+          created_at?: string
+          crew_id?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habits_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habits_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habits_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
-          code: string;
-          crew_id: string;
-          created_by: string;
-          created_at: string;
-          expires_at: string;
-          uses: number;
-        };
+          code: string
+          created_at: string
+          created_by: string
+          crew_id: string
+          expires_at: string
+          uses: number
+        }
         Insert: {
-          code: string;
-          crew_id: string;
-          created_by: string;
-          created_at?: string;
-          expires_at?: string;
-          uses?: number;
-        };
-        Update: never;
-        Relationships: [];
-      };
+          code: string
+          created_at?: string
+          created_by: string
+          crew_id: string
+          expires_at?: string
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          crew_id?: string
+          expires_at?: string
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nudges: {
+        Row: {
+          created_at: string
+          crew_id: string
+          from_user: string
+          id: string
+          local_date: string
+          message: string
+          status: Database["public"]["Enums"]["nudge_status"]
+          to_user: string
+        }
+        Insert: {
+          created_at?: string
+          crew_id: string
+          from_user: string
+          id?: string
+          local_date: string
+          message: string
+          status?: Database["public"]["Enums"]["nudge_status"]
+          to_user: string
+        }
+        Update: {
+          created_at?: string
+          crew_id?: string
+          from_user?: string
+          id?: string
+          local_date?: string
+          message?: string
+          status?: Database["public"]["Enums"]["nudge_status"]
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nudges_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nudges_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nudges_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nudges_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nudges_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_color: string
+          created_at: string
+          display_name: string
+          id: string
+          push_token: string | null
+          quiet_end: string
+          quiet_start: string
+          timezone: string
+        }
+        Insert: {
+          avatar_color?: string
+          created_at?: string
+          display_name?: string
+          id: string
+          push_token?: string | null
+          quiet_end?: string
+          quiet_start?: string
+          timezone?: string
+        }
+        Update: {
+          avatar_color?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          push_token?: string | null
+          quiet_end?: string
+          quiet_start?: string
+          timezone?: string
+        }
+        Relationships: []
+      }
+      reactions: {
+        Row: {
+          created_at: string
+          from_user: string
+          id: string
+          kind: Database["public"]["Enums"]["reaction_kind"]
+          nudge_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user: string
+          id?: string
+          kind: Database["public"]["Enums"]["reaction_kind"]
+          nudge_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["reaction_kind"]
+          nudge_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_nudge_id_fkey"
+            columns: ["nudge_id"]
+            isOneToOne: false
+            referencedRelation: "nudges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       status_events: {
         Row: {
-          id: string;
-          crew_id: string;
-          user_id: string;
-          kind: Database['public']['Enums']['status_kind'];
-          created_at: string;
-          expires_at: string;
-        };
+          created_at: string
+          crew_id: string
+          expires_at: string
+          id: string
+          kind: Database["public"]["Enums"]["status_kind"]
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          crew_id: string;
-          user_id: string;
-          kind?: Database['public']['Enums']['status_kind'];
-          created_at?: string;
-          expires_at?: string;
-        };
-        Update: never;
-        Relationships: [];
-      };
-    };
+          created_at?: string
+          crew_id: string
+          expires_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["status_kind"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          crew_id?: string
+          expires_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["status_kind"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_events_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
     Views: {
-      /** Crewmates' name and colour. Nothing else about them is readable. */
       crew_profiles: {
         Row: {
-          id: string;
-          display_name: string;
-          avatar_color: string;
-        };
-        Relationships: [];
-      };
-    };
+          avatar_color: string | null
+          display_name: string | null
+          id: string | null
+        }
+        Insert: {
+          avatar_color?: string | null
+          display_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          avatar_color?: string | null
+          display_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
+    }
     Functions: {
+      can_read_habit: { Args: { p_habit: string }; Returns: boolean }
       is_crew_member: {
-        Args: { p_crew: string; p_user?: string };
-        Returns: boolean;
-      };
+        Args: { p_crew: string; p_user?: string }
+        Returns: boolean
+      }
       is_crew_owner: {
-        Args: { p_crew: string; p_user?: string };
-        Returns: boolean;
-      };
-      shares_crew_with: {
-        Args: { p_user: string };
-        Returns: boolean;
-      };
-      can_read_habit: {
-        Args: { p_habit: string };
-        Returns: boolean;
-      };
-    };
+        Args: { p_crew: string; p_user?: string }
+        Returns: boolean
+      }
+      shares_crew_with: { Args: { p_user: string }; Returns: boolean }
+    }
     Enums: {
-      schedule_mode: 'after' | 'at' | 'any';
-      crew_role: 'owner' | 'member';
-      nudge_status: 'sent' | 'delivered' | 'acted';
-      reaction_kind: 'thanks' | 'same_time_tmrw';
-      status_kind: 'heading_out';
-    };
-    CompositeTypes: Record<never, never>;
-  };
-};
+      crew_role: "owner" | "member"
+      nudge_status: "sent" | "delivered" | "acted"
+      reaction_kind: "thanks" | "same_time_tmrw"
+      schedule_mode: "after" | "at" | "any"
+      status_kind: "heading_out"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
 
-export type Tables<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Row'];
-export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export type Profile = Tables<'profiles'>;
-export type Anchor = Tables<'anchors'>;
-export type Habit = Tables<'habits'>;
-export type HabitSchedule = Tables<'habit_schedules'>;
-export type Crew = Tables<'crews'>;
-export type CrewMember = Tables<'crew_members'>;
-export type Checkin = Tables<'checkins'>;
-export type Nudge = Tables<'nudges'>;
-export type Invite = Tables<'invites'>;
-export type StatusEvent = Tables<'status_events'>;
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      crew_role: ["owner", "member"],
+      nudge_status: ["sent", "delivered", "acted"],
+      reaction_kind: ["thanks", "same_time_tmrw"],
+      schedule_mode: ["after", "at", "any"],
+      status_kind: ["heading_out"],
+    },
+  },
+} as const
