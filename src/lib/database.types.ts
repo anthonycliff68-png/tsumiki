@@ -618,6 +618,21 @@ export type Database = {
         Args: { p_habit_id: string; p_name: string }
         Returns: string
       }
+      create_invite: { Args: { p_crew_id: string }; Returns: string }
+      generate_invite_code: { Args: never; Returns: string }
+      get_invite: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          crew_name: string
+          expired: boolean
+          habit_color: string
+          habit_name: string
+          is_full: boolean
+          member_count: number
+          streak_current: number
+        }[]
+      }
       is_crew_member: {
         Args: { p_crew: string; p_user?: string }
         Returns: boolean
@@ -625,6 +640,15 @@ export type Database = {
       is_crew_owner: {
         Args: { p_crew: string; p_user?: string }
         Returns: boolean
+      }
+      join_crew: {
+        Args: {
+          p_anchor_id?: string
+          p_at_time?: string
+          p_code: string
+          p_mode: Database["public"]["Enums"]["schedule_mode"]
+        }
+        Returns: string
       }
       leave_crew: { Args: { p_crew_id: string }; Returns: undefined }
       shares_crew_with: { Args: { p_user: string }; Returns: boolean }

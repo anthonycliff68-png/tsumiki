@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { takePendingInvite } from '@/lib/invite';
 import { colors } from '@/theme';
 
 const queryClient = new QueryClient({
@@ -58,6 +59,14 @@ function RootNavigator() {
     if (!loading) SplashScreen.hideAsync().catch(() => {});
   }, [loading]);
 
+  // An invite tapped before signing in picks up where it left off.
+  useEffect(() => {
+    if (!session) return;
+    void takePendingInvite().then((code) => {
+      if (code) router.replace({ pathname: '/j/[code]', params: { code } });
+    });
+  }, [session]);
+
   if (loading) return null;
 
   return (
@@ -73,12 +82,14 @@ function RootNavigator() {
         <Stack.Screen name="new-habit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="crew/[id]" />
         <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="(auth)/sign-in" />
       </Stack.Protected>
-      {/* The magic link lands here whether or not there is a session yet. */}
+      {/* These two work signed in or out: the magic link, and an invite link. */}
       <Stack.Screen name="auth-callback" />
+      <Stack.Screen name="j/[code]" />
     </Stack>
   );
 }

@@ -122,7 +122,18 @@ export default function CrewScreen() {
           <Text style={styles.subtitle}>{copy.crews.sameHabit(crew.habitName)}</Text>
         </View>
 
-        <Text style={styles.crewLine}>{copy.crews.crewLine(inCount, crew.members.length)}</Text>
+        <View style={styles.crewLineRow}>
+          <Text style={styles.crewLine}>{copy.crews.crewLine(inCount, crew.members.length)}</Text>
+          {crew.members.length < 5 && (
+            <Text
+              accessibilityRole="button"
+              style={[styles.crewLine, { color: tint(crew.habitColor, 0.5) }]}
+              onPress={() => router.push({ pathname: '/invite/[id]', params: { id: crew.id } })}
+            >
+              {copy.crews.invite}
+            </Text>
+          )}
+        </View>
 
         <View style={styles.members}>
           {crew.members.map((member) => (
@@ -155,7 +166,6 @@ export default function CrewScreen() {
 
         {me?.graceUsed && <Text style={styles.grace}>{copy.crews.graceUsed}</Text>}
 
-        <Text style={styles.hint}>{copy.crews.invitesLater}</Text>
         <Text style={styles.hint}>{copy.nudge.pushLater}</Text>
 
         <TextButton
@@ -335,6 +345,7 @@ const styles = StyleSheet.create({
   headerBlock: { gap: 6 },
   subtitle: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
   crewLine: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
+  crewLineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   members: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   member: { width: 100, gap: 6 },
   tile: { width: 100, height: 100, borderRadius: radii.card, alignItems: 'center', justifyContent: 'center' },

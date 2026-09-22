@@ -774,3 +774,96 @@ export function useMyProfile(userId: string | undefined) {
     },
   });
 }
+
+// --- invites ---------------------------------------------------------------
+
+export type InvitePreview = {
+  code: string;
+  crewName: string;
+  habitName: string;
+  habitColor: string;
+  streakCurrent: number;
+  memberCount: number;
+  isFull: boolean;
+  expired: boolean;
+};
+
+/** What an invite code shows before you join. Works signed out. */
+export function useInvitePreview(code: string | undefined) {
+  return useQuery({
+    queryKey: ['invite', code],
+    enabled: Boolean(code),
+    retry: false,
+    queryFn: async (): Promise<InvitePreview | null> => {
+      const { data, error } = await supabase.rpc('get_invite', { p_code: code ?? '' });
+      if (error) throw error;
+      const row = (data ?? [])[0];
+      if (!row) return null;
+      return {
+        code: row.code,
+        crewName: row.crew_name,
+        habitName: row.habit_name,
+        habitColor: row.habit_color,
+        streakCurrent: row.streak_current,
+        memberCount: row.member_count,
+        isFull: row.is_full,
+        expired: row.expired,
+      };
+    },
+  });
+}
+
+/** Make (or reuse) the crew's live invite code. */
+export function useCreateInvite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (crewId: string): Promise<string> => {
+      const { data, error } = await supabase.rpc('create_invite', { p_crew_id: crewId });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['crew'] }),
+  });
+}
+
+export class InviteNotFoundError extends Error {}
+export class CrewFullError extends Error {}
+
+/** Join a crew by code, picking your own moment for its habit. */
+export function useJoinCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      code,
+      mode,
+      anchorId,
+      atTime,
+    }: {
+      code: string;
+      mode: ScheduleMode;
+      anchorId?: string | null;
+      atTime?: string | null;
+    }): Promise<string> => {
+      const { data, error } = await supabase.rpc('join_crew', {
+        p_code: code,
+        p_mode: mode,
+        p_anchor_id: mode === 'after' ? (anchorId ?? undefined) : undefined,
+        p_at_time: mode === 'at' ? (atTime ?? undefined) : undefined,
+      });
+      if (error) {
+        if (error.code === 'P0002') throw new InviteNotFoundError(error.message);
+        if (error.code === '23514' && error.message.includes('crew_full')) {
+          throw new CrewFullError(error.message);
+        }
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+    },
+  });
+}

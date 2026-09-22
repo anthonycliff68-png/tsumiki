@@ -181,6 +181,36 @@ export const copy = {
       'Push notifications arrive in a later build step; nudges show up in the app for now.',
   },
 
+  invite: {
+    title: 'Bring your crew',
+    spots: (taken: number) => `${taken} of 5 spots`,
+    whatTheyGet: 'What they\u2019ll get',
+    share: 'Send invite',
+    linkLabel: 'Join the crew',
+    copyHint: 'The link works for seven days, or until the crew is full.',
+    universalLinksLater:
+      'The link needs the Tsumiki domain set up before it opens the app from a browser. Until then, share it with someone who already has the app.',
+    full: 'This crew is full.',
+    failed: 'Could not make an invite link.',
+
+    joinTitle: (crew: string) => `Join ${crew}`,
+    invitedBy: 'You\u2019ve been invited',
+    yourMoment: 'You\u2019ll do it after\u2026',
+    join: 'Join the crew',
+    notNow: 'Not now',
+    signInToJoin: 'Sign in to join',
+    signInBlurb: 'Make an account first and we\u2019ll bring you straight back here.',
+    notFound: 'That invite link has expired, or it never existed.',
+    crewFull: 'This crew already has five people in it.',
+    alreadyIn: 'You\u2019re already in this crew.',
+
+    joinedTitle: 'You\u2019re in.',
+    joinedBody: (crew: string, count: number) =>
+      `${crew} is ${count} strong. Everyone can see you joined.`,
+    firstCheckIn: 'First check-in',
+    seeMyDay: 'See my day',
+  },
+
   crews: {
     title: 'Crews',
     groupStreak: 'Group streak',
@@ -198,7 +228,7 @@ export const copy = {
     graceUsed: 'One miss, back tomorrow keeps it alive',
     leave: 'Leave this crew',
     back: 'Back',
-    invitesLater: 'Invite links arrive in a later build step, so a crew is just you for now.',
+    invite: 'Invite',
     nudgesLater: 'Nudging arrives in a later build step.',
 
     emptyTitle: 'No crews yet',

@@ -148,7 +148,6 @@ export default function CrewsScreen() {
               maxLength={40}
             />
 
-            <Text style={styles.hint}>{copy.crews.invitesLater}</Text>
             {error && <Text style={styles.error}>{error}</Text>}
 
             <PrimaryButton
