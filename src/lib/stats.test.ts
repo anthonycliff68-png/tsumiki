@@ -9,12 +9,13 @@ import {
   calendarFor,
   currentRun,
   datesBetween,
+  endOfMonth,
   isDue,
   overallOf,
+  periodRange,
+  startOfWeek,
   statsFor,
   weekdayOf,
-  weeklyFor,
-  windowStart,
   type HabitInput,
 } from './stats.ts';
 
@@ -54,17 +55,59 @@ describe('dates', () => {
   });
 });
 
-describe('windows', () => {
-  it('week is the last seven days, today included', () => {
-    assert.equal(windowStart('week', '2026-09-21', '2020-01-01'), '2026-09-15');
+describe('periods', () => {
+  it('a day is just that day', () => {
+    assert.deepEqual(periodRange('day', '2026-09-22'), {
+      from: '2026-09-22',
+      to: '2026-09-22',
+    });
   });
 
-  it('month is the last thirty', () => {
-    assert.equal(windowStart('month', '2026-09-21', '2020-01-01'), '2026-08-23');
+  it('a week runs Sunday to Saturday around the date', () => {
+    // 22 Sep 2026 is a Tuesday.
+    assert.deepEqual(periodRange('week', '2026-09-22'), {
+      from: '2026-09-20',
+      to: '2026-09-26',
+    });
   });
 
-  it('all time starts at the earliest thing there is', () => {
-    assert.equal(windowStart('all', '2026-09-21', '2026-03-04'), '2026-03-04');
+  it('a week starting on Sunday is its own first day', () => {
+    assert.equal(startOfWeek('2026-09-20'), '2026-09-20');
+  });
+
+  it('a month is the whole calendar month', () => {
+    assert.deepEqual(periodRange('month', '2026-09-22'), {
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+  });
+
+  it('knows how long a month is, February included', () => {
+    assert.equal(endOfMonth('2026-02-05'), '2026-02-28');
+    assert.equal(endOfMonth('2028-02-05'), '2028-02-29');
+    assert.equal(endOfMonth('2026-12-31'), '2026-12-31');
+  });
+
+  it('steps back a period at a time', () => {
+    assert.deepEqual(periodRange('day', '2026-09-22', 1), {
+      from: '2026-09-21',
+      to: '2026-09-21',
+    });
+    assert.deepEqual(periodRange('week', '2026-09-22', 1), {
+      from: '2026-09-13',
+      to: '2026-09-19',
+    });
+    assert.deepEqual(periodRange('month', '2026-09-22', 1), {
+      from: '2026-08-01',
+      to: '2026-08-31',
+    });
+  });
+
+  it('steps back across a year boundary', () => {
+    assert.deepEqual(periodRange('month', '2026-01-15', 1), {
+      from: '2025-12-01',
+      to: '2025-12-31',
+    });
   });
 });
 
@@ -267,40 +310,26 @@ describe('the calendar', () => {
   });
 });
 
-describe('weekly buckets', () => {
-  it('groups due days into weeks starting on Sunday', () => {
-    const weeks = weeklyFor(
-      habit({ checkedOn: ['2026-09-21', '2026-09-22'] }),
+describe('days that have not happened yet', () => {
+  it('does not count a future scheduled day as missed', () => {
+    const stats = statsFor(habit(), '2026-09-20', '2026-09-26', '2026-09-22');
+    // Sunday to Tuesday only; the rest of the week is still to come.
+    assert.equal(stats.due, 3);
+  });
+
+  it('marks them apart in the calendar', () => {
+    const cal = calendarFor(habit(), '2026-09-20', '2026-09-26', '2026-09-22');
+    assert.equal(cal.find((d) => d.date === '2026-09-22')?.state, 'missed');
+    assert.equal(cal.find((d) => d.date === '2026-09-23')?.state, 'future');
+  });
+
+  it('still shows a future day you somehow checked in as done', () => {
+    const cal = calendarFor(
+      habit({ checkedOn: ['2026-09-25'] }),
       '2026-09-20',
-      '2026-09-28',
-    );
-    // 20 Sep is a Sunday, so it opens a week running to Saturday the 26th;
-    // the 27th starts the next one.
-    assert.equal(weeks.length, 2);
-    assert.equal(weeks[0]?.weekStart, '2026-09-20');
-    assert.equal(weeks[0]?.due, 7);
-    assert.equal(weeks[0]?.done, 2);
-    assert.equal(weeks[1]?.weekStart, '2026-09-27');
-    assert.equal(weeks[1]?.due, 2);
-  });
-
-  it('reports a rate per week', () => {
-    const weeks = weeklyFor(
-      habit({ checkedOn: ['2026-09-21', '2026-09-22'] }),
-      '2026-09-21',
       '2026-09-26',
+      '2026-09-22',
     );
-    assert.equal(weeks[0]?.due, 6);
-    assert.equal(weeks[0]?.done, 2);
-    assert.equal(weeks[0]?.rate, 2 / 6);
-  });
-
-  it('skips weeks where nothing was ever due', () => {
-    const weeks = weeklyFor(
-      habit({ daysOfWeek: [1], createdOn: '2026-09-21' }),
-      '2026-09-21',
-      '2026-09-27',
-    );
-    assert.equal(weeks.length, 1);
+    assert.equal(cal.find((d) => d.date === '2026-09-25')?.state, 'done');
   });
 });

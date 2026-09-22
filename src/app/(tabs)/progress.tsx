@@ -15,20 +15,51 @@ import {
   calendarFor,
   currentRun,
   overallOf,
+  periodRange,
   statsFor,
-  weeklyFor,
-  windowStart,
   type StatsWindow,
 } from '@/lib/stats';
 import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [
+  { key: 'day', label: copy.stats.day },
   { key: 'week', label: copy.stats.week },
   { key: 'month', label: copy.stats.month },
-  { key: 'all', label: copy.stats.all },
 ];
 
-const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+/** What to call the period on screen. */
+function periodLabel(window: StatsWindow, offset: number, from: string, to: string): string {
+  if (offset === 0) {
+    if (window === 'day') return copy.stats.today;
+    if (window === 'week') return copy.stats.thisWeek;
+    return copy.stats.thisMonth;
+  }
+  if (window === 'day') return longDate(from);
+  if (window === 'month') return monthLabel(from);
+  return `${shortDate(from)} – ${shortDate(to)}`;
+}
+
+function asUtc(date: string): Date {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+}
+
+function longDate(date: string): string {
+  return asUtc(date).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+function monthLabel(date: string): string {
+  return asUtc(date).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
 
 /** "2026-08-24" -> "24 Aug". */
 function shortDate(date: string): string {
@@ -51,7 +82,8 @@ export default function ProgressScreen() {
   const resetHistory = useResetHistory(userId);
 
   const [window, setWindow] = useState<StatsWindow>('week');
-  const [openId, setOpenId] = useState<string | null>(null);
+  /** How many periods back from the current one we are looking. */
+  const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
 
   useFocusEffect(
@@ -61,8 +93,6 @@ export default function ProgressScreen() {
   );
 
   const today = localDateString();
-  // All time has to reach back past the oldest habit to the oldest check-in:
-  // a day filled in through the day pills can predate the habit itself.
   const earliest = useMemo(
     () =>
       history.reduce((oldest, habit) => {
@@ -74,23 +104,23 @@ export default function ProgressScreen() {
     [history, today],
   );
 
-  const from = useMemo(
-    () => windowStart(window, today, earliest),
-    [window, today, earliest],
+  const { from, to } = useMemo(
+    () => periodRange(window, today, offset),
+    [window, today, offset],
   );
-  // If a wider window starts no earlier than the week does, there is simply no
-  // older history — worth saying, rather than looking like a broken filter.
-  const shortestStart = useMemo(() => windowStart('week', today, earliest), [today, earliest]);
+
+  // Stepping back stops where the history does; there is no forward past today.
+  const canGoBack = from > earliest;
+  const canGoForward = offset > 0;
 
   const stats = useMemo(() => {
     return history
       .map((habit) => ({
-        ...statsFor(habit, from, today),
-        calendar: calendarFor(habit, from, today),
-        weeks: weeklyFor(habit, from, today),
+        ...statsFor(habit, from, to, today),
+        calendar: calendarFor(habit, from, to, today),
       }))
       .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
-  }, [history, from, today]);
+  }, [history, from, to, today]);
 
   const overall = useMemo(() => overallOf(stats), [stats]);
   const accent = stats[0]?.color ?? habitColors[0];
@@ -135,95 +165,85 @@ export default function ProgressScreen() {
           })}
         </View>
 
+        <View style={styles.stepper}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.stats.earlier}
+            accessibilityState={{ disabled: !canGoBack }}
+            disabled={!canGoBack}
+            onPress={() => setOffset((current) => current + 1)}
+            style={[styles.step, !canGoBack && styles.stepOff]}
+          >
+            <Text style={styles.stepText}>‹</Text>
+          </Pressable>
+
+          <Text style={styles.period}>{periodLabel(window, offset, from, to)}</Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.stats.later}
+            accessibilityState={{ disabled: !canGoForward }}
+            disabled={!canGoForward}
+            onPress={() => setOffset((current) => Math.max(0, current - 1))}
+            style={[styles.step, !canGoForward && styles.stepOff]}
+          >
+            <Text style={styles.stepText}>›</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.headline}>
           <Text style={[display(64, 58), { color: colors.text }]}>
             {overall.rate === null ? '—' : `${Math.round(overall.rate * 100)}%`}
           </Text>
           <Text style={styles.headlineSub}>
-            {overall.rate === null ? copy.stats.noneDue : copy.stats.doneOf(overall.done, overall.due)}
+            {overall.rate === null
+              ? copy.stats.nothingHere
+              : copy.stats.doneOf(overall.done, overall.due)}
           </Text>
-          {/* The window is worth stating: with a short history, a month and a
-              week hold the same days, and the numbers matching is honest. */}
-          <Text style={styles.range}>
-            {copy.stats.covering(shortDate(from), shortDate(today))}
-            {window !== 'week' && from >= shortestStart ? ` · ${copy.stats.sameAsWeek}` : ''}
-          </Text>
+          <Text style={styles.range}>{copy.stats.covering(shortDate(from), shortDate(to))}</Text>
         </View>
 
         {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
 
-        {stats.map((habit) => {
-          const open = openId === habit.habitId;
-          return (
-            <Pressable
-              key={habit.habitId}
-              accessibilityRole="button"
-              accessibilityLabel={habit.name}
-              onPress={() => setOpenId(open ? null : habit.habitId)}
-              style={styles.habit}
-            >
-              <View style={styles.habitHead}>
-                <Text style={styles.habitName} numberOfLines={1}>
-                  {habit.name}
-                </Text>
-                <Text style={styles.habitRate}>
-                  {habit.rate === null ? copy.stats.notYet : `${Math.round(habit.rate * 100)}%`}
-                </Text>
-              </View>
-
-              <View style={styles.track}>
-                <View
-                  style={[
-                    styles.fill,
-                    { width: `${Math.round((habit.rate ?? 0) * 100)}%`, backgroundColor: habit.color },
-                  ]}
-                />
-              </View>
-
-              <Text style={styles.habitMeta}>
-                {copy.stats.doneOf(habit.done, habit.due)} · {copy.stats.run} {currentRun(habit)} ·{' '}
-                {copy.stats.best} {bestRun(habit)}
+        {stats.map((habit) => (
+          <View key={habit.habitId} style={styles.habit}>
+            <View style={styles.habitHead}>
+              <Text style={styles.habitName} numberOfLines={1}>
+                {habit.name}
               </Text>
+              <Text style={styles.habitRate}>
+                {habit.rate === null ? copy.stats.notYet : `${Math.round(habit.rate * 100)}%`}
+              </Text>
+            </View>
 
+            <View style={styles.track}>
+              <View
+                style={[
+                  styles.fill,
+                  {
+                    width: `${Math.round((habit.rate ?? 0) * 100)}%`,
+                    backgroundColor: habit.color,
+                  },
+                ]}
+              />
+            </View>
+
+            <Text style={styles.habitMeta}>
+              {copy.stats.doneOf(habit.done, habit.due)} · {copy.stats.run} {currentRun(habit)} ·{' '}
+              {copy.stats.best} {bestRun(habit)}
+            </Text>
+
+            {window !== 'day' && (
               <View style={styles.calendar}>
-                <HabitCalendar
-                  window={window}
-                  color={habit.color}
-                  days={habit.calendar}
-                  weeks={habit.weeks}
-                />
+                <HabitCalendar window={window} color={habit.color} days={habit.calendar} />
               </View>
+            )}
+          </View>
+        ))}
 
-              {open && (
-                <View style={styles.detail}>
-                  <Text style={styles.label}>{copy.stats.byWeekday}</Text>
-                  <View style={styles.weekdays}>
-                    {habit.byWeekday.map((day, index) => {
-                      const rate = day.due === 0 ? null : day.done / day.due;
-                      return (
-                        <View key={index} style={styles.weekday}>
-                          <View style={styles.barTrack}>
-                            <View
-                              style={[
-                                styles.bar,
-                                {
-                                  height: `${Math.max(4, Math.round((rate ?? 0) * 100))}%`,
-                                  backgroundColor:
-                                    rate === null ? colors.hairline : habit.color,
-                                },
-                              ]}
-                            />
-                          </View>
-                          <Text style={styles.weekdayLetter}>{WEEKDAY_LETTERS[index]}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+        {window !== 'day' && stats.length > 0 && (
+          <Text style={styles.storage}>{copy.stats.notDue}</Text>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.storage}>{copy.stats.storage}</Text>
@@ -288,25 +308,20 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)' },
   fill: { height: 8, borderRadius: 4 },
   habitMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
-  detail: { gap: spacing.sm, paddingTop: spacing.sm },
-  label: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-  },
-  weekdays: { flexDirection: 'row', gap: 6, height: 74 },
-  weekday: { flex: 1, gap: 4 },
-  barTrack: { flex: 1, justifyContent: 'flex-end' },
-  bar: { width: '100%', borderRadius: 3 },
-  weekdayLetter: {
-    textAlign: 'center',
-    fontFamily: fonts.bodyBold,
-    fontSize: 10,
-    color: colors.textFaint,
-  },
   calendar: { paddingTop: spacing.sm },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  step: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stepOff: { opacity: 0.3 },
+  stepText: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
+  period: { flex: 1, textAlign: 'center', fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   footer: { gap: spacing.md, paddingTop: spacing.lg },
   storage: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.textFaint },
   confirm: {

@@ -7,7 +7,7 @@
  * so it lives here as pure functions with tests.
  */
 
-export type StatsWindow = 'week' | 'month' | 'all';
+export type StatsWindow = 'day' | 'week' | 'month';
 
 export type HabitInput = {
   habitId: string;
@@ -61,15 +61,48 @@ export function datesBetween(from: string, to: string, limit = 400): string[] {
   return dates;
 }
 
+/** The Sunday that opens this date's week. */
+export function startOfWeek(date: string): string {
+  return shiftDate(date, -weekdayOf(date));
+}
+
+export function startOfMonth(date: string): string {
+  return `${date.slice(0, 7)}-01`;
+}
+
+export function endOfMonth(date: string): string {
+  const [y, m] = date.split('-').map(Number);
+  // Day 0 of the next month is the last day of this one.
+  const last = new Date(Date.UTC(y ?? 1970, m ?? 1, 0));
+  return last.toISOString().slice(0, 10);
+}
+
+export function shiftMonth(date: string, months: number): string {
+  const [y, m] = date.split('-').map(Number);
+  const at = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1 + months, 1));
+  return at.toISOString().slice(0, 10);
+}
+
 /**
- * Where a window starts. Week and month are rolling — the last 7 and 30 days,
- * today included — rather than calendar boundaries, so the number means the
- * same thing whichever day you open it.
+ * The period on screen: a real day, a Sunday-to-Saturday week, or a calendar
+ * month, stepped back by `offset`. Fixed periods rather than rolling windows,
+ * so a week always means the same seven days to everyone looking at it.
  */
-export function windowStart(window: StatsWindow, today: string, earliest: string): string {
-  if (window === 'week') return shiftDate(today, -6);
-  if (window === 'month') return shiftDate(today, -29);
-  return earliest;
+export function periodRange(
+  window: StatsWindow,
+  today: string,
+  offset = 0,
+): { from: string; to: string } {
+  if (window === 'day') {
+    const day = shiftDate(today, -offset);
+    return { from: day, to: day };
+  }
+  if (window === 'week') {
+    const from = shiftDate(startOfWeek(today), -7 * offset);
+    return { from, to: shiftDate(from, 6) };
+  }
+  const first = shiftMonth(startOfMonth(today), -offset);
+  return { from: first, to: endOfMonth(first) };
 }
 
 /**
@@ -79,14 +112,21 @@ export function windowStart(window: StatsWindow, today: string, earliest: string
  * last week through the day pills is real history and should show up, but the
  * empty weeks before you thought of the habit are not misses.
  */
-export function isDue(habit: HabitInput, date: string): boolean {
+export function isDue(habit: HabitInput, date: string, today?: string): boolean {
+  // A day that has not happened yet cannot have been missed.
+  if (today !== undefined && date > today) return false;
   if (!habit.daysOfWeek.includes(weekdayOf(date))) return false;
   if (habit.archivedOn !== null && date >= habit.archivedOn) return false;
   if (date < habit.createdOn) return habit.checkedOn.includes(date);
   return true;
 }
 
-export function statsFor(habit: HabitInput, from: string, to: string): HabitStats {
+export function statsFor(
+  habit: HabitInput,
+  from: string,
+  to: string,
+  today?: string,
+): HabitStats {
   const checked = new Set(habit.checkedOn);
   const byWeekday: WeekdayStat[] = Array.from({ length: 7 }, (_, weekday) => ({
     weekday,
@@ -98,7 +138,7 @@ export function statsFor(habit: HabitInput, from: string, to: string): HabitStat
   let done = 0;
 
   for (const date of datesBetween(from, to)) {
-    if (!isDue(habit, date)) continue;
+    if (!isDue(habit, date, today)) continue;
     const wasDone = checked.has(date);
     due += 1;
     if (wasDone) done += 1;
@@ -154,7 +194,7 @@ export function bestRun(stats: HabitStats): number {
   return best;
 }
 
-export type DayState = 'done' | 'missed' | 'not-due';
+export type DayState = 'done' | 'missed' | 'not-due' | 'future';
 
 /**
  * Every date in the window, including the ones the habit never owed you, so a
@@ -164,38 +204,12 @@ export function calendarFor(
   habit: HabitInput,
   from: string,
   to: string,
+  today?: string,
 ): { date: string; state: DayState }[] {
   const checked = new Set(habit.checkedOn);
-  return datesBetween(from, to).map((date) => ({
-    date,
-    state: checked.has(date) ? 'done' : isDue(habit, date) ? 'missed' : 'not-due',
-  }));
-}
-
-export type WeekBucket = { weekStart: string; due: number; done: number; rate: number | null };
-
-/**
- * One bucket per week, oldest first. Weeks start on Sunday, matching the
- * weekday numbering used everywhere else.
- */
-export function weeklyFor(habit: HabitInput, from: string, to: string): WeekBucket[] {
-  const buckets = new Map<string, { due: number; done: number }>();
-
-  for (const date of datesBetween(from, to)) {
-    if (!isDue(habit, date)) continue;
-    const weekStart = shiftDate(date, -weekdayOf(date));
-    const bucket = buckets.get(weekStart) ?? { due: 0, done: 0 };
-    bucket.due += 1;
-    if (habit.checkedOn.includes(date)) bucket.done += 1;
-    buckets.set(weekStart, bucket);
-  }
-
-  return [...buckets.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([weekStart, bucket]) => ({
-      weekStart,
-      due: bucket.due,
-      done: bucket.done,
-      rate: bucket.due === 0 ? null : bucket.done / bucket.due,
-    }));
+  return datesBetween(from, to).map((date) => {
+    if (checked.has(date)) return { date, state: 'done' as DayState };
+    if (today !== undefined && date > today) return { date, state: 'future' as DayState };
+    return { date, state: isDue(habit, date, today) ? 'missed' : 'not-due' };
+  });
 }
