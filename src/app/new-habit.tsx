@@ -4,11 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
+import { DayPicker } from '@/components/DayPicker';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { CheckIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { copy } from '@/copy';
-import { formatTime, formatTimeShort } from '@/data/defaults';
+import { describeDays, EVERY_DAY, formatTime, formatTimeShort } from '@/data/defaults';
 import {
   useAnchors,
   useArchiveHabit,
@@ -39,6 +40,7 @@ export default function NewHabitScreen() {
   const [mode, setMode] = useState<ScheduleMode>('after');
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [atTime, setAtTime] = useState('18:00');
+  const [days, setDays] = useState<number[]>(EVERY_DAY);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +57,7 @@ export default function NewHabitScreen() {
     setMode(existing.mode);
     setAnchorId(existing.anchor_id);
     if (existing.at_time) setAtTime(existing.at_time.slice(0, 5));
+    if (existing.days_of_week.length > 0) setDays(existing.days_of_week);
   }, [existing]);
 
   const anchorLabel = anchors.find((anchor) => anchor.id === anchorId)?.label ?? '';
@@ -72,8 +75,9 @@ export default function NewHabitScreen() {
     setError(null);
     if (!name.trim()) return setError(copy.newHabit.needName);
     if (mode === 'after' && !anchorId) return setError(copy.newHabit.needAnchor);
+    if (days.length === 0) return setError(copy.newHabit.needDay);
 
-    const input = { name, color, mode, anchorId, atTime, daysOfWeek: undefined };
+    const input = { name, color, mode, anchorId, atTime, daysOfWeek: days };
     const onDone = () => router.back();
     const onFail = (e: unknown) => setError(e instanceof Error ? e.message : copy.auth.genericError);
 
@@ -119,7 +123,9 @@ export default function NewHabitScreen() {
           />
           <View style={styles.previewRow}>
             <View style={[styles.previewDot, { backgroundColor: color }]} />
-            <Text style={styles.preview}>{preview}</Text>
+            <Text style={styles.preview}>
+              {preview} · {describeDays(days).toLowerCase()}
+            </Text>
           </View>
         </View>
 
@@ -189,6 +195,11 @@ export default function NewHabitScreen() {
             </Pressable>
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.label}>{copy.newHabit.whichDays}</Text>
+          <DayPicker value={days} color={color} onChange={setDays} />
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.label}>{copy.newHabit.color}</Text>

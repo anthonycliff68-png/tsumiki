@@ -99,3 +99,23 @@ export function formatTimeGutter(value: string): string {
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
   return minutes === '00' ? `${hour12} ${suffix}` : `${hour12}:${minutes} ${suffix}`;
 }
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKENDS = [0, 6];
+
+function sameDays(a: number[], b: number[]): boolean {
+  return a.length === b.length && [...a].sort().every((day, i) => day === [...b].sort()[i]);
+}
+
+/** "Every day", "Weekdays", or the days themselves. */
+export function describeDays(days: number[]): string {
+  if (days.length === 0) return 'No days';
+  if (days.length === 7) return 'Every day';
+  if (sameDays(days, WEEKDAYS)) return 'Weekdays';
+  if (sameDays(days, WEEKENDS)) return 'Weekends';
+  return [...days]
+    .sort()
+    .map((day) => DAY_NAMES[day] ?? '')
+    .join(', ');
+}

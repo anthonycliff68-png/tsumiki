@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EditIcon } from '@/components/icons';
 import { copy } from '@/copy';
-import { formatTimeGutter } from '@/data/defaults';
+import { describeDays, formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, colors, display, fonts, radii, spacing } from '@/theme';
 
@@ -55,6 +55,7 @@ export function DayList({ habits, nowMinutes, onToggle, onEdit }: Props) {
                 numberOfLines={1}
               >
                 {whenOf(habit)}
+                {habit.daysOfWeek.length < 7 ? ` · ${describeDays(habit.daysOfWeek)}` : ''}
                 {missed ? ` · ${copy.today.missed}` : ''}
                 {habit.checkedIn ? ` · ${copy.today.doneTag}` : ''}
               </Text>

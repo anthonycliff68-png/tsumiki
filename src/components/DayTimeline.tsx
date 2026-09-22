@@ -4,7 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { LinesIcon } from '@/components/icons';
 import { copy } from '@/copy';
-import { formatTimeGutter } from '@/data/defaults';
+import { describeDays, formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import type { Anchor } from '@/lib/models';
 import { alpha, anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
@@ -315,7 +315,7 @@ function HabitCard({
               style={[styles.cardSub, habit.checkedIn && styles.cardSubDone]}
               numberOfLines={1}
             >
-              {copy.myDay.solo} · {copy.myDay.everyDay}
+              {copy.myDay.solo} · {describeDays(habit.daysOfWeek).toLowerCase()}
             </Text>
           </View>
 

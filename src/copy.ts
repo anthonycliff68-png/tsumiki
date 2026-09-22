@@ -139,6 +139,13 @@ export const copy = {
     modeAnySub: 'No set spot',
     afterYou: 'After you\u2026',
     atTime: 'At',
+    whichDays: 'Which days?',
+    everyDay: 'Every day',
+    weekdays: 'Weekdays',
+    weekends: 'Weekends',
+    needDay: 'Pick at least one day.',
+    dayName: (day: number) =>
+      ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day] ?? '',
     color: 'Colour',
     doItWith: 'Do it with',
     solo: 'Solo',

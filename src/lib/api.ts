@@ -131,6 +131,8 @@ export type TodayHabit = {
   checkedIn: boolean;
   /** Minutes since midnight, for ordering. Anytime habits sort last. */
   sortKey: number;
+  /** 0 = Sunday … 6 = Saturday. */
+  daysOfWeek: number[];
 };
 
 type ScheduleRow = {
@@ -185,6 +187,7 @@ export function useToday(userId: string | undefined, date: Date = new Date()) {
             time,
             checkedIn: done.has(habit.id),
             sortKey: minutesOfDay(time),
+            daysOfWeek: row.days_of_week,
           };
         })
         .sort((a, b) => a.sortKey - b.sortKey);
