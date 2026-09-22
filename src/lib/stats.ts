@@ -72,11 +72,18 @@ export function windowStart(window: StatsWindow, today: string, earliest: string
   return earliest;
 }
 
-/** Was this habit due on this date? */
+/**
+ * Was this habit due on this date?
+ *
+ * Before the habit existed, only a day you actually logged counts — backfilling
+ * last week through the day pills is real history and should show up, but the
+ * empty weeks before you thought of the habit are not misses.
+ */
 export function isDue(habit: HabitInput, date: string): boolean {
-  if (date < habit.createdOn) return false;
+  if (!habit.daysOfWeek.includes(weekdayOf(date))) return false;
   if (habit.archivedOn !== null && date >= habit.archivedOn) return false;
-  return habit.daysOfWeek.includes(weekdayOf(date));
+  if (date < habit.createdOn) return habit.checkedOn.includes(date);
+  return true;
 }
 
 export function statsFor(habit: HabitInput, from: string, to: string): HabitStats {

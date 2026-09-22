@@ -75,9 +75,25 @@ describe('what counts as due', () => {
     assert.equal(isDue(habit({ daysOfWeek: WEEKDAYS }), '2026-09-27'), false);
   });
 
-  it('does not count days before the habit existed', () => {
+  it('does not count empty days before the habit existed', () => {
     assert.equal(isDue(habit({ createdOn: '2026-09-20' }), '2026-09-19'), false);
     assert.equal(isDue(habit({ createdOn: '2026-09-20' }), '2026-09-20'), true);
+  });
+
+  it('counts a day before it existed that was filled in afterwards', () => {
+    // Backfilling through the day pills is real history, not a miss.
+    const backfilled = habit({ createdOn: '2026-09-22', checkedOn: ['2026-09-20'] });
+    assert.equal(isDue(backfilled, '2026-09-20'), true);
+    assert.equal(isDue(backfilled, '2026-09-19'), false);
+  });
+
+  it('still ignores a backfilled day the habit does not run on', () => {
+    const weekdayOnly = habit({
+      daysOfWeek: WEEKDAYS,
+      createdOn: '2026-09-22',
+      checkedOn: ['2026-09-27'],
+    });
+    assert.equal(isDue(weekdayOnly, '2026-09-27'), false);
   });
 
   it('stops counting once it is archived', () => {
@@ -129,6 +145,18 @@ describe('the rate', () => {
     );
     assert.equal(stats.due, 3);
     assert.equal(stats.rate, 1);
+  });
+
+  it('keeps history filled in for days before the habit was made', () => {
+    const stats = statsFor(
+      habit({ createdOn: '2026-09-22', checkedOn: ['2026-09-20', '2026-09-21', '2026-09-22'] }),
+      '2026-09-16',
+      '2026-09-22',
+    );
+    // The 20th, 21st and 22nd; the empty days before the habit existed are not misses.
+    assert.equal(stats.due, 3);
+    assert.equal(stats.done, 3);
+    assert.equal(stats.days.length, 3);
   });
 });
 

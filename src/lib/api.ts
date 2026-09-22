@@ -209,7 +209,10 @@ export function useCheckIn(userId: string | undefined) {
         );
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['today'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
   });
 }
 
@@ -227,7 +230,10 @@ export function useUndoCheckIn(userId: string | undefined) {
         .eq('local_date', localDateString(date));
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['today'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
   });
 }
 

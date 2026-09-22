@@ -284,6 +284,8 @@ export const copy = {
     month: 'Month',
     all: 'All time',
     doneOf: (done: number, due: number) => `${done} of ${due} due`,
+    covering: (from: string, to: string) => `${from} \u2013 ${to}`,
+    sameAsWeek: 'No history further back yet.',
     noneDue: 'Nothing was due yet in this window.',
     empty: 'Once you have checked a habit in, this fills up.',
     byWeekday: 'By weekday',

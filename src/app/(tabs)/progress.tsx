@@ -27,6 +27,16 @@ const WINDOWS: { key: StatsWindow; label: string }[] = [
 
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
+/** "2026-08-24" -> "24 Aug". */
+function shortDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
 /** Progress. How often each habit actually gets done. */
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
@@ -48,18 +58,32 @@ export default function ProgressScreen() {
   );
 
   const today = localDateString();
+  // All time has to reach back past the oldest habit to the oldest check-in:
+  // a day filled in through the day pills can predate the habit itself.
   const earliest = useMemo(
     () =>
-      history.reduce((oldest, habit) => (habit.createdOn < oldest ? habit.createdOn : oldest), today),
+      history.reduce((oldest, habit) => {
+        const firstCheck = habit.checkedOn[0];
+        const start =
+          firstCheck && firstCheck < habit.createdOn ? firstCheck : habit.createdOn;
+        return start < oldest ? start : oldest;
+      }, today),
     [history, today],
   );
 
+  const from = useMemo(
+    () => windowStart(window, today, earliest),
+    [window, today, earliest],
+  );
+  // If a wider window starts no earlier than the week does, there is simply no
+  // older history — worth saying, rather than looking like a broken filter.
+  const shortestStart = useMemo(() => windowStart('week', today, earliest), [today, earliest]);
+
   const stats = useMemo(() => {
-    const from = windowStart(window, today, earliest);
     return history
       .map((habit) => statsFor(habit, from, today))
       .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
-  }, [history, window, today, earliest]);
+  }, [history, from, today]);
 
   const overall = useMemo(() => overallOf(stats), [stats]);
   const accent = stats[0]?.color ?? habitColors[0];
@@ -110,6 +134,12 @@ export default function ProgressScreen() {
           </Text>
           <Text style={styles.headlineSub}>
             {overall.rate === null ? copy.stats.noneDue : copy.stats.doneOf(overall.done, overall.due)}
+          </Text>
+          {/* The window is worth stating: with a short history, a month and a
+              week hold the same days, and the numbers matching is honest. */}
+          <Text style={styles.range}>
+            {copy.stats.covering(shortDate(from), shortDate(today))}
+            {window !== 'week' && from >= shortestStart ? ` · ${copy.stats.sameAsWeek}` : ''}
           </Text>
         </View>
 
@@ -243,6 +273,7 @@ const styles = StyleSheet.create({
   windowTextActive: { color: colors.bg },
   headline: { gap: 2 },
   headlineSub: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  range: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   empty: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
   habit: {
     gap: spacing.sm,
