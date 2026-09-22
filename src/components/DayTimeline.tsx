@@ -85,7 +85,18 @@ export function DayTimeline({
     });
   };
 
-  const findRect = (y: number) => rects.current.find((rect) => y >= rect.top && y < rect.bottom);
+  /**
+   * The smallest box containing the point. Hour rows cover the whole day so a
+   * drop never lands nowhere; a moment sitting inside one is the tighter match
+   * and wins.
+   */
+  const findRect = (y: number) => {
+    const hits = rects.current.filter((rect) => y >= rect.top && y < rect.bottom);
+    if (hits.length === 0) return undefined;
+    return hits.reduce((best, rect) =>
+      rect.bottom - rect.top < best.bottom - best.top ? rect : best,
+    );
+  };
 
   const hover = (y: number) => {
     const key = findRect(y)?.key ?? null;
@@ -119,19 +130,14 @@ export function DayTimeline({
       <Text style={styles.hint}>{copy.myDay.dragHint}</Text>
 
       {rows.map((row) => (
-        <View key={row.hour} style={styles.hourRow}>
+        <View
+          key={row.hour}
+          ref={registerTarget(`hour-${row.hour}`, { kind: 'hour', hour: row.hour })}
+          style={[styles.hourRow, hoveredKey === `hour-${row.hour}` && styles.hovered]}
+        >
           <Text style={styles.hourLabel}>{row.label}</Text>
 
           <View style={styles.hourBody}>
-            {row.anchors.length === 0 && row.loose.length === 0 && (
-              <View
-                ref={registerTarget(`hour-${row.hour}`, { kind: 'hour', hour: row.hour })}
-                style={[
-                  styles.emptyHour,
-                  hoveredKey === `hour-${row.hour}` && styles.hovered,
-                ]}
-              />
-            )}
 
             {row.anchors.map(({ anchor, habits: stacked }) => (
               <View
@@ -240,21 +246,28 @@ function HabitCard({
   const offsetX = useSharedValue(0);
   const offsetY = useSharedValue(0);
   const lifted = useSharedValue(0);
+  /**
+   * How far the card's middle sits from the finger holding it. People aim with
+   * the card they can see, not with the fingertip underneath it.
+   */
+  const aimOffset = useSharedValue(0);
+  const cardRef = useRef<View>(null);
 
   // A press-and-hold lifts the card; a plain drag still scrolls the page.
   const pan = Gesture.Pan()
     .activateAfterLongPress(220)
-    .onStart(() => {
+    .onStart((event) => {
       lifted.value = withSpring(1);
+      runOnJS(measureAim)(event.absoluteY);
       runOnJS(onPickUp)();
     })
     .onUpdate((event) => {
       offsetX.value = event.translationX;
       offsetY.value = event.translationY;
-      runOnJS(onHover)(event.absoluteY);
+      runOnJS(onHover)(event.absoluteY + aimOffset.value);
     })
     .onEnd((event) => {
-      runOnJS(onDrop)(event.absoluteY);
+      runOnJS(onDrop)(event.absoluteY + aimOffset.value);
     })
     // Runs whether the gesture ended or was cancelled, so the card always
     // springs home and the page always scrolls again.
@@ -264,6 +277,12 @@ function HabitCard({
       lifted.value = withSpring(0);
       runOnJS(onRelease)();
     });
+
+  const measureAim = (fingerY: number) => {
+    cardRef.current?.measureInWindow((_x, y, _width, height) => {
+      aimOffset.value = y + height / 2 - fingerY;
+    });
+  };
 
   const style = useAnimatedStyle(() => ({
     transform: [
@@ -278,6 +297,7 @@ function HabitCard({
     <GestureDetector gesture={pan}>
       <Animated.View style={style}>
         <View
+          ref={cardRef}
           style={[
             styles.card,
             habit.checkedIn
@@ -379,8 +399,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   hourBody: { flex: 1, gap: 6, justifyContent: 'center' },
-  emptyHour: { minHeight: 28, borderRadius: radii.card },
-  hovered: { backgroundColor: alpha(habitColors[1], 0.18) },
+  emptyHour: { minHeight: 28 },
+  hovered: { backgroundColor: alpha(habitColors[1], 0.22), borderRadius: radii.card },
   anchorGroup: { gap: 6, borderRadius: radii.card },
   anchorHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, minHeight: 28 },
   anchorLabel: { ...display(19, 21) },
