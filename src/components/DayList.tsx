@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CheckIcon, EditIcon } from '@/components/icons';
+import { EditIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
@@ -37,18 +37,23 @@ export function DayList({ habits, nowMinutes, onToggle, onEdit }: Props) {
             onPress={() => onToggle(habit)}
             style={({ pressed }) => [
               styles.row,
-              { borderColor: alpha(habit.color, habit.checkedIn ? 0.9 : 0.45) },
-              habit.checkedIn && { backgroundColor: alpha(habit.color, 0.22) },
+              {
+                borderColor: habit.color,
+                // Empty until it is done, then the whole bar fills.
+                backgroundColor: habit.checkedIn ? habit.color : 'transparent',
+              },
               pressed && { opacity: 0.85 },
             ]}
           >
-            <View style={[styles.bar, { backgroundColor: habit.color }]} />
 
             <View style={styles.text}>
               <Text style={styles.name} numberOfLines={1}>
                 {habit.name}
               </Text>
-              <Text style={styles.when} numberOfLines={1}>
+              <Text
+                style={[styles.when, habit.checkedIn && styles.whenDone]}
+                numberOfLines={1}
+              >
                 {whenOf(habit)}
                 {missed ? ` · ${copy.today.missed}` : ''}
                 {habit.checkedIn ? ` · ${copy.today.doneTag}` : ''}
@@ -61,21 +66,20 @@ export function DayList({ habits, nowMinutes, onToggle, onEdit }: Props) {
               accessibilityRole="button"
               accessibilityLabel={copy.today.editLabel(habit.name)}
               onPress={() => onEdit(habit)}
-              hitSlop={6}
-              style={({ pressed }) => [styles.edit, pressed && { opacity: 0.6 }]}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.edit,
+                {
+                  borderColor: habit.checkedIn ? 'rgba(255,255,255,0.45)' : colors.border,
+                },
+                pressed && { opacity: 0.6 },
+              ]}
             >
-              <EditIcon size={17} color={colors.textMuted} />
+              <EditIcon
+                size={16}
+                color={habit.checkedIn ? colors.white : colors.textMuted}
+              />
             </Pressable>
-
-            <View style={styles.check}>
-              {habit.checkedIn ? (
-                <View style={[styles.doneCircle, { backgroundColor: habit.color }]}>
-                  <CheckIcon size={16} color={colors.white} strokeWidth={3.4} />
-                </View>
-              ) : (
-                <View style={[styles.openCircle, { borderColor: alpha(habit.color, 0.8) }]} />
-              )}
-            </View>
           </Pressable>
         );
       })}
@@ -96,33 +100,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     minHeight: 64,
-    paddingRight: spacing.sm,
-    paddingLeft: 0,
+    paddingHorizontal: spacing.lg,
     borderRadius: radii.card,
-    borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    overflow: 'hidden',
+    borderWidth: 2,
   },
-  bar: { width: 5, alignSelf: 'stretch' },
   text: { flex: 1, gap: 2, paddingVertical: 10 },
   name: { ...display(22, 22) },
   when: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+  whenDone: { color: 'rgba(255,255,255,0.8)' },
   edit: {
     width: 34,
     height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: colors.border,
   },
-  check: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  doneCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  openCircle: { width: 24, height: 24, borderRadius: 12, borderWidth: 2 },
 });

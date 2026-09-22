@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { CheckIcon, EditIcon } from '@/components/icons';
+import { EditIcon } from '@/components/icons';
 import { copy } from '@/copy';
 import { formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
@@ -287,13 +287,24 @@ function HabitCard({
           accessibilityLabel={
             habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
           }
-          style={[styles.card, { backgroundColor: habit.color }, carried && styles.carried]}
+          style={[
+            styles.card,
+            {
+              borderColor: habit.color,
+              // Empty until it is done, then the whole card fills.
+              backgroundColor: habit.checkedIn ? habit.color : 'transparent',
+            },
+            carried && styles.carried,
+          ]}
         >
           <View style={styles.cardText}>
             <Text style={styles.cardName} numberOfLines={1}>
               {habit.name}
             </Text>
-            <Text style={styles.cardSub} numberOfLines={1}>
+            <Text
+              style={[styles.cardSub, habit.checkedIn && styles.cardSubDone]}
+              numberOfLines={1}
+            >
               {copy.myDay.solo} · {copy.myDay.everyDay}
             </Text>
           </View>
@@ -304,21 +315,14 @@ function HabitCard({
               accessible
               accessibilityRole="button"
               accessibilityLabel={copy.today.editLabel(habit.name)}
-              style={styles.cardEdit}
+              style={[
+                styles.cardEdit,
+                { borderColor: habit.checkedIn ? 'rgba(255,255,255,0.45)' : colors.border },
+              ]}
             >
-              <EditIcon size={16} color="rgba(255,255,255,0.85)" />
+              <EditIcon size={16} color={habit.checkedIn ? colors.white : colors.textMuted} />
             </View>
           </GestureDetector>
-
-          <View style={styles.cardCheck}>
-            {habit.checkedIn ? (
-              <View style={styles.doneCircle}>
-                <CheckIcon size={16} color={habit.color} strokeWidth={3.4} />
-              </View>
-            ) : (
-              <View style={styles.openCircle} />
-            )}
-          </View>
         </View>
       </Animated.View>
     </GestureDetector>
@@ -451,37 +455,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
     borderRadius: radii.card,
+    borderWidth: 2,
   },
   carried: { borderWidth: 2, borderColor: colors.white },
   cardText: { flex: 1, gap: 2 },
   cardName: { ...display(20, 20), color: colors.white },
-  cardSub: { fontFamily: fonts.body, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  cardSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+  cardSubDone: { color: 'rgba(255,255,255,0.8)' },
   cardEdit: {
     width: 34,
     height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 17,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  cardCheck: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  doneCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  openCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.55)',
   },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
