@@ -6,14 +6,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { copy } from '@/copy';
-import { HabitCalendar } from '@/components/HabitCalendar';
+import { AdviceList, type AdviceTab } from '@/components/AdviceList';
+import { CalendarLegend } from '@/components/HabitCalendar';
+import { HeatWall, RingGrid, TrendBars, type HeatCell } from '@/components/ProgressViews';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
+import { ADVICE_DAYS, adviceRange, splitVerdicts, type Placement } from '@/lib/advice';
 import {
-  bestRun,
   calendarFor,
   currentRun,
+  datesBetween,
+  isDue,
   overallOf,
   periodRange,
   statsFor,
@@ -85,6 +89,7 @@ export default function ProgressScreen() {
   /** How many periods back from the current one we are looking. */
   const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
+  const [tab, setTab] = useState<AdviceTab>('needs-work');
 
   useFocusEffect(
     useCallback(() => {
@@ -124,6 +129,60 @@ export default function ProgressScreen() {
 
   const overall = useMemo(() => overallOf(stats), [stats]);
   const accent = stats[0]?.color ?? habitColors[0];
+
+  // Advice reads its own trailing stretch, ending where the period on screen
+  // ends, so stepping back through history still tells you what was slipping
+  // then — and a single day never decides which habit needs work.
+  const advice = useMemo(() => {
+    const span = adviceRange(to);
+    const placements = new Map<string, Placement>(
+      history.map((habit) => [
+        habit.habitId,
+        { mode: habit.mode, anchorLabel: habit.anchorLabel, anchorLoad: habit.anchorLoad },
+      ]),
+    );
+    const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
+    return { ...splitVerdicts(over, placements), byHabit: new Map(over.map((h) => [h.habitId, h])) };
+  }, [history, to, today]);
+
+  /** Day: a ring per habit, filled by how it has been going lately. */
+  const ringData = useMemo(
+    () =>
+      stats.map((habit) => {
+        const recent = advice.byHabit.get(habit.habitId);
+        return {
+          stats: habit,
+          run: recent ? currentRun(recent) : 0,
+          recent: recent?.rate ?? null,
+        };
+      }),
+    [stats, advice],
+  );
+
+  /** Week: seven marks a habit, weakest habit on top. */
+  const wallData = useMemo(
+    () =>
+      stats
+        .slice()
+        .sort((a, b) => (a.rate ?? 2) - (b.rate ?? 2))
+        .map((habit) => ({ stats: habit, cells: habit.calendar as HeatCell[] })),
+    [stats],
+  );
+
+  /** Month: one bar a day, how much of that day's list got done. */
+  const trendData = useMemo(() => {
+    if (window !== 'month') return [];
+    return datesBetween(from, to).map((date) => {
+      let due = 0;
+      let done = 0;
+      for (const habit of history) {
+        if (!isDue(habit, date, today)) continue;
+        due += 1;
+        if (habit.checkedOn.includes(date)) done += 1;
+      }
+      return { date, rate: due === 0 ? null : done / due };
+    });
+  }, [window, from, to, history, today]);
 
   return (
     <View style={styles.root}>
@@ -201,48 +260,37 @@ export default function ProgressScreen() {
               : copy.stats.doneOf(overall.done, overall.due)}
           </Text>
           <Text style={styles.range}>{copy.stats.covering(shortDate(from), shortDate(to))}</Text>
+          {window === 'week' && <CalendarLegend color={colors.text} />}
         </View>
 
         {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
 
-        {stats.map((habit) => (
-          <View key={habit.habitId} style={styles.habit}>
-            <View style={styles.habitHead}>
-              <Text style={styles.habitName} numberOfLines={1}>
-                {habit.name}
-              </Text>
-              <Text style={styles.habitRate}>
-                {habit.rate === null ? copy.stats.notYet : `${Math.round(habit.rate * 100)}%`}
-              </Text>
-            </View>
-
-            <View style={styles.track}>
-              <View
-                style={[
-                  styles.fill,
-                  {
-                    width: `${Math.round((habit.rate ?? 0) * 100)}%`,
-                    backgroundColor: habit.color,
-                  },
-                ]}
+        {stats.length > 0 && (
+          <View style={styles.view}>
+            {window === 'day' && <RingGrid habits={ringData} />}
+            {window === 'week' && <HeatWall habits={wallData} />}
+            {window === 'month' && (
+              <TrendBars
+                days={trendData}
+                color={accent}
+                from={shortDate(from)}
+                to={shortDate(to)}
               />
-            </View>
-
-            <Text style={styles.habitMeta}>
-              {copy.stats.doneOf(habit.done, habit.due)} · {copy.stats.run} {currentRun(habit)} ·{' '}
-              {copy.stats.best} {bestRun(habit)}
-            </Text>
-
-            {window !== 'day' && (
-              <View style={styles.calendar}>
-                <HabitCalendar window={window} color={habit.color} days={habit.calendar} />
-              </View>
             )}
           </View>
-        ))}
+        )}
 
-        {window !== 'day' && stats.length > 0 && (
-          <Text style={styles.storage}>{copy.stats.notDue}</Text>
+        {stats.length > 0 && (
+          <AdviceList
+            tab={tab}
+            onTab={setTab}
+            needsWork={advice.needsWork}
+            goingWell={advice.goingWell}
+            windowDays={ADVICE_DAYS}
+            onOpen={(habitId) =>
+              router.push({ pathname: '/new-habit', params: { id: habitId } })
+            }
+          />
         )}
 
         <View style={styles.footer}>
@@ -294,6 +342,7 @@ const styles = StyleSheet.create({
   headlineSub: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
   range: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   empty: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
+  view: { marginTop: 24 },
   habit: {
     gap: spacing.sm,
     padding: spacing.lg,

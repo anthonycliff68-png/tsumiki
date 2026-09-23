@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { copy } from '@/copy';
 import type { DayState, StatsWindow } from '@/lib/stats';
 import { alpha, colors, fonts } from '@/theme';
 
@@ -22,11 +23,50 @@ export function HabitCalendar({ window, color, days }: Props) {
   return <MonthGrid color={color} days={days} />;
 }
 
+/**
+ * Four states that have to be told apart at a glance, in this order of
+ * loudness: done, missed, future, not due. A miss is the thing worth
+ * noticing, so it is drawn — a tinted box with a hard edge — rather than
+ * left as an absence. A day still to come is dashed, and a day the habit
+ * was never scheduled for recedes into the card.
+ */
 function cellStyle(state: DayState, color: string) {
   if (state === 'done') return { backgroundColor: color };
-  if (state === 'missed') return { borderWidth: 1, borderColor: alpha(color, 0.5) };
-  if (state === 'future') return { borderWidth: 1, borderColor: alpha(colors.white, 0.1) };
-  return { backgroundColor: alpha(colors.white, 0.05) };
+  if (state === 'missed') {
+    return {
+      backgroundColor: alpha(color, 0.18),
+      borderWidth: 1.5,
+      borderColor: alpha(color, 0.9),
+    };
+  }
+  if (state === 'future') {
+    return {
+      borderWidth: 1,
+      borderStyle: 'dashed' as const,
+      borderColor: alpha(colors.white, 0.16),
+    };
+  }
+  return { backgroundColor: alpha(colors.white, 0.04) };
+}
+
+/** Says what the four cell treatments mean, once per screen. */
+export function CalendarLegend({ color }: { color: string }) {
+  const keys: { state: DayState; label: string }[] = [
+    { state: 'done', label: copy.stats.legend.done },
+    { state: 'missed', label: copy.stats.legend.missed },
+    { state: 'future', label: copy.stats.legend.future },
+    { state: 'not-due', label: copy.stats.legend.notDue },
+  ];
+  return (
+    <View style={styles.legend}>
+      {keys.map((key) => (
+        <View key={key.state} style={styles.legendKey}>
+          <View style={[styles.legendCell, cellStyle(key.state, color)]} />
+          <Text style={styles.legendLabel}>{key.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function WeekStrip({ color, days }: { color: string; days: Props['days'] }) {
@@ -76,6 +116,10 @@ function weekdayOfDate(date: string): number {
 }
 
 const styles = StyleSheet.create({
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
+  legendKey: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendCell: { width: 12, height: 12, borderRadius: 3 },
+  legendLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   week: { flexDirection: 'row', gap: 5 },
   weekCol: { flex: 1, gap: 4, alignItems: 'center' },
   cell: { width: '100%', aspectRatio: 1, borderRadius: 4, minWidth: 12 },

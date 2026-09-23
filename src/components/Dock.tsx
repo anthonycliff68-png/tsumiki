@@ -60,12 +60,18 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
   const done = habits.filter((h) => h.checkedIn).length;
   const total = habits.length;
 
-  // Up next is the first habit still open; on a finished day the dock keeps
-  // showing the last one so the row does not collapse.
-  const habit = useMemo(
-    () => habits.find((h) => !h.checkedIn) ?? habits[habits.length - 1],
-    [habits],
-  );
+  // Up next is the next one still to come, so the dock agrees with the card at
+  // the front of the fan on Today. A habit whose moment has passed is not "up
+  // next"; it falls in behind. On a finished day the dock keeps showing the
+  // last one so the row does not collapse.
+  const habit = useMemo(() => {
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const open = habits.filter((h) => !h.checkedIn);
+    return (
+      open.find((h) => h.sortKey >= nowMinutes) ?? open[0] ?? habits[habits.length - 1]
+    );
+  }, [habits]);
 
   const accent = habit ? tint(habit.color, 0.55) : tint(colors.textMuted, 0.2);
 

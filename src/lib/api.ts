@@ -1007,7 +1007,9 @@ export function useHabitHistory(userId: string | undefined) {
       const [schedules, checkins] = await Promise.all([
         supabase
           .from('habit_schedules')
-          .select('habit_id, days_of_week, habits!inner(id, name, color, created_at, archived_at)')
+          .select(
+            'habit_id, days_of_week, mode, habits!inner(id, name, color, created_at, archived_at), anchors(id, label)',
+          )
           .eq('user_id', userId ?? ''),
         supabase
           .from('checkins')
@@ -1021,6 +1023,7 @@ export function useHabitHistory(userId: string | undefined) {
       const rows = schedules.data as unknown as {
         habit_id: string;
         days_of_week: number[];
+        mode: 'after' | 'at' | 'any';
         habits: {
           id: string;
           name: string;
@@ -1028,7 +1031,16 @@ export function useHabitHistory(userId: string | undefined) {
           created_at: string;
           archived_at: string | null;
         };
+        anchors: { id: string; label: string } | null;
       }[];
+
+      // How many habits hang off each anchor, so advice can spot one that has
+      // quietly become a queue.
+      const load = new Map<string, number>();
+      for (const row of rows) {
+        if (row.anchors === null) continue;
+        load.set(row.anchors.id, (load.get(row.anchors.id) ?? 0) + 1);
+      }
 
       const checkedByHabit = new Map<string, string[]>();
       for (const row of checkins.data ?? []) {
@@ -1045,6 +1057,9 @@ export function useHabitHistory(userId: string | undefined) {
         createdOn: row.habits.created_at.slice(0, 10),
         archivedOn: row.habits.archived_at ? row.habits.archived_at.slice(0, 10) : null,
         checkedOn: checkedByHabit.get(row.habits.id) ?? [],
+        mode: row.mode,
+        anchorLabel: row.anchors?.label ?? null,
+        anchorLoad: row.anchors === null ? 0 : (load.get(row.anchors.id) ?? 0),
       }));
     },
   });

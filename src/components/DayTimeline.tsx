@@ -12,6 +12,11 @@ import { alpha, anchorColor, colors, display, fonts, habitColors, radii, spacing
 const GUTTER = 58;
 const RAIL_GAP = 8;
 
+/** An hour is never shorter than this, so an empty hour still reads as an hour. */
+const HOUR_MIN = 72;
+/** Past this many habits, a moment folds the finished ones away. */
+const STACK_CAP = 3;
+
 export type DropTarget =
   | { kind: 'anchor'; anchorId: string; label: string }
   | { kind: 'hour'; hour: number };
@@ -56,6 +61,7 @@ export function DayTimeline({
 
   const [carried, setCarried] = useState<TodayHabit | null>(null);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [opened, setOpened] = useState<string[]>([]);
 
   const rows = useMemo(
     () => buildHours(anchors, habits, nowMinutes),
@@ -116,6 +122,27 @@ export function DayTimeline({
     setCarried(null);
     setHoveredKey(null);
     onDragChange(false);
+  };
+
+  const toggleStack = (anchorId: string) =>
+    setOpened((open) =>
+      open.includes(anchorId) ? open.filter((id) => id !== anchorId) : [...open, anchorId],
+    );
+
+  /** A tall stack folds, but only ever hides habits that are already done:
+      anything still open stays on the timeline where you can reach it. */
+  const fold = (anchorId: string, list: TodayHabit[]) => {
+    if (opened.includes(anchorId) || list.length <= STACK_CAP) {
+      return { shown: list, hidden: 0 };
+    }
+    let room = Math.max(0, STACK_CAP - list.filter((habit) => !habit.checkedIn).length);
+    const shown = list.filter((habit) => {
+      if (!habit.checkedIn) return true;
+      if (room === 0) return false;
+      room -= 1;
+      return true;
+    });
+    return { shown, hidden: list.length - shown.length };
   };
 
   const cardFor = (habit: TodayHabit) => (
@@ -192,7 +219,28 @@ export function DayTimeline({
                         {line.anchor.label}
                       </Text>
                     </Pressable>
-                    {line.habits.map(cardFor)}
+                    {fold(line.anchor.id, line.habits).shown.map(cardFor)}
+                    {(() => {
+                      const { hidden } = fold(line.anchor.id, line.habits);
+                      const open = opened.includes(line.anchor.id);
+                      if (hidden === 0 && !open) return null;
+                      return (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            open
+                              ? copy.myDay.foldStack(line.anchor.label)
+                              : copy.myDay.unfoldStack(hidden, line.anchor.label)
+                          }
+                          onPress={() => toggleStack(line.anchor.id)}
+                          style={styles.foldRow}
+                        >
+                          <Text style={styles.foldLabel}>
+                            {open ? copy.myDay.showLess : copy.myDay.showDone(hidden)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })()}
                   </View>
                 )}
 
@@ -444,8 +492,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.hairline,
     paddingVertical: 6,
+    // Without a floor an empty hour collapses to one line, and a busy
+    // twenty minutes ends up taller than a quiet afternoon.
+    minHeight: HOUR_MIN,
+    justifyContent: 'center',
   },
   hovered: { backgroundColor: alpha(habitColors[1], 0.22), borderRadius: radii.card },
+  foldRow: { paddingVertical: 8, paddingHorizontal: 4 },
+  foldLabel: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textFaint,
+  },
   railLayer: { position: 'absolute', top: 0, bottom: 0, flexDirection: 'row', gap: 3 },
   span: { width: 4, opacity: 0.9 },
   line: { flexDirection: 'row', minHeight: 30, paddingVertical: 2 },

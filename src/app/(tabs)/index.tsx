@@ -6,8 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
-import { HeroCard } from '@/components/HeroCard';
 import { DayList } from '@/components/DayList';
+import { HabitFan } from '@/components/HabitFan';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -23,6 +23,10 @@ export default function TodayScreen() {
 
   // 0 is today; going back fills in a day that was missed.
   const [dayOffset, setDayOffset] = useState(0);
+  const [showingDone, setShowingDone] = useState(false);
+  // The habit under your finger in the fan, so the glow behind the screen
+  // tracks the card you are looking at rather than the one that was next.
+  const [fanColor, setFanColor] = useState<string | null>(null);
   const viewedDate = useMemo(() => addDays(new Date(), dayOffset), [dayOffset]);
   const isToday = dayOffset === 0;
 
@@ -64,12 +68,20 @@ export default function TodayScreen() {
     () => upcoming[0] ?? missed[0] ?? habits[habits.length - 1],
     [upcoming, missed, habits],
   );
+  // The hand you are still holding: what is next, then what you let slip.
+  const inHand = useMemo(() => [...upcoming, ...missed], [upcoming, missed]);
+  const finished = useMemo(() => habits.filter((habit) => habit.checkedIn), [habits]);
+  const onFanFocus = useCallback(
+    (habit: { color: string }) => setFanColor(habit.color),
+    [],
+  );
+
   const toggle = (habit: { id: string; checkedIn: boolean }) =>
     habit.checkedIn
       ? undo.mutate({ habitId: habit.id, date: viewedDate })
       : checkIn.mutate({ habitId: habit.id, date: viewedDate });
 
-  const bleedColor = hero?.color ?? habitColors[0];
+  const bleedColor = fanColor ?? hero?.color ?? habitColors[0];
 
   return (
     <View style={styles.root}>
@@ -166,50 +178,79 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {hero && (
+        {inHand.length > 0 && (
+          <HabitFan
+            habits={inHand}
+            nowMinutes={isToday ? nowMinutes : null}
+            busy={checkIn.isPending}
+            onCheckIn={(habit) => toggle({ id: habit.id, checkedIn: false })}
+            onEdit={(habit) => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
+            onFocus={onFanFocus}
+          />
+        )}
+
+        {habits.length > 0 && inHand.length === 0 && (
           <View style={styles.padded}>
-            <HeroCard
-              habit={hero}
-              onEdit={() => router.push({ pathname: '/new-habit', params: { id: hero.id } })}
-              busy={checkIn.isPending}
-              onCheckIn={() => toggle({ id: hero.id, checkedIn: false })}
-              onUndo={() => toggle({ id: hero.id, checkedIn: true })}
-            />
+            <Text style={styles.allDone}>{copy.today.allDone}</Text>
           </View>
         )}
 
         {habits.length > 0 && (
-          <View style={[styles.padded, styles.listBlock]}>
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>{copy.today.everything}</Text>
-              <Text style={styles.sectionLink} onPress={() => router.push('/crews')}>
-                {copy.today.allCrews}
-              </Text>
+          <View style={styles.padded}>
+            <Text style={styles.fanHint}>{copy.today.fanHint}</Text>
+
+            <View style={styles.chips}>
+              {finished.length > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showingDone }}
+                  accessibilityLabel={
+                    showingDone ? copy.today.hideDone : copy.today.foldedAway(finished.length)
+                  }
+                  onPress={() => setShowingDone((open) => !open)}
+                  style={({ pressed }) => [styles.chip, pressed && { opacity: 0.85 }]}
+                >
+                  <Text style={styles.chipText}>
+                    {copy.today.foldedAway(finished.length)} ·{' '}
+                    {showingDone ? copy.today.hideDone : copy.today.showDone}
+                  </Text>
+                </Pressable>
+              )}
+
+              {inHand.length > 0 && (
+                <View style={[styles.chip, { backgroundColor: bleedColor, borderColor: bleedColor }]}>
+                  <Text style={styles.chipText}>{copy.today.leftToday(inHand.length)}</Text>
+                </View>
+              )}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.today.newHabit}
+                onPress={() => router.push('/new-habit')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  { borderColor: tint(bleedColor, 0.35), backgroundColor: alpha(bleedColor, 0.28) },
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Text style={[styles.chipText, { color: tint(bleedColor, 0.75) }]}>
+                  + {copy.today.newHabit}
+                </Text>
+              </Pressable>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={copy.today.newHabit}
-              onPress={() => router.push('/new-habit')}
-              style={({ pressed }) => [
-                styles.addRow,
-                { borderColor: tint(bleedColor, 0.35), backgroundColor: alpha(bleedColor, 0.28) },
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={[styles.addLabel, { color: tint(bleedColor, 0.6) }]}>
-                + {copy.today.newHabit}
-              </Text>
-            </Pressable>
-
-            <DayList
-              habits={habits}
-              nowMinutes={isToday ? nowMinutes : null}
-              onToggle={toggle}
-              onEdit={(habit) =>
-                router.push({ pathname: '/new-habit', params: { id: habit.id } })
-              }
-            />
+            {showingDone && (
+              <View style={styles.listBlock}>
+                <DayList
+                  habits={finished}
+                  nowMinutes={isToday ? nowMinutes : null}
+                  onToggle={toggle}
+                  onEdit={(habit) =>
+                    router.push({ pathname: '/new-habit', params: { id: habit.id } })
+                  }
+                />
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -220,6 +261,40 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   padded: { paddingHorizontal: spacing.xl },
+  fanHint: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  allDone: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  chip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.text,
+  },
   days: {
     flexDirection: 'row',
     justifyContent: 'center',
