@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
+import { SafetySheet } from '@/components/SafetySheet';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { CheckIcon, FlameIcon } from '@/components/icons';
 import { copy } from '@/copy';
@@ -31,6 +33,7 @@ export default function NudgeScreen() {
   const checkIn = useCheckIn(userId);
   const headingOut = useHeadingOut(userId);
   const react = useSendReaction(userId);
+  const [reporting, setReporting] = useState(false);
 
   if (isPending) {
     return (
@@ -146,6 +149,14 @@ export default function NudgeScreen() {
             </Pressable>
             <Text style={styles.orbLabel}>{copy.nudge.didIt}</Text>
 
+            <Text
+              accessibilityRole="button"
+              onPress={() => setReporting(true)}
+              style={styles.reportLink}
+            >
+              {copy.safety.report} · {copy.safety.block}
+            </Text>
+
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
@@ -165,6 +176,16 @@ export default function NudgeScreen() {
           </>
         )}
       </ScrollView>
+
+      <SafetySheet
+        visible={reporting}
+        kind="nudge"
+        refId={nudge.id}
+        personId={nudge.fromUserId}
+        personName={nudge.fromName}
+        onClose={() => setReporting(false)}
+        onBlocked={() => router.replace('/')}
+      />
     </View>
   );
 }
@@ -252,6 +273,12 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   actions: { gap: spacing.sm },
+  reportLink: {
+    textAlign: 'center',
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.textFaint,
+  },
   action: {
     minHeight: 52,
     alignItems: 'center',

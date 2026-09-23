@@ -87,6 +87,53 @@ export type Database = {
           },
         ]
       }
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkins: {
         Row: {
           created_at: string
@@ -587,6 +634,68 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["report_kind"]
+          reason: string
+          ref_id: string | null
+          reported_id: string | null
+          reporter_id: string
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["report_kind"]
+          reason: string
+          ref_id?: string | null
+          reported_id?: string | null
+          reporter_id: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["report_kind"]
+          reason?: string
+          ref_id?: string | null
+          reported_id?: string | null
+          reporter_id?: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "crew_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       status_events: {
         Row: {
           created_at: string
@@ -679,6 +788,7 @@ export type Database = {
           streak_current: number
         }[]
       }
+      is_blocked: { Args: { p_a: string; p_b: string }; Returns: boolean }
       is_crew_member: {
         Args: { p_crew: string; p_user?: string }
         Returns: boolean
@@ -705,6 +815,8 @@ export type Database = {
       crew_role: "owner" | "member"
       nudge_status: "sent" | "delivered" | "acted"
       reaction_kind: "thanks" | "same_time_tmrw"
+      report_kind: "nudge" | "crew" | "profile"
+      report_status: "open" | "reviewed" | "actioned"
       schedule_mode: "after" | "at" | "any"
       status_kind: "heading_out"
     }
@@ -840,6 +952,8 @@ export const Constants = {
       crew_role: ["owner", "member"],
       nudge_status: ["sent", "delivered", "acted"],
       reaction_kind: ["thanks", "same_time_tmrw"],
+      report_kind: ["nudge", "crew", "profile"],
+      report_status: ["open", "reviewed", "actioned"],
       schedule_mode: ["after", "at", "any"],
       status_kind: ["heading_out"],
     },

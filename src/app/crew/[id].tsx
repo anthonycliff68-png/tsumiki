@@ -19,6 +19,7 @@ import {
   type CrewMemberState,
 } from '@/lib/api';
 import { NudgeSheet } from '@/components/NudgeSheet';
+import { SafetySheet } from '@/components/SafetySheet';
 import { useAuth } from '@/lib/auth';
 import { alpha, colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
 
@@ -39,6 +40,7 @@ export default function CrewScreen() {
   const headingOut = useHeadingOut(userId);
   const leaveCrew = useLeaveCrew();
   const [nudging, setNudging] = useState<CrewMemberState | null>(null);
+  const [reporting, setReporting] = useState<CrewMemberState | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,6 +149,7 @@ export default function CrewScreen() {
               onTheWay={onTheWay.includes(member.userId)}
               alreadyNudged={nudgedToday.includes(member.userId)}
               onNudge={() => setNudging(member)}
+              onReport={() => setReporting(member)}
               onToggle={() => {
                 if (member.userId !== userId) return;
                 if (member.checkedIn) undo.mutate({ habitId: crew.habitId });
@@ -176,6 +179,15 @@ export default function CrewScreen() {
         />
       </ScrollView>
 
+      <SafetySheet
+        visible={reporting !== null}
+        kind="profile"
+        personId={reporting?.userId ?? ''}
+        personName={reporting?.displayName ?? ''}
+        onClose={() => setReporting(null)}
+        onBlocked={() => void refetch()}
+      />
+
       <NudgeSheet
         visible={nudging !== null}
         crewId={crew.id}
@@ -203,6 +215,7 @@ function MemberTile({
   onTheWay,
   alreadyNudged,
   onNudge,
+  onReport,
   onToggle,
 }: {
   member: CrewMemberState;
@@ -211,6 +224,7 @@ function MemberTile({
   onTheWay: boolean;
   alreadyNudged: boolean;
   onNudge: () => void;
+  onReport: () => void;
   onToggle: () => void;
 }) {
   const moment = momentOf(member);
@@ -253,7 +267,19 @@ function MemberTile({
             {member.checkedIn ? copy.crews.checkedIn : copy.crews.checkIn}
           </Text>
         </Pressable>
-      ) : member.checkedIn ? (
+      ) : null}
+
+      {!isMe && (
+        <Text
+          accessibilityRole="button"
+          onPress={onReport}
+          style={styles.reportLink}
+        >
+          {copy.safety.report}
+        </Text>
+      )}
+
+      {isMe ? null : member.checkedIn ? (
         <View style={styles.memberIn}>
           <CheckIcon size={14} color={colors.success} strokeWidth={3} />
           <Text style={[styles.memberButtonText, { color: colors.success }]}>
@@ -364,6 +390,7 @@ const styles = StyleSheet.create({
   memberButtonText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   memberIn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36 },
   grace: { fontFamily: fonts.bodyMedium, fontSize: 13, color: habitColors[4] },
+  reportLink: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textFaint },
   headingOut: {
     minHeight: 52,
     alignItems: 'center',

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { EVERY_DAY } from '@/data/defaults';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
+import type { Enums } from '@/lib/database.types';
 import type { Anchor, CrewRole, Habit, ReactionKind, ScheduleMode } from '@/lib/models';
 import { supabase } from '@/lib/supabase';
 import { habitColors } from '@/theme';
@@ -1077,6 +1078,100 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+    },
+  });
+}
+
+// --- blocking and reporting ------------------------------------------------
+
+export type BlockedPerson = { userId: string; displayName: string; avatarColor: string };
+
+/** Who you have blocked, with enough to show them in a list. */
+export function useBlocked(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['blocks', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<BlockedPerson[]> => {
+      const { data, error } = await supabase
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', userId ?? '');
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // crew_profiles only reaches people you still share a crew with, so a
+      // blocked stranger falls back to their id.
+      const { data: profiles } = await supabase
+        .from('crew_profiles')
+        .select('id, display_name, avatar_color');
+      const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+      return data.map((row) => ({
+        userId: row.blocked_id,
+        displayName: byId.get(row.blocked_id)?.display_name ?? 'Someone',
+        avatarColor: byId.get(row.blocked_id)?.avatar_color ?? habitColors[0],
+      }));
+    },
+  });
+}
+
+export function useBlockUser(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (blockedId: string) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase
+        .from('blocks')
+        .upsert({ blocker_id: userId, blocked_id: blockedId }, { onConflict: 'blocker_id,blocked_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['blocks'] });
+      void queryClient.invalidateQueries({ queryKey: ['nudges'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+    },
+  });
+}
+
+export function useUnblockUser(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (blockedId: string) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', userId)
+        .eq('blocked_id', blockedId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['blocks'] });
+      void queryClient.invalidateQueries({ queryKey: ['nudges'] });
+    },
+  });
+}
+
+export type ReportInput = {
+  kind: Enums<'report_kind'>;
+  reportedId?: string | null;
+  refId?: string | null;
+  reason: string;
+};
+
+/** File a report. Write-only from the app; the queue is read server side. */
+export function useReport(userId: string | undefined) {
+  return useMutation({
+    mutationFn: async (input: ReportInput) => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase.from('reports').insert({
+        reporter_id: userId,
+        reported_id: input.reportedId ?? null,
+        kind: input.kind,
+        ref_id: input.refId ?? null,
+        reason: input.reason.trim().slice(0, 500),
+      });
       if (error) throw error;
     },
   });

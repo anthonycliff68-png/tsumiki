@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Screen, Stub, Title } from '@/components/Screen';
 import { TextButton } from '@/components/Button';
-import { APP_NAME, APP_TAGLINE } from '@/constants/brand';
+import { APP_NAME, APP_TAGLINE, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
-import { useDeleteAccount, useMyProfile } from '@/lib/api';
+import { useBlocked, useDeleteAccount, useMyProfile, useUnblockUser } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatTime } from '@/data/defaults';
 import { registerForPush, unregisterPush, type PushRegistration } from '@/lib/push';
@@ -21,6 +21,8 @@ export default function YouScreen() {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deleteAccount = useDeleteAccount();
+  const { data: blocked = [] } = useBlocked(userId);
+  const unblock = useUnblockUser(userId);
 
   const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -73,6 +75,35 @@ export default function YouScreen() {
         />
       )}
 
+      <Text style={styles.label}>{copy.safety.blockedTitle}</Text>
+      {blocked.length === 0 ? (
+        <Text style={styles.meta}>{copy.safety.blockedEmpty}</Text>
+      ) : (
+        blocked.map((person) => (
+          <View key={person.userId} style={styles.blockedRow}>
+            <View style={[styles.blockedDot, { backgroundColor: person.avatarColor }]} />
+            <Text style={styles.blockedName} numberOfLines={1}>
+              {person.displayName}
+            </Text>
+            <Text
+              accessibilityRole="button"
+              onPress={() => unblock.mutate(person.userId)}
+              style={styles.unblock}
+            >
+              {copy.safety.unblock}
+            </Text>
+          </View>
+        ))
+      )}
+
+      <Text
+        accessibilityRole="link"
+        onPress={() => void Linking.openURL(TERMS_URL)}
+        style={styles.termsLink}
+      >
+        {copy.safety.terms}
+      </Text>
+
       <Stub>{copy.placeholder.you}</Stub>
 
       <View style={{ paddingTop: spacing.md }}>
@@ -123,6 +154,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   meta: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
+  blockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 44,
+  },
+  blockedDot: { width: 10, height: 10, borderRadius: 5 },
+  blockedName: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
+  unblock: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.textMuted },
+  termsLink: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.textMuted,
+    paddingTop: spacing.md,
+  },
   danger: {
     gap: spacing.sm,
     padding: spacing.lg,

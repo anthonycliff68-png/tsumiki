@@ -238,6 +238,29 @@ export const copy = {
     seeMyDay: 'See my day',
   },
 
+  safety: {
+    report: 'Report',
+    block: 'Block',
+    blockName: (name: string) => `Block ${name}`,
+    reportTitle: 'Report this',
+    reportBody:
+      'Tell us what is wrong with it. Reports are read and acted on within 24 hours, and the person is not told who reported them.',
+    reasonPlaceholder: 'What is wrong with it?',
+    send: 'Send report',
+    sent: 'Reported. Thank you \u2014 we will look at it within 24 hours.',
+    blockTitle: (name: string) => `Block ${name}?`,
+    blockBody:
+      'They will not be able to nudge you, and their nudges stop arriving. You stay in any crew you share; leave it separately if you want out.',
+    blockConfirm: 'Block them',
+    blocked: 'Blocked',
+    unblock: 'Unblock',
+    blockedTitle: 'Blocked people',
+    blockedEmpty: 'You have not blocked anyone.',
+    cancel: 'Cancel',
+    failed: 'That did not go through. Try again.',
+    terms: 'Terms and community rules',
+  },
+
   crews: {
     title: 'Crews',
     groupStreak: 'Group streak',

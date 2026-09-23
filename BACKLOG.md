@@ -33,6 +33,35 @@ Beyond the default anchors, the ability to lay out a real day — a work schedul
 Monday to Friday, specific things at specific times — and slot habits between
 them. Partly served today by anchors; wants more structure.
 
+## Before the App Store will take it
+
+Built: account deletion, reporting, blocking, a blocked list.
+
+Still needed, and none of it is code:
+- a **privacy policy** and **terms** actually published at the URLs in
+  `src/constants/brand.ts`, which are placeholders pointing at a domain that
+  does not exist yet
+- the **App Privacy questionnaire** in App Store Connect, matching what is
+  really collected: email, habit names and check-ins, push token
+- a real **1024px icon** — the default Expo one is still in `assets/`
+- screenshots, description, keywords, age rating, support URL
+- the encryption declaration (almost certainly exempt, but it must be answered)
+- a way for **us** to read the reports queue. Reports are written to
+  `public.reports` and only the service role can read them; there is no
+  console yet, and the app promises a 24-hour response.
+
+## Paywall
+
+Digital subscriptions must go through Apple's In-App Purchase — Stripe is not
+allowed for this. The route is RevenueCat (`react-native-purchases`), a config
+plugin and a development build. Banking and tax details have to be complete in
+App Store Connect before IAP works at all, and a Restore purchases button is
+mandatory.
+
+Not yet decided: what is actually paid. Gating crews would put a paywall in
+front of an invited friend before they have done anything, so history depth,
+habit count or crew count are the safer levers.
+
 ## Waiting on something external
 
 - **Web invite landing page** and Universal Links — needs the Tsumiki domain.
