@@ -46,9 +46,10 @@ Still needed, and none of it is code:
 - a real **1024px icon** — the default Expo one is still in `assets/`
 - screenshots, description, keywords, age rating, support URL
 - the encryption declaration (almost certainly exempt, but it must be answered)
-- a way for **us** to read the reports queue. Reports are written to
-  `public.reports` and only the service role can read them; there is no
-  console yet, and the app promises a 24-hour response.
+- **being told** a report arrived. `npm run reports` reads the queue, but it is
+  pull-only: nobody is alerted. A nightly Edge Function that emails on an open
+  report would close the gap between the promise and the practice, and needs an
+  email provider that does not exist yet.
 
 ## Paywall
 

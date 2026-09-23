@@ -87,6 +87,29 @@ npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value <key>
 iOS builds for a physical device need a paid Apple Developer account. The
 `simulator` profile does not.
 
+## Reports
+
+The app tells people a report is read and acted on within 24 hours. That is a
+promise, so there is a queue to read:
+
+```bash
+npm run reports                    # what is open, oldest flagged past 24h
+npm run reports -- --all           # including what is already handled
+npm run reports -- actioned <id>   # looked at it and acted
+npm run reports -- reviewed <id>   # looked at it, nothing to do
+```
+
+Reports are deliberately unreadable through the app — the RLS policy lets you
+insert one and see your own, and nothing else — so the console needs the secret
+key. It goes in `.env`, which is gitignored and separate from `.env.local`:
+
+```bash
+echo "SUPABASE_SERVICE_ROLE_KEY=your-secret-key" >> .env
+```
+
+Never put that key in `.env.local`. Everything prefixed `EXPO_PUBLIC_` is
+compiled into the app that ships to phones.
+
 ## Checks
 
 ```bash
