@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { DayTimeline, type DropTarget } from '@/components/DayTimeline';
 import { useDockClearance } from '@/components/Dock';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import {
   useAnchors,
@@ -16,10 +17,12 @@ import {
   type TodayHabit,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** My Day. Artboard: MyDay, as a full hour grid you can rearrange. */
 export default function MyDayScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const clearance = useDockClearance();
   const { session } = useAuth();
@@ -140,7 +143,7 @@ export default function MyDayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: {
@@ -172,4 +175,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-});
+}) as const;

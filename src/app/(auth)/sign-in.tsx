@@ -1,21 +1,33 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Body, Screen, Stub, Title } from '@/components/Screen';
+import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useAuth } from '@/lib/auth';
+import { CODE_MAX, longEnough, normaliseCode, readCodeError } from '@/lib/otp.ts';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { colors, fonts, habitColors, spacing } from '@/theme';
+import { fonts, habitColors, spacing, type Palette } from '@/theme';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function sayWhy(message: string): string {
+  const problem = readCodeError(message);
+  if (problem === 'expired') return copy.auth.codeExpired;
+  if (problem === 'wrong') return copy.auth.codeWrong;
+  return message;
+}
+
 export default function SignInScreen() {
-  const { signInWithEmail, signInWithApple } = useAuth();
+  const styles = useStyles(makeStyles);
+  const { signInWithEmail, verifyEmailCode, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -33,14 +45,66 @@ export default function SignInScreen() {
     }
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       await signInWithEmail(trimmed);
       setSentTo(trimmed);
+      setCode('');
+    } catch (e) {
+      // Supabase throttles resends; its message says how long to wait, which
+      // is more use than anything generic.
+      setError(e instanceof Error ? e.message : copy.auth.genericError);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resend = async () => {
+    if (!sentTo) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await signInWithEmail(sentTo);
+      setCode('');
+      setNotice(copy.auth.resent);
     } catch (e) {
       setError(e instanceof Error ? e.message : copy.auth.genericError);
     } finally {
       setBusy(false);
     }
+  };
+
+  const submitCode = async (value: string) => {
+    if (!sentTo) return;
+    if (!longEnough(value)) {
+      setError(copy.auth.codeTooShort);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await verifyEmailCode(sentTo, value);
+      // The provider picks the session up; the router moves us on.
+    } catch (e) {
+      setError(e instanceof Error ? sayWhy(e.message) : copy.auth.genericError);
+      setCode('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Digits only. It used to sign in by itself the moment a sixth digit landed,
+   * which is lovely for a six-digit code and breaks an eight-digit one: it
+   * submits two digits early, every time. Since the real length is a server
+   * setting, there is nothing safe to count to — so the code goes when it is
+   * sent, by the keyboard's go key or the button.
+   */
+  const onCodeChange = (raw: string) => {
+    setCode(normaliseCode(raw));
+    if (error) setError(null);
   };
 
   const signInApple = async () => {
@@ -65,12 +129,42 @@ export default function SignInScreen() {
         <Stub>{copy.auth.notConfigured}</Stub>
       ) : sentTo ? (
         <View style={styles.form}>
-          <Body>{copy.auth.linkSent(sentTo)}</Body>
+          <Body>{copy.auth.codeSent(sentTo)}</Body>
+
+          <Field
+            label={copy.auth.codeLabel}
+            placeholder={copy.auth.codePlaceholder}
+            value={code}
+            onChangeText={onCodeChange}
+            autoFocus
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            inputMode="numeric"
+            keyboardType="number-pad"
+            returnKeyType="go"
+            maxLength={CODE_MAX}
+            onSubmitEditing={() => void submitCode(code)}
+            editable={!busy}
+            style={styles.code}
+          />
+
+          <PrimaryButton
+            label={busy ? copy.auth.verifying : copy.auth.verify}
+            onPress={() => void submitCode(code)}
+            busy={busy}
+          />
+
+          <Text style={styles.hint}>{copy.auth.linkAlsoWorks}</Text>
+
+          <TextButton label={copy.auth.resend} onPress={resend} />
           <TextButton
             label={copy.auth.useAnotherEmail}
             onPress={() => {
               setSentTo(null);
               setEmail('');
+              setCode('');
+              setError(null);
+              setNotice(null);
             }}
           />
         </View>
@@ -108,6 +202,12 @@ export default function SignInScreen() {
         </View>
       )}
 
+      {notice && !error && (
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
+      )}
+
       {error && (
         <Text style={styles.error} accessibilityLiveRegion="polite">
           {error}
@@ -117,7 +217,7 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   header: {
     gap: spacing.md,
     paddingTop: spacing.xxl,
@@ -125,6 +225,24 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.md,
     paddingTop: spacing.lg,
+  },
+  code: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 28,
+    letterSpacing: 10,
+    textAlign: 'center',
+  },
+  hint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.textFaint,
+    textAlign: 'center',
+  },
+  notice: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.textMuted,
+    paddingTop: spacing.md,
   },
   apple: {
     height: 58,
@@ -135,4 +253,4 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: '#E8552B',
   },
-});
+}) as const;

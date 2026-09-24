@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useBlockUser, useReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Enums } from '@/lib/database.types';
-import { colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 type Props = {
   visible: boolean;
@@ -34,6 +35,8 @@ export function SafetySheet({
   onClose,
   onBlocked,
 }: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const report = useReport(session?.user.id);
@@ -139,7 +142,7 @@ export function SafetySheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
     gap: spacing.md,
@@ -179,4 +182,4 @@ const styles = StyleSheet.create({
   },
   dangerText: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.white },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[4] },
-});
+}) as const;

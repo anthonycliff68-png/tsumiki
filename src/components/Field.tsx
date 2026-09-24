@@ -1,7 +1,8 @@
-import { StyleSheet, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 
-import { colors, fonts, radii } from '@/theme';
+import { useStyles, useTheme } from '@/lib/appearance';
+import { fonts, radii, type Palette } from '@/theme';
 
 type Props = TextInputProps & {
   /** Read out by screen readers in place of a visible label. */
@@ -10,6 +11,8 @@ type Props = TextInputProps & {
 
 /** A single-line input on the dark ground. */
 export function Field({ label, style, ...rest }: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   return (
     <View style={styles.wrap}>
       <TextInput
@@ -23,7 +26,7 @@ export function Field({ label, style, ...rest }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   wrap: {
     borderRadius: radii.card,
     borderWidth: 1,
@@ -37,4 +40,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
   },
-});
+}) as const;

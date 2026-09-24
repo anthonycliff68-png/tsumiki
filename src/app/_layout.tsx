@@ -4,13 +4,14 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PushBridge } from '@/components/PushBridge';
+import { AppearanceProvider, useAppearance, useTheme } from '@/lib/appearance';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { takePendingInvite } from '@/lib/invite';
-import { colors } from '@/theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,14 +41,33 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <RootNavigator />
-          </AuthProvider>
-        </QueryClientProvider>
+        <AppearanceProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <Themed>
+                <RootNavigator />
+              </Themed>
+            </AuthProvider>
+          </QueryClientProvider>
+        </AppearanceProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * Holds the first frame until the stored theme has been read, so the app does
+ * not open dark and then snap to light. Also keeps the status bar the
+ * opposite of the ground it sits on.
+ */
+function Themed({ children }: { children: React.ReactNode }) {
+  const { theme, colors, ready } = useAppearance();
+  if (!ready) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      {children}
+    </View>
   );
 }
 
@@ -57,6 +77,7 @@ export default function RootLayout() {
  * Signed out: the sign-in screen.
  */
 function RootNavigator() {
+  const colors = useTheme();
   const { session, loading } = useAuth();
 
   useEffect(() => {

@@ -2,7 +2,8 @@ import { Pressable, View } from 'react-native';
 
 import { CheckIcon } from '@/components/icons';
 import { ProgressRing } from '@/components/ProgressRing';
-import { alpha, colors } from '@/theme';
+import { useTheme } from '@/lib/appearance';
+import { alpha } from '@/theme';
 
 const ORB_SIZE = 60;
 const RING_INSET = 7;
@@ -27,6 +28,7 @@ export function CheckInOrb({
   accessibilityLabel,
   onPress,
 }: Props) {
+  const colors = useTheme();
   const fill = checkedIn ? colors.success : color;
   const tick = checkedIn ? colors.bg : colors.white;
   const ringSize = ORB_SIZE + RING_INSET * 2;

@@ -1,19 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { ArrowRightIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTimeShort } from '@/data/defaults';
 import { useAnchors } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** Step 3. Artboard: OnbCrew. Shows where the new habit sits, then crew or solo. */
 export default function CrewPromptScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { data: anchors = [] } = useAnchors(session?.user.id);
@@ -107,6 +110,7 @@ export default function CrewPromptScreen() {
 }
 
 function TimelineAnchor({ time, label }: { time: string; label: string }) {
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.anchorRow}>
       <Text style={styles.time}>{formatTimeShort(time)}</Text>
@@ -118,7 +122,7 @@ function TimelineAnchor({ time, label }: { time: string; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   intro: { gap: spacing.sm },
   eyebrow: {
@@ -234,4 +238,4 @@ const styles = StyleSheet.create({
     bottom: 0,
     gap: 10,
   },
-});
+}) as const;

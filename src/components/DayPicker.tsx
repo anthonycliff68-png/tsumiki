@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { colors, fonts, radii, spacing } from '@/theme';
+import { fonts, radii, spacing, type Palette } from '@/theme';
 
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -16,6 +17,7 @@ type Props = {
 
 /** Which days a habit runs on. Sunday first, matching the rest of the app. */
 export function DayPicker({ value, color, onChange }: Props) {
+  const styles = useStyles(makeStyles);
   const toggle = (day: number) =>
     onChange(
       value.includes(day) ? value.filter((each) => each !== day) : [...value, day].sort(),
@@ -51,6 +53,7 @@ export function DayPicker({ value, color, onChange }: Props) {
 }
 
 function Preset({ label, onPress }: { label: string; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -62,7 +65,7 @@ function Preset({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   wrap: { gap: spacing.sm },
   days: { flexDirection: 'row', gap: 6 },
   day: {
@@ -87,4 +90,4 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   presetText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.textMuted },
-});
+}) as const;

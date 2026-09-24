@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import type { Advice, Verdict } from '@/lib/advice';
-import { alpha, colors, display, fonts, radii, spacing } from '@/theme';
+import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 
 export type AdviceTab = 'needs-work' | 'going-well';
 
@@ -26,6 +27,8 @@ export function AdviceList({
   onOpen: (habitId: string) => void;
   windowDays: number;
 }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const shown = tab === 'needs-work' ? needsWork : goingWell;
 
   return (
@@ -109,6 +112,7 @@ function Tab({
   active: boolean;
   onPress: () => void;
 }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="tab"
@@ -138,7 +142,7 @@ function adviceText(advice: Advice): string {
   return copy.stats.advice.run(advice.days);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { marginTop: spacing.xl },
   tabs: { flexDirection: 'row', gap: spacing.sm },
   tab: {
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: radii.chip,
-    backgroundColor: alpha(colors.white, 0.1),
+    backgroundColor: alpha(colors.overlay, 0.1),
     alignItems: 'center',
   },
   badgeOn: { backgroundColor: alpha(colors.bg, 0.14) },
@@ -194,7 +198,7 @@ const styles = StyleSheet.create({
   bar: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: alpha(colors.white, 0.1),
+    backgroundColor: alpha(colors.overlay, 0.1),
     marginTop: spacing.md,
     overflow: 'hidden',
   },
@@ -206,4 +210,4 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   suggestionText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, fontWeight: '500' },
-});
+}) as const;

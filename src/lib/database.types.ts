@@ -41,6 +41,7 @@ export type Database = {
     Tables: {
       anchors: {
         Row: {
+          color: string | null
           created_at: string
           ends_at: string | null
           id: string
@@ -51,6 +52,7 @@ export type Database = {
           usual_time: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           ends_at?: string | null
           id?: string
@@ -61,6 +63,7 @@ export type Database = {
           usual_time: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           ends_at?: string | null
           id?: string

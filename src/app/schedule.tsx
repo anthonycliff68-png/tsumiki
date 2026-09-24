@@ -1,42 +1,47 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
+import { MomentSheet, type MomentDraft } from '@/components/MomentSheet';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
+import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
-import { useAnchors, useCreateAnchor, useDeleteAnchor, useUpdateAnchor } from '@/lib/api';
+import {
+  useAnchorLoad,
+  useAnchors,
+  useCreateAnchor,
+  useDeleteAnchor,
+  useUpdateAnchor,
+} from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
-import { anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
 
-type Draft = {
-  id: string | null;
-  label: string;
-  usualTime: string;
-  endsAt: string | null;
-};
+
 
 /**
  * The shape of your day: the moments habits stack onto, and the blocks that
  * take up real time. Reached from My Day.
  */
 export default function ScheduleScreen() {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
 
   const { data: anchors = [] } = useAnchors(userId);
+  const { data: stacks = [] } = useAnchorLoad(userId);
   const createAnchor = useCreateAnchor(userId);
   const updateAnchor = useUpdateAnchor(userId);
   const deleteAnchor = useDeleteAnchor();
 
   const { id: openId } = useLocalSearchParams<{ id?: string }>();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<MomentDraft | null>(null);
   const [picking, setPicking] = useState<'start' | 'end' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +55,7 @@ export default function ScheduleScreen() {
         label: anchor.label,
         usualTime: anchor.usual_time.slice(0, 5),
         endsAt: anchor.ends_at ? anchor.ends_at.slice(0, 5) : null,
+        color: anchor.color,
       });
     }
   }, [openId, anchors, draft]);
@@ -59,7 +65,7 @@ export default function ScheduleScreen() {
   );
 
   const openNew = () =>
-    setDraft({ id: null, label: '', usualTime: '09:00', endsAt: null });
+    setDraft({ id: null, label: '', usualTime: '09:00', endsAt: null, color: null });
 
   const openExisting = (anchor: Anchor) =>
     setDraft({
@@ -67,6 +73,7 @@ export default function ScheduleScreen() {
       label: anchor.label,
       usualTime: anchor.usual_time.slice(0, 5),
       endsAt: anchor.ends_at ? anchor.ends_at.slice(0, 5) : null,
+      color: anchor.color,
     });
 
   const save = () => {
@@ -77,7 +84,12 @@ export default function ScheduleScreen() {
       return setError(copy.schedule.needLaterEnd);
     }
 
-    const input = { label: draft.label, usualTime: draft.usualTime, endsAt: draft.endsAt };
+    const input = {
+      label: draft.label,
+      usualTime: draft.usualTime,
+      endsAt: draft.endsAt,
+      color: draft.color,
+    };
     const done = () => setDraft(null);
     if (draft.id) updateAnchor.mutate({ id: draft.id, ...input }, { onSuccess: done });
     else createAnchor.mutate(input, { onSuccess: done });
@@ -116,7 +128,7 @@ export default function ScheduleScreen() {
             style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
           >
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: anchorColor(anchor.label) }]}>
+              <Text style={[styles.rowLabel, { color: momentColor(anchor) }]}>
                 {anchor.label}
               </Text>
               <Text style={styles.rowTime}>
@@ -131,87 +143,26 @@ export default function ScheduleScreen() {
 
         <TextButton label={`+ ${copy.schedule.add}`} onPress={openNew} />
 
-        {draft && (
-          <View style={styles.editor}>
-            <Text style={styles.label}>{copy.schedule.label}</Text>
-            <TextInput
-              accessibilityLabel={copy.schedule.label}
-              value={draft.label}
-              onChangeText={(label) => setDraft({ ...draft, label })}
-              placeholder={copy.schedule.labelPlaceholder}
-              placeholderTextColor={colors.textFaint}
-              selectionColor={colors.text}
-              style={styles.input}
-              maxLength={40}
-            />
-
-            <View style={styles.timesRow}>
-              <View style={styles.timeCol}>
-                <Text style={styles.label}>{copy.schedule.starts}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setPicking('start')}
-                  style={styles.timeButton}
-                >
-                  <Text style={styles.timeText}>{formatTime(draft.usualTime)}</Text>
-                </Pressable>
-              </View>
-
-              {draft.endsAt !== null && (
-                <View style={styles.timeCol}>
-                  <Text style={styles.label}>{copy.schedule.ends}</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => setPicking('end')}
-                    style={styles.timeButton}
-                  >
-                    <Text style={styles.timeText}>{formatTime(draft.endsAt)}</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.switchRow}>
-              <View style={styles.switchText}>
-                <Text style={styles.rowLabel}>{copy.schedule.lasts}</Text>
-                <Text style={styles.hint}>{copy.schedule.lastsHint}</Text>
-              </View>
-              <Switch
-                accessibilityLabel={copy.schedule.lasts}
-                value={draft.endsAt !== null}
-                onValueChange={(on) =>
-                  setDraft({
-                    ...draft,
-                    endsAt: on ? shiftHour(draft.usualTime) : null,
-                  })
-                }
-                trackColor={{ true: habitColors[2], false: colors.border }}
-              />
-            </View>
-
-            {error && <Text style={styles.error}>{error}</Text>}
-
-            <PrimaryButton
-              label={copy.schedule.save}
-              busy={createAnchor.isPending || updateAnchor.isPending}
-              onPress={save}
-            />
-            <TextButton label={copy.newHabit.cancel} onPress={() => setDraft(null)} />
-
-            {draft.id && (
-              <>
-                <TextButton
-                  label={copy.schedule.delete}
-                  onPress={() =>
-                    deleteAnchor.mutate(draft.id as string, { onSuccess: () => setDraft(null) })
-                  }
-                />
-                <Text style={styles.hint}>{copy.schedule.deleteHint}</Text>
-              </>
-            )}
-          </View>
-        )}
       </ScrollView>
+
+      <MomentSheet
+        draft={draft}
+        stacked={draft?.id ? (stacks.find((s) => s.anchorId === draft.id)?.count ?? 0) : 0}
+        busy={createAnchor.isPending || updateAnchor.isPending || deleteAnchor.isPending}
+        error={error}
+        onChange={setDraft}
+        onPickTime={setPicking}
+        onSave={save}
+        onDelete={() =>
+          draft?.id
+            ? deleteAnchor.mutate(draft.id, { onSuccess: () => setDraft(null) })
+            : undefined
+        }
+        onClose={() => {
+          setDraft(null);
+          setError(null);
+        }}
+      />
 
       <TimePickerSheet
         visible={picking !== null}
@@ -233,7 +184,7 @@ function shiftHour(time: string): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   pill: {
@@ -304,4 +255,4 @@ const styles = StyleSheet.create({
   switchText: { flex: 1, gap: 2 },
   hint: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.textFaint },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[4] },
-});
+}) as const;

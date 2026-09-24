@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -8,6 +8,7 @@ import { DayPicker } from '@/components/DayPicker';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { CheckIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { describeDays, EVERY_DAY, formatTime, formatTimeShort } from '@/data/defaults';
 import {
@@ -19,10 +20,12 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ScheduleMode } from '@/lib/models';
-import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** Create a habit, or edit one when opened with ?id=. Artboard: NewHabitDark. */
 export default function NewHabitScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -273,6 +276,8 @@ function ModeCard({
   color: string;
   onPress: () => void;
 }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -289,7 +294,7 @@ function ModeCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: {
@@ -372,4 +377,4 @@ const styles = StyleSheet.create({
   swatchActive: { borderColor: colors.text },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1] },
-});
+}) as const;

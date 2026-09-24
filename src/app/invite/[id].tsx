@@ -1,17 +1,20 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { INVITE_BASE_URL, inviteMessage } from '@/constants/brand';
 import { useCreateInvite, useCrew } from '@/lib/api';
-import { colors, display, fonts, radii, spacing } from '@/theme';
+import { display, fonts, radii, spacing, type Palette } from '@/theme';
 
 /** Share a crew's invite link. Artboard: InviteSend. */
 export default function InviteScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: crew } = useCrew(id);
@@ -91,7 +94,7 @@ export default function InviteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -130,4 +133,4 @@ const styles = StyleSheet.create({
   linkUrl: { fontFamily: fonts.body, fontSize: 13, color: 'rgba(255,255,255,0.85)' },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
-});
+}) as const;

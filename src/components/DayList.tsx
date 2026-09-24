@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { EditIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { describeDays, formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
-import { alpha, colors, display, fonts, radii, spacing } from '@/theme';
+import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 
 type Props = {
   habits: TodayHabit[];
@@ -20,6 +21,8 @@ type Props = {
  * come and already missed all sit in the same list.
  */
 export function DayList({ habits, nowMinutes, onToggle, onEdit }: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   return (
     <View style={styles.list}>
       {habits.map((habit) => {
@@ -94,7 +97,7 @@ function whenOf(habit: TodayHabit): string {
   return copy.today.anytimeShort;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   list: { gap: spacing.sm },
   row: {
     flexDirection: 'row',
@@ -117,4 +120,4 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     borderWidth: 1,
   },
-});
+}) as const;

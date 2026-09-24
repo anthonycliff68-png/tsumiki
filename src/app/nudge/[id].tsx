@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { SafetySheet } from '@/components/SafetySheet';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { CheckIcon, FlameIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import {
   useCheckIn,
@@ -17,10 +18,12 @@ import {
   useSendReaction,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { alpha, colors, display, fonts, radii, spacing } from '@/theme';
+import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 
 /** A nudge, opened. Artboards: NudgeOpen, then NudgeDone once you check in. */
 export default function NudgeScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -191,6 +194,7 @@ export default function NudgeScreen() {
 }
 
 function ReactionChip({ label, onPress }: { label: string; onPress: () => void }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -202,7 +206,7 @@ function ReactionChip({ label, onPress }: { label: string; onPress: () => void }
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   loading: {
     flex: 1,
@@ -319,4 +323,4 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
   reactionText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
-});
+}) as const;

@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { colors, fonts } from '@/theme';
+import { useStyles } from '@/lib/appearance';
+import { fonts, type Palette } from '@/theme';
 
 type Props = {
   /** Display name; the first two letters become the initials. */
@@ -21,6 +22,7 @@ export function initialsOf(name: string): string {
 
 /** A member, as a coloured disc with their initials. */
 export function Avatar({ name, color, size = 32, ringColor }: Props) {
+  const styles = useStyles(makeStyles);
   return (
     <View
       style={[
@@ -41,10 +43,11 @@ export function Avatar({ name, color, size = 32, ringColor }: Props) {
 
 /** Overlapping row of avatars, as the canvas draws them. */
 export function AvatarStack({ children }: { children: React.ReactNode }) {
+  const styles = useStyles(makeStyles);
   return <View style={styles.stack}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   avatar: {
     flexShrink: 0,
     alignItems: 'center',
@@ -60,4 +63,4 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingLeft: 8,
   },
-});
+}) as const;

@@ -18,6 +18,8 @@ type AuthState = {
   /** Set when the exchange fails, so the callback screen can say so. */
   authError: string | null;
   signInWithEmail: (email: string) => Promise<void>;
+  /** Exchange the six-digit code from the email for a session. */
+  verifyEmailCode: (email: string, code: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -95,6 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  /**
+   * The code route, for a real phone. A magic link has to come back to a
+   * redirect address, and in Expo Go that address changes every session and is
+   * not in the project's allow-list — so on a device the link has nowhere to
+   * land. The same email carries a code, which needs no deep link at all.
+   */
+  const verifyEmailCode = useCallback(async (email: string, code: string) => {
+    setAuthError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'email',
+    });
+    if (error) throw error;
+  }, []);
+
   const signInWithApple = useCallback(async () => {
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
@@ -134,10 +152,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       exchanging,
       authError,
       signInWithEmail,
+      verifyEmailCode,
       signInWithApple,
       signOut,
     }),
-    [session, loading, exchanging, authError, signInWithEmail, signInWithApple, signOut],
+    [
+      session,
+      loading,
+      exchanging,
+      authError,
+      signInWithEmail,
+      verifyEmailCode,
+      signInWithApple,
+      signOut,
+    ],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

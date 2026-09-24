@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -8,14 +8,17 @@ import { PrimaryButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
 import { DayList } from '@/components/DayList';
 import { HabitFan } from '@/components/HabitFan';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
-import { alpha, colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
 
 /** Today. Artboard: TodayDark. */
 export default function TodayScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const clearance = useDockClearance();
   const { session } = useAuth();
@@ -68,9 +71,33 @@ export default function TodayScreen() {
     () => upcoming[0] ?? missed[0] ?? habits[habits.length - 1],
     [upcoming, missed, habits],
   );
-  // The hand you are still holding: what is next, then what you let slip.
-  const inHand = useMemo(() => [...upcoming, ...missed], [upcoming, missed]);
   const finished = useMemo(() => habits.filter((habit) => habit.checkedIn), [habits]);
+  const openCount = open.length;
+
+  /**
+   * The day in the order it happens, and nothing moves it. Checking a habit in
+   * must not shuffle the hand, so the sort never looks at whether it is done.
+   * Habits with no set time sit at the end — that is where the app already
+   * treats them, and the only place that never jumps ahead of a real time.
+   * Ties break on name, so two habits on the same moment keep a fixed order.
+   */
+  const inHand = useMemo(
+    () =>
+      [...habits].sort(
+        (a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name),
+      ),
+    [habits],
+  );
+
+  // Open on the first thing still to do. Once the day is done that is nothing,
+  // so fall back to the start of the day rather than an arbitrary card.
+  const initialFocus = useMemo(() => {
+    const at = inHand.findIndex((habit) => !habit.checkedIn);
+    return at === -1 ? 0 : at;
+  }, [inHand]);
+
+  // A new day is a new hand: remount so the focus rule runs again.
+  const dayKey = viewedDate.toDateString();
   const onFanFocus = useCallback(
     (habit: { color: string }) => setFanColor(habit.color),
     [],
@@ -180,16 +207,18 @@ export default function TodayScreen() {
 
         {inHand.length > 0 && (
           <HabitFan
+            key={dayKey}
             habits={inHand}
+            initialFocus={initialFocus}
             nowMinutes={isToday ? nowMinutes : null}
             busy={checkIn.isPending}
-            onCheckIn={(habit) => toggle({ id: habit.id, checkedIn: false })}
+            onToggle={toggle}
             onEdit={(habit) => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
             onFocus={onFanFocus}
           />
         )}
 
-        {habits.length > 0 && inHand.length === 0 && (
+        {habits.length > 0 && openCount === 0 && (
           <View style={styles.padded}>
             <Text style={styles.allDone}>{copy.today.allDone}</Text>
           </View>
@@ -217,9 +246,9 @@ export default function TodayScreen() {
                 </Pressable>
               )}
 
-              {inHand.length > 0 && (
+              {openCount > 0 && (
                 <View style={[styles.chip, { backgroundColor: bleedColor, borderColor: bleedColor }]}>
-                  <Text style={styles.chipText}>{copy.today.leftToday(inHand.length)}</Text>
+                  <Text style={styles.chipText}>{copy.today.leftToday(openCount)}</Text>
                 </View>
               )}
 
@@ -258,7 +287,7 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   padded: { paddingHorizontal: spacing.xl },
   fanHint: {
@@ -411,4 +440,4 @@ const styles = StyleSheet.create({
   nudgeText: { flex: 1, gap: 2 },
   nudgeFrom: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   nudgeMessage: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
-});
+}) as const;

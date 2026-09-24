@@ -1,11 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { TextButton } from '@/components/Button';
 import { CheckIcon, FlameIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import {
@@ -21,12 +22,14 @@ import {
 import { NudgeSheet } from '@/components/NudgeSheet';
 import { SafetySheet } from '@/components/SafetySheet';
 import { useAuth } from '@/lib/auth';
-import { alpha, colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /** One crew: the shared streak, the week behind it, and who is in today. */
 export default function CrewScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -227,6 +230,8 @@ function MemberTile({
   onReport: () => void;
   onToggle: () => void;
 }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   const moment = momentOf(member);
 
   return (
@@ -314,7 +319,7 @@ function initials(name: string): string {
   return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -402,4 +407,4 @@ const styles = StyleSheet.create({
   },
   headingOutText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
-});
+}) as const;

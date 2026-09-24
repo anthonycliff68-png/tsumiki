@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text } from 'react-native';
 
-import { colors, fonts, radii } from '@/theme';
+import { useStyles, useTheme } from '@/lib/appearance';
+import { fonts, radii, type Palette } from '@/theme';
 
 type Props = {
   label: string;
@@ -13,6 +14,8 @@ type Props = {
 
 /** The pale pill from the canvas: the one thing to do on a screen. */
 export function PrimaryButton({ label, onPress, disabled, busy, icon }: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const inactive = disabled || busy;
   return (
     <Pressable
@@ -41,6 +44,7 @@ export function PrimaryButton({ label, onPress, disabled, busy, icon }: Props) {
 
 /** The quieter second option underneath it. */
 export function TextButton({ label, onPress, disabled }: Omit<Props, 'busy' | 'icon'>) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -55,7 +59,7 @@ export function TextButton({ label, onPress, disabled }: Omit<Props, 'busy' | 'i
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   primary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -87,4 +91,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-});
+}) as const;

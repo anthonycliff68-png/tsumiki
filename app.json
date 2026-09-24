@@ -2,6 +2,7 @@
   "expo": {
     "name": "Tsumiki",
     "slug": "tsumiki",
+    "owner": "cliffora9",
     "scheme": "tsumiki",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,6 +18,9 @@
         "UIBackgroundModes": [
           "remote-notification"
         ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -55,6 +59,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0fd29007-1a7c-4e37-a844-dbb4a2200115"
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -8,11 +8,12 @@ import { PrimaryButton } from '@/components/Button';
 import { ArrowRightIcon, PlusIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeShort } from '@/data/defaults';
 import { useSaveRoutine } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 type Row = {
   id: string;
@@ -34,6 +35,8 @@ const initialRows = (): Row[] =>
 
 /** Step 1. Artboard: OnbRoutine. Writes the anchors every habit stacks onto. */
 export default function RoutineScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const saveRoutine = useSaveRoutine(session?.user.id);
@@ -193,7 +196,7 @@ export default function RoutineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   intro: { gap: spacing.sm },
   eyebrow: {
@@ -276,4 +279,4 @@ const styles = StyleSheet.create({
     color: habitColors[1],
   },
   pressed: { opacity: 0.75 },
-});
+}) as const;

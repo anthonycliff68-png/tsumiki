@@ -1,19 +1,22 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
 import { FlameIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCreateCrew, useCrews, useHabits } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors, display, fonts, habitColors, radii, spacing, tint } from '@/theme';
+import { display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
 
 /** Crews. Artboards: GroupDark, CrewWalk. */
 export default function CrewsScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const clearance = useDockClearance();
   const { session } = useAuth();
@@ -163,7 +166,7 @@ export default function CrewsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   crewCard: { gap: 6, padding: spacing.xl, borderRadius: radii.hero },
   crewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -225,4 +228,4 @@ const styles = StyleSheet.create({
   },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: tint(habitColors[1], 0.2) },
-});
+}) as const;

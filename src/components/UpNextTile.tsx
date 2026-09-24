@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { CheckIcon } from '@/components/icons';
+import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
-import { colors, display, fonts, radii, spacing } from '@/theme';
+import { display, fonts, radii, spacing, type Palette } from '@/theme';
 
 type Props = {
   habit: TodayHabit;
@@ -13,6 +14,7 @@ type Props = {
 
 /** One tile in the "Up next" row. A done habit goes grey. */
 export function UpNextTile({ habit, onPress }: Props) {
+  const styles = useStyles(makeStyles);
   const when =
     habit.mode === 'after' && habit.anchorLabel
       ? habit.anchorLabel
@@ -47,7 +49,7 @@ export function UpNextTile({ habit, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   tile: {
     width: 150,
     flexShrink: 0,
@@ -87,4 +89,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-});
+}) as const;

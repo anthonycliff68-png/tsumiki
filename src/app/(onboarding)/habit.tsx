@@ -1,18 +1,19 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { ArrowRightIcon, CheckIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { DEFAULT_ANCHORS, HABIT_SUGGESTIONS, type HabitSuggestion } from '@/data/defaults';
 import { useAnchors, useCreateFirstHabit } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Anchor } from '@/lib/models';
-import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /**
  * Suggestions are written against the default routine, so match them back to
@@ -29,6 +30,8 @@ function anchorFor(suggestion: HabitSuggestion, anchors: Anchor[]): Anchor | und
 
 /** Step 2. Artboard: OnbHabit. Writes habits + habit_schedules. */
 export default function FirstHabitScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -171,7 +174,7 @@ export default function FirstHabitScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   intro: { gap: spacing.sm },
   eyebrow: {
@@ -260,4 +263,4 @@ const styles = StyleSheet.create({
     color: habitColors[1],
   },
   pressed: { opacity: 0.85 },
-});
+}) as const;

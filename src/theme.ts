@@ -1,10 +1,32 @@
 /**
- * Design tokens for the cinematic dark direction.
- * Source of truth: the "Direction 2: cinematic dark" rows on the design canvas.
- * The app is dark only — there is no light theme in v1.
+ * Design tokens. The cinematic dark direction is the original and stays the
+ * source of truth; light is a second palette against the same token names.
+ *
+ * `overlay` is the one that is easy to get wrong. Borders, scrims and input
+ * fills were all written as white at low alpha, which lightens on a dark
+ * ground — on a light ground the same thing has to darken. So anything that
+ * means "a wash over whatever is behind" uses `overlay`, never `white`.
  */
 
-export const colors = {
+export type Palette = {
+  bg: string;
+  surface: string;
+  surfaceRaised: string;
+  glass: string;
+  text: string;
+  textMuted: string;
+  textFaint: string;
+  textInactive: string;
+  border: string;
+  hairline: string;
+  success: string;
+  /** A wash over the ground: white on dark, near-black on light. */
+  overlay: string;
+  /** Actual white, for the few places that genuinely mean it. */
+  white: string;
+};
+
+export const darkPalette: Palette = {
   bg: '#0B0B0C',
   surface: '#1C1C1F',
   surfaceRaised: '#2A2A2E',
@@ -17,8 +39,38 @@ export const colors = {
   border: 'rgba(255,255,255,0.14)',
   hairline: 'rgba(255,255,255,0.08)',
   success: '#7FD1A4',
+  overlay: '#FFFFFF',
   white: '#FFFFFF',
-} as const;
+};
+
+/**
+ * Provisional. Warm paper rather than pure white, so the habit colours sit on
+ * it the way they sit on the dark ground. Not designed yet — that is its own
+ * job, and these values are here so the switch can be seen working.
+ */
+export const lightPalette: Palette = {
+  bg: '#F6F3ED',
+  surface: '#FFFFFF',
+  surfaceRaised: '#FFFFFF',
+  glass: 'rgba(255,255,255,0.78)',
+  text: '#16161A',
+  textMuted: '#4B4740',
+  textFaint: '#7A746B',
+  textInactive: '#8E887E',
+  border: 'rgba(22,22,26,0.16)',
+  hairline: 'rgba(22,22,26,0.09)',
+  success: '#2F8F5B',
+  overlay: '#16161A',
+  white: '#FFFFFF',
+};
+
+export const palettes = { dark: darkPalette, light: lightPalette };
+
+/**
+ * The dark palette, for modules that read colours at import time. Anything
+ * that should follow the theme reads it through `useTheme()` instead.
+ */
+export const colors = darkPalette;
 
 /** blue, orange, teal, purple, gold, magenta */
 export const habitColors = [
@@ -154,6 +206,15 @@ export function companionColor(color: string): string {
  * behind white text but disappears as text on a near-black ground. Derived
  * from the label, so a moment keeps its colour as long as it keeps its name.
  */
+/**
+ * A moment's colour: the one chosen for it, or failing that one derived from
+ * its label. The column is nullable on purpose — a moment nobody has picked a
+ * colour for keeps the colour it has always had.
+ */
+export function momentColor(anchor: { label: string; color?: string | null }): string {
+  return anchor.color ?? anchorColor(anchor.label);
+}
+
 export function anchorColor(seed: string): string {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {

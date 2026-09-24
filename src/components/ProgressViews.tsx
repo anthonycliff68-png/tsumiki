@@ -1,9 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import type { HabitStats } from '@/lib/stats';
-import { alpha, colors, fonts, spacing } from '@/theme';
+import { alpha, fonts, spacing, type Palette } from '@/theme';
 
 /**
  * Each period gets the shape that suits it. A day is a set of rings, because
@@ -21,6 +22,8 @@ export function RingGrid({
 }: {
   habits: { stats: HabitStats; run: number; recent: number | null }[];
 }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   return (
     <View style={styles.rings}>
       {habits.map(({ stats, run, recent }) => {
@@ -36,7 +39,7 @@ export function RingGrid({
                   cx={RING / 2}
                   cy={RING / 2}
                   r={radius}
-                  stroke={alpha(colors.white, 0.1)}
+                  stroke={alpha(colors.overlay, 0.1)}
                   strokeWidth={RING_WIDTH}
                   fill="none"
                 />
@@ -75,6 +78,8 @@ export function RingGrid({
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export function HeatWall({ habits }: { habits: { stats: HabitStats; cells: HeatCell[] }[] }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   return (
     <View>
       <View style={styles.wallHead}>
@@ -96,7 +101,7 @@ export function HeatWall({ habits }: { habits: { stats: HabitStats; cells: HeatC
           </Text>
           <View style={styles.wallCells}>
             {cells.map((cell) => (
-              <View key={cell.date} style={[styles.wallCell, heatStyle(cell.state, stats.color)]} />
+              <View key={cell.date} style={[styles.wallCell, heatStyle(cell.state, stats.color, colors)]} />
             ))}
           </View>
           <Text
@@ -115,15 +120,15 @@ export function HeatWall({ habits }: { habits: { stats: HabitStats; cells: HeatC
 
 export type HeatCell = { date: string; state: 'done' | 'missed' | 'not-due' | 'future' };
 
-function heatStyle(state: HeatCell['state'], color: string) {
+function heatStyle(state: HeatCell['state'], color: string, colors: Palette) {
   if (state === 'done') return { backgroundColor: color };
   if (state === 'missed') {
     return { backgroundColor: alpha(color, 0.18), borderWidth: 1, borderColor: alpha(color, 0.9) };
   }
   if (state === 'future') {
-    return { borderWidth: 1, borderStyle: 'dashed' as const, borderColor: alpha(colors.white, 0.16) };
+    return { borderWidth: 1, borderStyle: 'dashed' as const, borderColor: alpha(colors.overlay, 0.16) };
   }
-  return { backgroundColor: alpha(colors.white, 0.04) };
+  return { backgroundColor: alpha(colors.overlay, 0.04) };
 }
 
 const TREND_HEIGHT = 120;
@@ -139,6 +144,8 @@ export function TrendBars({
   from: string;
   to: string;
 }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   return (
     <View>
       <View style={styles.trend}>
@@ -152,7 +159,7 @@ export function TrendBars({
                 styles.trendBar,
                 {
                   height: day.rate === null ? 2 : Math.max(3, day.rate * TREND_HEIGHT),
-                  backgroundColor: day.rate === null ? alpha(colors.white, 0.08) : color,
+                  backgroundColor: day.rate === null ? alpha(colors.overlay, 0.08) : color,
                   opacity: day.rate === null ? 1 : 0.35 + day.rate * 0.65,
                 },
               ]}
@@ -169,7 +176,7 @@ export function TrendBars({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   rings: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -217,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: alpha(colors.white, 0.06),
+    borderBottomColor: alpha(colors.overlay, 0.06),
   },
   wallName: {
     width: 104,
@@ -249,10 +256,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: alpha(colors.white, 0.1),
+    backgroundColor: alpha(colors.overlay, 0.1),
   },
   trendSlot: { flex: 1, justifyContent: 'flex-end' },
   trendBar: { borderTopLeftRadius: 3, borderTopRightRadius: 3, width: '100%' },
   trendAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm },
   trendTick: { fontFamily: fonts.body, fontSize: 10, color: colors.textFaint },
-});
+}) as const;

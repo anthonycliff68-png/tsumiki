@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { FlameIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime, formatTimeShort } from '@/data/defaults';
 import {
@@ -19,10 +20,12 @@ import {
 import { useAuth } from '@/lib/auth';
 import { rememberInvite } from '@/lib/invite';
 import type { ScheduleMode } from '@/lib/models';
-import { colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** An invite link, opened. Artboards: InviteJoin, then InviteJoined. */
 export default function JoinScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { code } = useLocalSearchParams<{ code: string }>();
   const { session } = useAuth();
@@ -221,7 +224,7 @@ export default function JoinScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   centre: {
     flex: 1,
@@ -275,4 +278,4 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   chipTime: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   chipTextActive: { color: colors.bg },
-});
+}) as const;

@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+import { LinesIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { describeDays } from '@/data/defaults';
+import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
-import { alpha, colors, display, fonts, radii, spacing } from '@/theme';
+import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 
 /** Cards either side of the front one that stay mounted — one spare, so a card
     slides in rather than appearing. */
@@ -14,11 +26,20 @@ const MOUNTED = WINGS + 1;
 
 const CARD_W = 214;
 /** Tuned so the caption and the check-in button still clear the dock. */
-const CARD_H = 280;
+const CARD_H = 264;
 /** How far apart the cards sit, how far they drop, and how far they lean. */
 const SPREAD = 46;
 const DROP = 16;
 const LEAN = 7;
+/** The colour left showing along the bottom of a card still to do. */
+const FLOOR = 6;
+/** The corner of the front card that opens it for editing. */
+const HANDLE_HIT = 56;
+/** A press that moves less than this, for less than this long, is a tap. */
+const TAP_SLOP = 8;
+const TAP_TIME = 600;
+/** More pips than this and they stop being countable, so show a figure. */
+const PIP_LIMIT = 10;
 /** Finger travel that moves the fan on by one card. */
 const TRAVEL = 96;
 /** How much of a throw carries into where it lands. */
@@ -30,27 +51,59 @@ type Props = {
   habits: TodayHabit[];
   /** Minutes since midnight, or null when looking at another day. */
   nowMinutes: number | null;
-  onCheckIn: (habit: TodayHabit) => void;
+  onToggle: (habit: TodayHabit) => void;
   onEdit: (habit: TodayHabit) => void;
   /** The card at the front, as it changes under the finger. */
   onFocus?: (habit: TodayHabit) => void;
+  /** Where to open the hand: the first habit still to do. */
+  initialFocus?: number;
   busy: boolean;
 };
+
+/**
+ * When a habit happens, short enough for the corner of a card. A habit with a
+ * set time is not "anytime" — only one with no time at all is.
+ */
+function whenOf(habit: TodayHabit): string {
+  if (habit.anchorLabel !== null) return habit.anchorLabel;
+  if (habit.mode === 'at' && habit.time !== null) return formatTime(habit.time);
+  return copy.today.anytimeShort;
+}
+
+function whenLongOf(habit: TodayHabit): string {
+  if (habit.anchorLabel !== null) return copy.today.afterAnchor(habit.anchorLabel);
+  if (habit.mode === 'at' && habit.time !== null) return copy.today.atTime(formatTime(habit.time));
+  return copy.today.anytime;
+}
 
 const clamp = (value: number, low: number, high: number) =>
   Math.min(high, Math.max(low, value));
 
 /**
- * What is left of the day, held like a hand of cards.
+ * The day, held like a hand of cards.
  *
  * Everything is driven by one fractional position — 2.4 means "between the
  * third and fourth card" — and every card reads its own offset from it. So the
  * fan follows the finger the whole way, cards straightening and leaning as they
- * pass, instead of sliding as a block and snapping a card at a time. Only the
- * open habits are in the hand; the finished ones fold away behind a count.
- * Artboard: 3a.
+ * pass, instead of sliding as a block and snapping a card at a time.
+ *
+ * A card is hollow until it is done and then fills with its colour, the same
+ * way a row does everywhere else. The whole card is the target, so checking in
+ * and undoing are the same gesture; editing is the rarer thing, so it gets the
+ * small three-line handle in the corner. Finished habits stay in the hand —
+ * take them out and there would be no way back to undo one. Artboard: 3a.
  */
-export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy }: Props) {
+export function HabitFan({
+  habits,
+  nowMinutes,
+  onToggle,
+  onEdit,
+  onFocus,
+  initialFocus = 0,
+  busy,
+}: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const { width } = useWindowDimensions();
   const position = useRef(new Animated.Value(0)).current;
 
@@ -71,6 +124,7 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
         focusRef.current = target;
         setFocus(target);
       }
+      held.current = habits[target]?.id ?? held.current;
       Animated.spring(position, {
         toValue: target,
         useNativeDriver: true,
@@ -78,11 +132,40 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
         bounciness: 5,
       }).start();
     },
-    [last, position],
+    [last, position, habits],
   );
 
-  // A check-in takes a card out of the hand: close the gap rather than leaving
-  // the fan pointing past the end.
+  // Open on the habit the screen was told to, once the day has actually
+  // arrived — the first render usually has nothing in it yet.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || habits.length === 0) return;
+    opened.current = true;
+    const start = clamp(initialFocus, 0, habits.length - 1);
+    focusRef.current = start;
+    held.current = habits[start]?.id ?? null;
+    settled.current = start;
+    setFocus(start);
+    position.setValue(start);
+  }, [habits, initialFocus, position]);
+
+  // Stay on the habit you were looking at, not the slot it happened to be in:
+  // adding or removing a habit elsewhere in the day must not swap the card
+  // under your thumb.
+  const held = useRef<string | null>(null);
+  useEffect(() => {
+    if (!opened.current || held.current === null) return;
+    const at = habits.findIndex((habit) => habit.id === held.current);
+    const start = at === -1 ? clamp(focusRef.current, 0, Math.max(0, habits.length - 1)) : at;
+    if (start === focusRef.current) return;
+    focusRef.current = start;
+    held.current = habits[start]?.id ?? null;
+    settled.current = start;
+    setFocus(start);
+    position.setValue(start);
+  }, [habits, position]);
+
+  // The hand can also shrink from under the fan.
   useEffect(() => {
     if (settled.current > last) land(last);
   }, [last, land]);
@@ -92,6 +175,35 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
     if (habit !== undefined) onFocus?.(habit);
   }, [focus, habits, onFocus]);
 
+  const cardLeft = (width - CARD_W) / 2;
+  const touch = useRef({ x: 0, y: 0, at: 0 });
+  const dragged = useRef(false);
+  const aim = useRef({ cardLeft, focus, habits, onToggle, onEdit, busy });
+  aim.current = { cardLeft, focus, habits, onToggle, onEdit, busy };
+
+  /** A press that never travelled: work out what it landed on. */
+  const tapped = (x: number, y: number) => {
+    const { cardLeft: at, focus: index, habits: all, busy: working } = aim.current;
+    const habit = all[index];
+    land(index);
+    if (habit === undefined || working) return;
+    // Past either edge of the front card is a wing: bring that one forward.
+    if (x < at) return land(index - 1);
+    if (x > at + CARD_W) return land(index + 1);
+    // The handle's corner, given a generous target.
+    if (x > at + CARD_W - HANDLE_HIT && y < HANDLE_HIT) return aim.current.onEdit(habit);
+    aim.current.onToggle(habit);
+  };
+
+  // One gesture, not two. A tap and a drag composed as separate gestures —
+  // nested, raced or exclusive — left the pan unable to activate, so the fan
+  // would not turn.
+  //
+  // The tap rides on the pan's raw touches instead. Those fire whether or not
+  // the pan ever activates, so the pan keeps its horizontal threshold — which
+  // is what lets a vertical drag fall through to the scroll view — and a touch
+  // that never became a drag is still a tap.
+  //
   // runOnJS throughout: this project drives gestures from the JS thread on
   // purpose, since the worklet runtime takes Expo Go down with it.
   const pan = useMemo(
@@ -99,7 +211,29 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
       Gesture.Pan()
         .runOnJS(true)
         .activeOffsetX([-10, 10])
+        // Give up the moment the drag reads as vertical, or the fan swallows
+        // every scroll and everything below it becomes unreachable.
+        .failOffsetY([-14, 14])
+        .onTouchesDown((event) => {
+          const first = event.allTouches[0];
+          touch.current = { x: first?.x ?? 0, y: first?.y ?? 0, at: Date.now() };
+          dragged.current = false;
+        })
+        .onTouchesMove((event) => {
+          const first = event.allTouches[0];
+          if (first === undefined) return;
+          const far =
+            Math.abs(first.x - touch.current.x) > TAP_SLOP ||
+            Math.abs(first.y - touch.current.y) > TAP_SLOP;
+          if (far) dragged.current = true;
+        })
+        .onTouchesUp(() => {
+          if (dragged.current) return;
+          if (Date.now() - touch.current.at > TAP_TIME) return;
+          tapped(touch.current.x, touch.current.y);
+        })
         .onStart(() => {
+          dragged.current = true;
           position.stopAnimation((value) => {
             settled.current = clamp(Math.round(value), 0, last);
           });
@@ -113,6 +247,7 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
           const near = clamp(Math.round(raw), 0, last);
           if (near !== focusRef.current) {
             focusRef.current = near;
+            held.current = aim.current.habits[near]?.id ?? held.current;
             setFocus(near);
           }
         })
@@ -127,7 +262,8 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
   const current = habits[focus];
   if (current === undefined) return null;
 
-  const left = (width - CARD_W) / 2;
+  const left = cardLeft;
+
 
   return (
     <View>
@@ -198,107 +334,294 @@ export function HabitFan({ habits, nowMinutes, onCheckIn, onEdit, onFocus, busy 
                   },
                 ]}
               >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isFront
-                      ? copy.today.editLabel(habit.name)
-                      : copy.today.bringForward(habit.name)
-                  }
-                  onPress={() => (isFront ? onEdit(habit) : land(index))}
-                  style={[styles.card, { backgroundColor: habit.color }]}
-                >
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.scrim, { opacity: behind }]}
-                  />
-
-                  <View style={styles.cardTop}>
-                    <View style={styles.tag}>
-                      <Text style={styles.tagText} numberOfLines={1}>
-                        {habit.anchorLabel ?? copy.today.anytimeShort}
-                      </Text>
-                    </View>
-                    {missed && (
-                      <View style={styles.tag}>
-                        <Text style={styles.tagText}>{copy.today.missed}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Animated.View style={{ opacity: nameIn }}>
-                    <Text style={display(30, 27)} numberOfLines={3}>
-                      {habit.name}
-                    </Text>
-                    <Text style={styles.cardSub} numberOfLines={1}>
-                      {describeDays(habit.daysOfWeek)}
-                    </Text>
-                  </Animated.View>
-                </Pressable>
+                <FanCard
+                  habit={habit}
+                  isFront={isFront}
+                  missed={missed}
+                  busy={busy}
+                  behind={behind}
+                  nameIn={nameIn}
+                  onPress={() => (isFront ? onToggle(habit) : land(index))}
+                  onEdit={() => onEdit(habit)}
+                  
+                  style={[
+                    styles.card,
+                    {
+                      borderColor: habit.checkedIn ? alpha(colors.overlay, 0.16) : habit.color,
+                      borderWidth: habit.checkedIn ? 1 : 1.5,
+                    },
+                  ]}
+                />
               </Animated.View>
             );
           })}
         </View>
       </GestureDetector>
 
-      <View style={styles.pips}>
-        {habits.map((habit, index) => (
-          <View
-            key={habit.id}
-            style={[
-              styles.pip,
-              index === focus && styles.pipOn,
-              index === focus && { backgroundColor: current.color },
-            ]}
-          />
-        ))}
-      </View>
+      {habits.length <= PIP_LIMIT ? (
+        <View style={styles.pips}>
+          {habits.map((habit, index) => (
+            <View
+              key={habit.id}
+              style={[
+                styles.pip,
+                habit.checkedIn && { backgroundColor: alpha(colors.overlay, 0.5) },
+                index === focus && styles.pipOn,
+                index === focus && { backgroundColor: current.color },
+              ]}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text style={[styles.counter, { color: current.color }]}>
+          {copy.today.cardOf(focus + 1, habits.length)}
+        </Text>
+      )}
 
       <View style={styles.caption}>
         <Text style={display(30, 28)} numberOfLines={2}>
           {current.name}
         </Text>
-        <Text style={styles.captionSub}>
-          {current.anchorLabel === null
-            ? copy.today.anytime
-            : copy.today.afterAnchor(current.anchorLabel)}
-        </Text>
+        <Text style={styles.captionSub}>{whenLongOf(current)}</Text>
       </View>
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={copy.today.checkInLabel(current.name)}
+        accessibilityState={{ checked: current.checkedIn }}
+        accessibilityLabel={
+          current.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(current.name)
+        }
         disabled={busy}
-        onPress={() => onCheckIn(current)}
+        onPress={() => onToggle(current)}
         style={({ pressed }) => [
           styles.check,
-          { backgroundColor: current.color },
+          current.checkedIn
+            ? { backgroundColor: 'transparent', borderWidth: 2, borderColor: current.color }
+            : { backgroundColor: current.color },
           (pressed || busy) && { opacity: 0.85 },
         ]}
       >
-        <Text style={styles.checkLabel}>{copy.today.checkIn}</Text>
+        <Text style={styles.checkLabel}>
+          {current.checkedIn ? copy.today.undoCheckIn : copy.today.checkIn}
+        </Text>
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * One card. Its tap is a gesture rather than a Pressable: a Pressable nested
+ * inside a GestureDetector never fires here, so the whole surface would look
+ * tappable and do nothing. The edit handle is a gesture of its own, nested
+ * deeper so it wins the tap that lands on it.
+ */
+function FanCard({
+  habit,
+  isFront,
+  missed,
+  busy,
+  behind,
+  nameIn,
+  onPress,
+  onEdit,
+  style,
+}: {
+  habit: TodayHabit;
+  isFront: boolean;
+  missed: boolean;
+  busy: boolean;
+  behind: Animated.AnimatedInterpolation<string | number>;
+  nameIn: Animated.AnimatedInterpolation<string | number>;
+  onPress: () => void;
+  onEdit: () => void;
+  style: StyleProp<ViewStyle>;
+}) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
+  // Checking in floods the card from a floor of colour up to the brim. Scale,
+  // not height, so all of it can run on the native driver.
+  //
+  // Three things move together, because one of them alone reads as a state
+  // change rather than as having done something: the colour rises, a bright
+  // line rides its surface and fades as it arrives, and the card takes a
+  // short push outwards and settles. Undoing drains, quicker and flatter —
+  // taking something back should not feel like a reward.
+  const rise = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+  const first = useRef(true);
+
+  useEffect(() => {
+    const done = habit.checkedIn;
+    // Cards mount mid-fan all the time; only a real change should play.
+    if (first.current) {
+      first.current = false;
+      rise.setValue(done ? 1 : 0);
+      return;
+    }
+
+    Animated.timing(rise, {
+      toValue: done ? 1 : 0,
+      duration: done ? 460 : 240,
+      // Out fast, then a long settle — the part that feels like arriving.
+      easing: done ? Easing.bezier(0.16, 1, 0.3, 1) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+
+    if (!done) {
+      pop.setValue(0);
+      return;
+    }
+    Animated.sequence([
+      Animated.delay(60),
+      Animated.timing(pop, {
+        toValue: 1,
+        duration: 130,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(pop, {
+        toValue: 0,
+        speed: 11,
+        bounciness: 9,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [habit.checkedIn, rise, pop]);
+
+  return (
+      <Animated.View
+        accessible
+        accessibilityRole="button"
+        accessibilityState={{ checked: habit.checkedIn, disabled: busy }}
+        accessibilityLabel={
+          isFront
+            ? habit.checkedIn
+              ? copy.today.undoCheckIn
+              : copy.today.checkInLabel(habit.name)
+            : copy.today.bringForward(habit.name)
+        }
+        accessibilityActions={[{ name: 'activate' }, { name: 'magicTap' }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'magicTap') onEdit();
+          else onPress();
+        }}
+        style={[
+          style,
+          { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] },
+        ]}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.fill,
+            {
+              backgroundColor: habit.color,
+              transform: [
+                {
+                  scaleY: rise.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [FLOOR / CARD_H, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+        {/* The bright edge of the colour as it climbs, gone once it lands. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.surface,
+            {
+              opacity: rise.interpolate({
+                inputRange: [0, 0.08, 0.82, 1],
+                outputRange: [0, 0.9, 0.9, 0],
+              }),
+              transform: [
+                {
+                  translateY: rise.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-FLOOR, -(CARD_H - 2)],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+
+        <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: behind }]} />
+
+        <View style={styles.cardTop}>
+          <View style={styles.tags}>
+            <View style={[styles.tag, !habit.checkedIn && styles.tagHollow]}>
+              <Text style={styles.tagText} numberOfLines={1}>
+                {whenOf(habit)}
+              </Text>
+            </View>
+            {missed && (
+              <View style={[styles.tag, !habit.checkedIn && styles.tagHollow]}>
+                <Text style={styles.tagText}>{copy.today.missed}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* The card itself checks in; editing is rarer, so it gets the
+              handle in the corner. Both are recognised by the stage's own tap
+              gesture rather than their own, because nesting a detector inside
+              the fan's pan stops either from firing. */}
+          <View style={styles.handle}>
+            <LinesIcon size={18} color={alpha(colors.overlay, 0.55)} />
+          </View>
+        </View>
+
+        <Animated.View style={{ opacity: nameIn }}>
+          <Text style={display(30, 27)} numberOfLines={3}>
+            {habit.name}
+          </Text>
+          <Text style={styles.cardSub} numberOfLines={1}>
+            {describeDays(habit.daysOfWeek)}
+            {habit.checkedIn ? ` \u00b7 ${copy.today.doneTag}` : ''}
+          </Text>
+        </Animated.View>
+      </Animated.View>
+  );
+}
+
+const makeStyles = (colors: Palette) => ({
   stage: { height: CARD_H + WINGS * DROP + 16, marginTop: spacing.sm },
   slot: { position: 'absolute', width: CARD_W, height: CARD_H },
+  fill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: CARD_H,
+    transformOrigin: 'bottom',
+  },
   card: {
     width: '100%',
     height: '100%',
+    // The card is always opaque, or the cards behind show through the fan.
+    backgroundColor: colors.bg,
     borderRadius: 26,
     padding: spacing.lg,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: alpha(colors.white, 0.16),
+    borderColor: alpha(colors.overlay, 0.16),
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.55,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 18 },
     elevation: 12,
+  },
+  surface: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: colors.white,
   },
   scrim: {
     position: 'absolute',
@@ -308,15 +631,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.bg,
   },
-  cardTop: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  tags: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  handle: { padding: 2, marginTop: 2 },
   tag: {
     alignSelf: 'flex-start',
     borderRadius: radii.chip,
     backgroundColor: alpha('#000000', 0.3),
     paddingVertical: 5,
     paddingHorizontal: 12,
-    maxWidth: CARD_W - spacing.lg * 2,
+    maxWidth: CARD_W - spacing.lg * 2 - 26,
   },
+  tagHollow: { backgroundColor: alpha(colors.overlay, 0.1) },
   tagText: {
     fontFamily: fonts.body,
     fontSize: 11,
@@ -328,15 +654,22 @@ const styles = StyleSheet.create({
   cardSub: {
     fontFamily: fonts.body,
     fontSize: 12,
-    color: alpha(colors.white, 0.75),
+    color: alpha(colors.overlay, 0.75),
     marginTop: spacing.sm,
   },
 
   pips: { flexDirection: 'row', justifyContent: 'center', gap: 7, marginTop: spacing.md },
-  pip: { width: 7, height: 7, borderRadius: 4, backgroundColor: alpha(colors.white, 0.2) },
+  pip: { width: 7, height: 7, borderRadius: 4, backgroundColor: alpha(colors.overlay, 0.2) },
   pipOn: { width: 22 },
+  counter: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
 
-  caption: { alignItems: 'center', paddingHorizontal: spacing.xl, marginTop: spacing.md },
+  caption: { alignItems: 'center', paddingHorizontal: spacing.xl, marginTop: spacing.sm },
   captionSub: {
     fontFamily: fonts.body,
     fontSize: 13,
@@ -354,4 +687,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkLabel: { ...display(17, 17), letterSpacing: 0.5, color: colors.text },
-});
+}) as const;

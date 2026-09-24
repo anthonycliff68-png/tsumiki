@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { AdviceList, type AdviceTab } from '@/components/AdviceList';
 import { CalendarLegend } from '@/components/HabitCalendar';
@@ -23,7 +24,7 @@ import {
   statsFor,
   type StatsWindow,
 } from '@/lib/stats';
-import { alpha, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [
   { key: 'day', label: copy.stats.day },
@@ -77,6 +78,8 @@ function shortDate(date: string): string {
 
 /** Progress. How often each habit actually gets done. */
 export default function ProgressScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const clearance = useDockClearance();
   const { session } = useAuth();
@@ -324,7 +327,7 @@ export default function ProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   windows: { flexDirection: 'row', gap: spacing.sm },
   window: {
@@ -390,4 +393,4 @@ const styles = StyleSheet.create({
   },
   dangerText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.white },
   cancel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
-});
+}) as const;

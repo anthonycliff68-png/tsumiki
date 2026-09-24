@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import type { DayState, StatsWindow } from '@/lib/stats';
-import { alpha, colors, fonts } from '@/theme';
+import { alpha, fonts, type Palette } from '@/theme';
 
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -30,7 +31,7 @@ export function HabitCalendar({ window, color, days }: Props) {
  * left as an absence. A day still to come is dashed, and a day the habit
  * was never scheduled for recedes into the card.
  */
-function cellStyle(state: DayState, color: string) {
+function cellStyle(state: DayState, color: string, colors: Palette) {
   if (state === 'done') return { backgroundColor: color };
   if (state === 'missed') {
     return {
@@ -43,14 +44,16 @@ function cellStyle(state: DayState, color: string) {
     return {
       borderWidth: 1,
       borderStyle: 'dashed' as const,
-      borderColor: alpha(colors.white, 0.16),
+      borderColor: alpha(colors.overlay, 0.16),
     };
   }
-  return { backgroundColor: alpha(colors.white, 0.04) };
+  return { backgroundColor: alpha(colors.overlay, 0.04) };
 }
 
 /** Says what the four cell treatments mean, once per screen. */
 export function CalendarLegend({ color }: { color: string }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   const keys: { state: DayState; label: string }[] = [
     { state: 'done', label: copy.stats.legend.done },
     { state: 'missed', label: copy.stats.legend.missed },
@@ -61,7 +64,7 @@ export function CalendarLegend({ color }: { color: string }) {
     <View style={styles.legend}>
       {keys.map((key) => (
         <View key={key.state} style={styles.legendKey}>
-          <View style={[styles.legendCell, cellStyle(key.state, color)]} />
+          <View style={[styles.legendCell, cellStyle(key.state, color, colors)]} />
           <Text style={styles.legendLabel}>{key.label}</Text>
         </View>
       ))}
@@ -70,11 +73,13 @@ export function CalendarLegend({ color }: { color: string }) {
 }
 
 function WeekStrip({ color, days }: { color: string; days: Props['days'] }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.week}>
       {days.map((day) => (
         <View key={day.date} style={styles.weekCol}>
-          <View style={[styles.cell, cellStyle(day.state, color)]} />
+          <View style={[styles.cell, cellStyle(day.state, color, colors)]} />
           <Text style={styles.letter}>{LETTERS[weekdayOfDate(day.date)]}</Text>
         </View>
       ))}
@@ -83,6 +88,8 @@ function WeekStrip({ color, days }: { color: string; days: Props['days'] }) {
 }
 
 function MonthGrid({ color, days }: { color: string; days: Props['days'] }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
   const first = days[0];
   // Pad so the first of the month lands under its own weekday column.
   const lead = first ? weekdayOfDate(first.date) : 0;
@@ -102,7 +109,7 @@ function MonthGrid({ color, days }: { color: string; days: Props['days'] }) {
         ))}
         {days.map((day) => (
           <View key={day.date} style={styles.monthCell}>
-            <View style={[styles.cell, cellStyle(day.state, color)]} />
+            <View style={[styles.cell, cellStyle(day.state, color, colors)]} />
           </View>
         ))}
       </View>
@@ -115,7 +122,7 @@ function weekdayOfDate(date: string): number {
   return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay();
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
   legendKey: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendCell: { width: 12, height: 12, borderRadius: 3 },
@@ -132,4 +139,4 @@ const styles = StyleSheet.create({
   month: { gap: 4 },
   monthRow: { flexDirection: 'row', flexWrap: 'wrap' },
   monthCell: { width: `${100 / 7}%`, padding: 2 },
-});
+}) as const;

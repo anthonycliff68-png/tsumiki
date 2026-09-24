@@ -1,13 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { LinesIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { describeDays, formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import type { Anchor } from '@/lib/models';
-import { alpha, anchorColor, colors, display, fonts, habitColors, radii, spacing } from '@/theme';
+import { alpha, display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
 
 const GUTTER = 58;
 const RAIL_GAP = 8;
@@ -56,6 +57,7 @@ export function DayTimeline({
   onMove,
   onDragChange,
 }: Props) {
+  const styles = useStyles(makeStyles);
   const nodes = useRef(new Map<string, { node: View; target: DropTarget }>());
   const rects = useRef<{ key: string; top: number; bottom: number; target: DropTarget }[]>([]);
 
@@ -190,7 +192,7 @@ export function DayTimeline({
               <View style={[styles.railCell, { width: railWidth + RAIL_GAP * 2 }]}>
                 {line.kind === 'moment' && line.anchor.ends_at === null && (
                   <View
-                    style={[styles.tick, { backgroundColor: anchorColor(line.anchor.label) }]}
+                    style={[styles.tick, { backgroundColor: momentColor(line.anchor) }]}
                   />
                 )}
               </View>
@@ -214,7 +216,7 @@ export function DayTimeline({
                       onPress={() => onEditAnchor(line.anchor)}
                     >
                       <Text
-                        style={[styles.momentLabel, { color: anchorColor(line.anchor.label) }]}
+                        style={[styles.momentLabel, { color: momentColor(line.anchor) }]}
                       >
                         {line.anchor.label}
                       </Text>
@@ -280,6 +282,8 @@ function HabitCard({
   onDrop: (y: number) => void;
   onRelease: () => void;
 }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const offset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const scale = useRef(new Animated.Value(1)).current;
   const aimOffset = useRef(0);
@@ -466,7 +470,7 @@ function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number)
       lines,
       spans: blocks
         .filter((block) => block.start < end && block.end > start)
-        .map((block) => ({ id: block.anchor.id, color: anchorColor(block.anchor.label) })),
+        .map((block) => ({ id: block.anchor.id, color: momentColor(block.anchor) })),
     });
   }
   return rows;
@@ -481,7 +485,7 @@ function order(line: Line): number {
   return hour * 60 + (m ?? 0);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   hint: {
     fontFamily: fonts.body,
     fontSize: 12,
@@ -542,4 +546,4 @@ const styles = StyleSheet.create({
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
   nowLine: { flex: 1, height: 1, backgroundColor: habitColors[1] },
-});
+}) as const;

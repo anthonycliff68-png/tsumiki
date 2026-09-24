@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,16 +13,24 @@ import {
   type IconProps,
 } from '@/components/icons';
 import { CheckInOrb } from '@/components/CheckInOrb';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { alpha, colors, display, fonts, radii, tint } from '@/theme';
+import { alpha, display, fonts, radii, tint, type Palette } from '@/theme';
 
-/** Row heights from the canvas: 12 + 56 + 12, then 4 + 44 + 10. */
+/**
+ * Row heights from the canvas: 12 + 56 + 12, then 4 + 44 + 10. Only a starting
+ * guess — the dock reports its real height once it has laid out, because a long
+ * habit name, a larger text size or a day with no habits at all all change it,
+ * and a guess that runs short leaves the last row of every list under the glass.
+ */
 export const DOCK_HEIGHT = 80 + 58;
 /** How far the dock floats off the bottom of the screen on a home-indicator phone. */
 const DOCK_EDGE = 12;
+/** Breathing room between the dock's top edge and the end of a list. */
+const DOCK_GAP = 16;
 
 type TabIcon = (props: IconProps) => React.ReactElement;
 
@@ -34,10 +42,34 @@ const TABS: Record<string, { label: string; Icon: TabIcon }> = {
   you: { label: copy.dock.tabs.you, Icon: YouIcon },
 };
 
+const MeasuredDock = createContext<{
+  height: number;
+  measure: (event: LayoutChangeEvent) => void;
+}>({ height: DOCK_HEIGHT, measure: () => {} });
+
+/**
+ * Holds the dock's measured height for the screens underneath it. Wraps the
+ * tabs, so the dock that reports the height and the lists that pad for it are
+ * reading the same number.
+ */
+export function DockClearanceProvider({ children }: { children: React.ReactNode }) {
+  const [height, setHeight] = useState(DOCK_HEIGHT);
+
+  const measure = useCallback((event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.height;
+    // Only on a real change, or laying out would set state on every pass.
+    setHeight((current) => (Math.abs(current - next) > 0.5 ? next : current));
+  }, []);
+
+  const value = useMemo(() => ({ height, measure }), [height, measure]);
+  return <MeasuredDock.Provider value={value}>{children}</MeasuredDock.Provider>;
+}
+
 /** Where the dock's top edge sits, so screens can pad their content past it. */
 export function useDockClearance(): number {
   const insets = useSafeAreaInsets();
-  return DOCK_HEIGHT + dockBottom(insets.bottom) + 16;
+  const { height } = useContext(MeasuredDock);
+  return height + dockBottom(insets.bottom) + DOCK_GAP;
 }
 
 function dockBottom(safeBottom: number): number {
@@ -49,6 +81,8 @@ function dockBottom(safeBottom: number): number {
  * four tabs. Artboard: NavAB.
  */
 export function Dock({ state, navigation }: BottomTabBarProps) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -86,8 +120,11 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
   const statusLabel =
     done === total && total > 0 ? copy.dock.allDone : copy.dock.soloProgress(done, total);
 
+  const { measure } = useContext(MeasuredDock);
+
   return (
     <View
+      onLayout={measure}
       style={[
         styles.dock,
         {
@@ -181,7 +218,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   dock: {
     position: 'absolute',
     left: DOCK_EDGE,
@@ -252,4 +289,4 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 10,
   },
-});
+}) as const;

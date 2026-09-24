@@ -1,16 +1,19 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { Bleed } from '@/components/Bleed';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useAuth } from '@/lib/auth';
-import { colors, fonts, habitColors, spacing } from '@/theme';
+import { fonts, habitColors, spacing, type Palette } from '@/theme';
 
 /**
  * Where the magic link lands. The session is exchanged by the provider; this
  * screen only has to wait for it, then get out of the way.
  */
 export default function AuthCallbackScreen() {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const { session, loading, exchanging, authError } = useAuth();
 
   if (session) return <Redirect href="/" />;
@@ -34,7 +37,7 @@ export default function AuthCallbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   root: {
     flex: 1,
     alignItems: 'center',
@@ -57,4 +60,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
   },
-});
+}) as const;

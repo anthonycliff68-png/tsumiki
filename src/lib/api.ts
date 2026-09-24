@@ -886,7 +886,40 @@ export type AnchorInput = {
   usualTime: string;
   /** "HH:MM", or null for a moment with no duration. */
   endsAt?: string | null;
+  /** Null means the app keeps deriving one from the label. */
+  color?: string | null;
 };
+
+/**
+ * How many habits are stacked on each moment. The delete confirmation has to
+ * say what it is about to move, and saying "3 habits" is the difference
+ * between an informed tap and a surprise.
+ */
+export function useAnchorLoad(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['anchor-load', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<{ anchorId: string; count: number }[]> => {
+      const { data, error } = await supabase
+        .from('habit_schedules')
+        .select('anchor_id, habits!inner(archived_at)')
+        .eq('user_id', userId ?? '')
+        .not('anchor_id', 'is', null);
+      if (error) throw error;
+
+      const rows = data as unknown as {
+        anchor_id: string;
+        habits: { archived_at: string | null };
+      }[];
+      const tally = new Map<string, number>();
+      for (const row of rows) {
+        if (row.habits.archived_at !== null) continue;
+        tally.set(row.anchor_id, (tally.get(row.anchor_id) ?? 0) + 1);
+      }
+      return [...tally].map(([anchorId, count]) => ({ anchorId, count }));
+    },
+  });
+}
 
 /** Add a moment or a block to the day. */
 export function useCreateAnchor(userId: string | undefined) {
@@ -901,6 +934,7 @@ export function useCreateAnchor(userId: string | undefined) {
           label: input.label.trim(),
           usual_time: input.usualTime,
           ends_at: input.endsAt ?? null,
+          color: input.color ?? null,
           sort_order: minutesOfDay(input.usualTime),
         })
         .select()
@@ -925,6 +959,7 @@ export function useUpdateAnchor(userId: string | undefined) {
           label: input.label.trim(),
           usual_time: input.usualTime,
           ends_at: input.endsAt ?? null,
+          color: input.color ?? null,
           sort_order: minutesOfDay(input.usualTime),
         })
         .eq('id', id);
@@ -932,14 +967,17 @@ export function useUpdateAnchor(userId: string | undefined) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['anchors'] });
+      void queryClient.invalidateQueries({ queryKey: ['anchor-load'] });
       void queryClient.invalidateQueries({ queryKey: ['today'] });
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
     },
   });
 }
 
 /**
- * Remove a moment. Any habit stacked on it keeps existing — habit_schedules
- * sets anchor_id to null — so nothing is lost, it just needs a new moment.
+ * Remove a moment. A database trigger drops anything stacked on it to an
+ * anytime habit first, so the habit and its history survive; without that the
+ * delete failed outright on the schedule shape constraint.
  */
 export function useDeleteAnchor() {
   const queryClient = useQueryClient();

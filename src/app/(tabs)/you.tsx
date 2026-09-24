@@ -1,19 +1,28 @@
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { Body, Screen, Stub, Title } from '@/components/Screen';
 import { TextButton } from '@/components/Button';
 import { APP_NAME, APP_TAGLINE, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import { useBlocked, useDeleteAccount, useMyProfile, useUnblockUser } from '@/lib/api';
+import { useAppearance, useStyles } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
 import { formatTime } from '@/data/defaults';
 import { registerForPush, unregisterPush, type PushRegistration } from '@/lib/push';
-import { colors, fonts, habitColors, spacing } from '@/theme';
+import { fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** You. Artboard: none yet — settings follow the same tokens as everything else. */
+const THEME_LABEL = {
+  light: copy.you.themeLight,
+  dark: copy.you.themeDark,
+  system: copy.you.themeSystem,
+} as const;
+
 export default function YouScreen() {
+  const { choice, setChoice, colors } = useAppearance();
+  const styles = useStyles(makeStyles);
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
   const { data: profile, refetch } = useMyProfile(userId);
@@ -52,6 +61,37 @@ export default function YouScreen() {
         {APP_NAME} — {APP_TAGLINE}
       </Body>
       {session?.user.email && <Body>Signed in as {session.user.email}</Body>}
+
+      <Text style={styles.label}>{copy.you.appearance}</Text>
+      <View style={styles.themes}>
+        {(['light', 'dark', 'system'] as const).map((option) => {
+          const picked = choice === option;
+          return (
+            <Pressable
+              key={option}
+              accessibilityRole="button"
+              accessibilityState={{ selected: picked }}
+              accessibilityLabel={THEME_LABEL[option]}
+              onPress={() => setChoice(option)}
+              style={[
+                styles.theme,
+                { borderColor: colors.border },
+                picked && { backgroundColor: colors.text, borderColor: 'transparent' },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.themeText,
+                  { color: picked ? colors.bg : colors.textMuted },
+                ]}
+              >
+                {THEME_LABEL[option]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.meta}>{copy.you.themeHint}</Text>
 
       <Text style={styles.label}>{copy.you.notifications}</Text>
       {pushLine && <Body>{pushLine}</Body>}
@@ -144,7 +184,16 @@ export default function YouScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
+  themes: { flexDirection: 'row', gap: spacing.sm },
+  theme: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+  },
+  themeText: { fontFamily: fonts.bodyBold, fontSize: 14 },
   label: {
     fontFamily: fonts.bodyBold,
     fontSize: 11,
@@ -187,4 +236,4 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.white },
   error: { fontFamily: fonts.bodyMedium, fontSize: 13, color: habitColors[4] },
-});
+}) as const;

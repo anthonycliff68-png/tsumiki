@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ChevronLeftIcon } from '@/components/icons';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, type Palette } from '@/theme';
 
 /** Four steps: welcome, routine, first habit, crew. */
 const TOTAL_STEPS = 4;
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export function OnboardingHeader({ step, onBack, onSkip }: Props) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
   return (
     <View style={styles.row}>
       {onBack ? (
@@ -60,7 +63,7 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,4 +113,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-});
+}) as const;
