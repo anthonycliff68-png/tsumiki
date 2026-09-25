@@ -114,7 +114,13 @@ export default function SignInScreen() {
     } catch (e) {
       // The sheet being dismissed is not an error worth showing.
       if (e instanceof Error && 'code' in e && e.code === 'ERR_REQUEST_CANCELED') return;
-      setError(e instanceof Error ? e.message : copy.auth.genericError);
+      // Everything else Apple raises is a Swift exception whose message names a
+      // file and a line number. That is for us, not for whoever is holding the
+      // phone — and it is what a reviewer sees on a device with no Apple
+      // account signed in. Say something true and useful instead, and leave
+      // the original in the log.
+      console.warn('Sign in with Apple failed', e);
+      setError(copy.auth.appleFailed);
     }
   };
 

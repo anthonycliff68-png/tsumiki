@@ -89,6 +89,8 @@ export const copy = {
     codeExpired: 'That code has expired or was already used. Ask for another.',
     linkAlsoWorks: 'The link in the same email works too.',
     useAnotherEmail: 'Use a different email',
+    appleFailed:
+      'Apple could not sign you in. Check you are signed in to your Apple Account on this device, then try again \u2014 or use your email instead.',
     appleHint: 'Sign in with Apple needs a development build; it does not work in Expo Go.',
     invalidEmail: 'That does not look like an email address.',
     genericError: 'Something went wrong. Try again in a moment.',
