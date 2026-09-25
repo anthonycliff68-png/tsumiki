@@ -316,6 +316,55 @@ export const copy = {
     cancel: 'Cancel',
   },
 
+  paywall: {
+    // Two ways in: the week ran out, or they came looking. The screen is the
+    // same; only the opening line changes, because "your week is up" is a
+    // statement of fact and "keep it going" is an offer.
+    overEyebrow: 'Your free week is up',
+    overTitle: 'Keep going.',
+    browsingEyebrow: 'Tsumiki',
+    browsingTitle: 'Keep going.',
+    trialLeft: (days: number) => `${days} day${days === 1 ? '' : 's'} left of your free week.`,
+
+    // Their own numbers, as a receipt rather than a threat. Nothing here says
+    // "don't lose this" — the point is to show what the week was worth.
+    done: (count: number) =>
+      `You have checked in ${count} time${count === 1 ? '' : 's'} so far.`,
+    run: (days: number) => `Your longest run is ${days} day${days === 1 ? '' : 's'}.`,
+
+    // The fear at a paywall in a habit app is "my streak is gone". Say
+    // plainly that it is not, because the panic is what writes bad reviews.
+    kept: 'Nothing is deleted. Your habits, your check-ins and your crews are all still here.',
+
+    carriesOn: 'What carries on',
+    features: [
+      'Every habit, stacked onto your own routine',
+      'Crews of up to five, sharing one streak',
+      'Nudges when someone has not checked in',
+      'Reminders at the moment you meant to do it',
+      'Your day, week and month in Progress',
+    ],
+
+    annual: 'Annual',
+    annualPrice: '$29.99 a year',
+    annualAside: '$2.50 a month \u2014 save 37%',
+    monthly: 'Monthly',
+    monthlyPrice: '$3.99 a month',
+    monthlyAside: 'Cancel whenever you like',
+
+    subscribe: 'Subscribe',
+    subscribing: 'One moment\u2026',
+    restore: 'Restore purchases',
+    restoring: 'Checking\u2026',
+    restoredNone: 'No earlier purchase found on this Apple ID.',
+    failed: 'That did not go through. Nothing has been charged.',
+
+    // Apple requires the delete-account path to stay reachable, and locking
+    // someone out of leaving would be indefensible anyway.
+    terms: 'Cancel any time in Settings. Payment is taken by Apple.',
+    deleteAccount: 'Delete my account',
+  },
+
   schedule: {
     newMoment: 'New moment',
     editMoment: 'Edit moment',
