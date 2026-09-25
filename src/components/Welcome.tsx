@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
+import { WelcomeShowcase, type ShowcaseKind } from '@/components/WelcomeShowcase';
 import { copy } from '@/copy';
 import { useStyles } from '@/lib/appearance';
 import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
@@ -24,6 +25,10 @@ const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[2]]
 
 /** Never undefined, whatever the slide count does. */
 const hue = (i: number): string => HUES[i % HUES.length] ?? habitColors[0];
+
+/** Each slide shows the piece of the app it is talking about. */
+const SHOWS: readonly ShowcaseKind[] = ['stack', 'crew', 'rule'];
+const show = (i: number): ShowcaseKind => SHOWS[i % SHOWS.length] ?? 'stack';
 
 type Props = {
   onStart: () => void;
@@ -81,13 +86,17 @@ export function Welcome({ onStart, onInvite }: Props) {
         {slides.map((slide, i) => (
           <View
             key={slide.step}
-            style={[styles.slide, { paddingTop: insets.top + 96 }]}
+            style={[styles.slide, { paddingTop: insets.top + 64 }]}
             accessible
             accessibilityLabel={copy.welcome.slideOf(i + 1, slides.length)}
           >
             <Text style={[styles.step, { color: hue(i) }]}>{slide.step.toUpperCase()}</Text>
-            <Text style={[display(60, 54), styles.title]}>{slide.title}</Text>
+            <Text style={[display(52, 47), styles.title]}>{slide.title}</Text>
             <Text style={styles.body}>{slide.body}</Text>
+
+            <View style={styles.showcase}>
+              <WelcomeShowcase kind={show(i)} color={hue(i)} />
+            </View>
           </View>
         ))}
       </ScrollView>
@@ -125,12 +134,13 @@ const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   slide: { width: W, paddingHorizontal: spacing.xl, gap: spacing.md },
+  showcase: { marginTop: spacing.lg },
   step: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 3.6 },
   title: { color: colors.text },
   body: {
     fontFamily: fonts.body,
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: 15,
+    lineHeight: 23,
     color: colors.textMuted,
     marginTop: spacing.sm,
   },
