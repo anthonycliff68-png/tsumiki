@@ -10,15 +10,21 @@ const { width: W } = Dimensions.get('window');
 
 /**
  * The collage is the app's own content: habit cards, tilted, the way the
- * reference uses its generated images. Nothing here is decoration borrowed
- * from another product — these are the cards from Today.
+ * reference uses its generated images.
+ *
+ * The cards carry no names. They started with them, and it read as a bug —
+ * the cards overlap each other and run off the edges, so half the words came
+ * out chopped ("10 MIN STRETCH" as "MIN TCH"). A cropped photograph still
+ * reads as a photograph; a cropped word just looks broken. The colours alone
+ * say "these are habits" and the wordmark is what the eye is meant to land on.
  */
 const CARDS = [
-  { n: '10 MIN\nSTRETCH', c: habitColors[1], x: -0.26, y: 30, r: '-13deg' },
-  { n: 'INBOX\nZERO', c: habitColors[0], x: 0.30, y: -8, r: '10deg' },
-  { n: 'YOGURT\nBOWL', c: habitColors[4], x: -0.04, y: 128, r: '4deg' },
-  { n: 'WALK AT\nLUNCH', c: habitColors[2], x: 0.56, y: 150, r: '-7deg' },
-  { n: 'READ 10\nPAGES', c: habitColors[3], x: -0.40, y: 210, r: '8deg' },
+  { n: '10 MIN\nSTRETCH', c: habitColors[1], x: -0.34, y: 18, r: '-14deg' },
+  { n: 'INBOX\nZERO', c: habitColors[0], x: 0.36, y: -14, r: '11deg' },
+  { n: 'YOGURT\nBOWL', c: habitColors[4], x: -0.08, y: 92, r: '4deg' },
+  { n: 'WALK AT\nLUNCH', c: habitColors[2], x: 0.62, y: 118, r: '-8deg' },
+  { n: 'READ 10\nPAGES', c: habitColors[3], x: -0.52, y: 160, r: '9deg' },
+  { n: 'WATER\nPLANTS', c: habitColors[5], x: 0.14, y: 186, r: '6deg' },
 ];
 
 const FEATURES = [
@@ -35,28 +41,30 @@ export default function PaywallD() {
   return (
     <View style={styles.root}>
       <View style={styles.collage} pointerEvents="none">
-        {CARDS.map((c) => (
-          <View
-            key={c.n}
-            style={[
-              styles.card,
-              { backgroundColor: c.c, left: W * 0.5 + W * c.x, top: c.y, transform: [{ rotate: c.r }] },
-            ]}
-          >
-            <Text style={styles.cardName}>{c.n}</Text>
-          </View>
-        ))}
+        {CARDS.map((c) => {
+          const left = W * 0.5 + W * c.x;
+          return (
+            <View
+              key={c.n}
+              style={[
+                styles.card,
+                { backgroundColor: c.c, left, top: c.y, transform: [{ rotate: c.r }] },
+              ]}
+            >
+            </View>
+          );
+        })}
       </View>
 
-      <Svg width={W} height={420} style={styles.fade}>
+      <Svg width={W} height={320} style={styles.fade}>
         <Defs>
           <LinearGradient id="f" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={colors.bg} stopOpacity="0" />
-            <Stop offset="0.45" stopColor={colors.bg} stopOpacity="0.82" />
+            <Stop offset="0.38" stopColor={colors.bg} stopOpacity="0.88" />
             <Stop offset="1" stopColor={colors.bg} stopOpacity="1" />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width={W} height={420} fill="url(#f)" />
+        <Rect x="0" y="0" width={W} height={320} fill="url(#f)" />
       </Svg>
 
       <View style={styles.body}>
@@ -112,7 +120,7 @@ export default function PaywallD() {
 
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
-  collage: { position: 'absolute', top: 0, left: 0, right: 0, height: 460 },
+  collage: { position: 'absolute', top: 0, left: 0, right: 0, height: 400 },
   card: {
     position: 'absolute',
     width: 150,
@@ -128,8 +136,8 @@ const makeStyles = (colors: Palette) => ({
     letterSpacing: -0.6,
     color: '#FFFFFF',
   },
-  fade: { position: 'absolute', top: 120, left: 0 },
-  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: 330, gap: spacing.md },
+  fade: { position: 'absolute', top: 60, left: 0 },
+  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: 300, gap: spacing.md },
   word: { color: colors.text, textAlign: 'center' },
   sub: {
     fontFamily: fonts.body,
