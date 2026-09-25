@@ -4,13 +4,15 @@ import { Platform, Text, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { Field } from '@/components/Field';
-import { Body, Screen, Stub, Title } from '@/components/Screen';
+import { Body, Screen, Stub } from '@/components/Screen';
+import { CardCollage } from '@/components/CardCollage';
+import { APP_NAME } from '@/constants/brand';
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useAuth } from '@/lib/auth';
 import { CODE_MAX, longEnough, normaliseCode, readCodeError } from '@/lib/otp.ts';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { fonts, habitColors, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, spacing, type Palette } from '@/theme';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -126,9 +128,10 @@ export default function SignInScreen() {
 
   return (
     <Screen color={habitColors[1]} underDock={false}>
+      <CardCollage height={470} fadeFrom={150} />
       <View style={styles.header}>
-        <Title size={58}>{copy.auth.title}</Title>
-        <Body>{copy.auth.blurb}</Body>
+        <Text style={[display(66, 58), styles.word]}>{APP_NAME.toUpperCase()}</Text>
+        <Text style={styles.tagline}>{copy.auth.tagline}</Text>
       </View>
 
       {!isSupabaseConfigured ? (
@@ -176,6 +179,27 @@ export default function SignInScreen() {
         </View>
       ) : (
         <View style={styles.form}>
+          {appleAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={999}
+              style={styles.apple}
+              onPress={signInApple}
+            />
+          )}
+
+          {/* Only an alternative when there is something to be an
+              alternative to: Apple sign-in does not exist in Expo Go, and
+              a lone "or use your email" reads as a bug. */}
+          {appleAvailable && (
+            <View style={styles.rule}>
+              <View style={styles.ruleLine} />
+              <Text style={styles.ruleLabel}>{copy.auth.orEmail}</Text>
+              <View style={styles.ruleLine} />
+            </View>
+          )}
+
           <Field
             label={copy.auth.emailLabel}
             placeholder={copy.auth.emailPlaceholder}
@@ -195,16 +219,6 @@ export default function SignInScreen() {
             onPress={sendLink}
             busy={busy}
           />
-
-          {appleAvailable && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={999}
-              style={styles.apple}
-              onPress={signInApple}
-            />
-          )}
         </View>
       )}
 
@@ -225,9 +239,20 @@ export default function SignInScreen() {
 
 const makeStyles = (colors: Palette) => ({
   header: {
-    gap: spacing.md,
-    paddingTop: spacing.xxl,
+    gap: spacing.sm,
+    paddingTop: 330,
+    alignItems: 'center',
   },
+  word: { color: colors.text, textAlign: 'center' },
+  tagline: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  ruleLine: { flex: 1, height: 1, backgroundColor: alpha(colors.overlay, 0.14) },
+  ruleLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   form: {
     gap: spacing.md,
     paddingTop: spacing.lg,

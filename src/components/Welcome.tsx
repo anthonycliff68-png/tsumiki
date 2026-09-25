@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
-import { WelcomeShowcase, type ShowcaseKind } from '@/components/WelcomeShowcase';
+import { WelcomeScreen, type ScreenKind } from '@/components/WelcomeScreens';
 import { copy } from '@/copy';
 import { useStyles } from '@/lib/appearance';
 import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
@@ -21,18 +21,18 @@ import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
 const { width: W } = Dimensions.get('window');
 
 /** One hue per idea. The bleed cross-fades between them as you swipe. */
-const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[2]];
+const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[5], habitColors[2]];
 
 /** Never undefined, whatever the slide count does. */
 const hue = (i: number): string => HUES[i % HUES.length] ?? habitColors[0];
 
 /** Each slide shows the piece of the app it is talking about. */
-const SHOWS: readonly ShowcaseKind[] = ['stack', 'crew', 'rule'];
-const show = (i: number): ShowcaseKind => SHOWS[i % SHOWS.length] ?? 'stack';
+const SHOWS: readonly ScreenKind[] = ['day', 'crew', 'nudge', 'progress'];
+const show = (i: number): ScreenKind => SHOWS[i % SHOWS.length] ?? 'day';
 
 type Props = {
   onStart: () => void;
-  onInvite: () => void;
+  onSkip: () => void;
 };
 
 /**
@@ -47,7 +47,7 @@ type Props = {
  * cross-fades as you move, so the colour is doing the work of telling you
  * where you are — the dots are only a confirmation.
  */
-export function Welcome({ onStart, onInvite }: Props) {
+export function Welcome({ onStart, onSkip }: Props) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
@@ -86,16 +86,16 @@ export function Welcome({ onStart, onInvite }: Props) {
         {slides.map((slide, i) => (
           <View
             key={slide.step}
-            style={[styles.slide, { paddingTop: insets.top + 64 }]}
+            style={[styles.slide, { paddingTop: insets.top + 40 }]}
             accessible
             accessibilityLabel={copy.welcome.slideOf(i + 1, slides.length)}
           >
             <Text style={[styles.step, { color: hue(i) }]}>{slide.step.toUpperCase()}</Text>
-            <Text style={[display(52, 47), styles.title]}>{slide.title}</Text>
+            <Text style={[display(42, 38), styles.title]}>{slide.title}</Text>
             <Text style={styles.body}>{slide.body}</Text>
 
             <View style={styles.showcase}>
-              <WelcomeShowcase kind={show(i)} color={hue(i)} />
+              <WelcomeScreen kind={show(i)} color={hue(i)} />
             </View>
           </View>
         ))}
@@ -124,7 +124,7 @@ export function Welcome({ onStart, onInvite }: Props) {
         </View>
 
         <PrimaryButton label={last ? copy.welcome.start : copy.welcome.next} onPress={advance} />
-        <TextButton label={copy.welcome.haveInvite} onPress={onInvite} />
+        <TextButton label={copy.welcome.skip} onPress={onSkip} />
       </View>
     </View>
   );
@@ -133,14 +133,16 @@ export function Welcome({ onStart, onInvite }: Props) {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  slide: { width: W, paddingHorizontal: spacing.xl, gap: spacing.md },
-  showcase: { marginTop: spacing.lg },
+  slide: { width: W, paddingHorizontal: spacing.xl, gap: 6, paddingBottom: spacing.md },
+  // The screen takes whatever the words leave, and is never squeezed
+  // below the point where its own type stops being readable.
+  showcase: { flex: 1, marginTop: spacing.md, minHeight: 360 },
   step: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 3.6 },
   title: { color: colors.text },
   body: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 21,
     color: colors.textMuted,
     marginTop: spacing.sm,
   },

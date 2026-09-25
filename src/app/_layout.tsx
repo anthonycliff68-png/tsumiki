@@ -113,6 +113,8 @@ function RootNavigator() {
           <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={session === null}>
+          {/* Welcome comes first and steps aside once it has been seen. */}
+          <Stack.Screen name="(auth)/welcome" />
           <Stack.Screen name="(auth)/sign-in" />
         </Stack.Protected>
         {/* These two work signed in or out: the magic link, and an invite link. */}

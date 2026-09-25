@@ -71,6 +71,10 @@ export const copy = {
     title: 'Build habits\nwith your\npeople.',
     blurb:
       'Stack new habits onto the routine you already have. Do them with friends who notice when you don\u2019t.',
+    // The welcome carousel does the explaining now, so this screen only has
+    // to get someone in. Apple first, because it is one tap and no inbox.
+    tagline: 'Build habits with your people.',
+    orEmail: 'or use your email',
     emailLabel: 'Email address',
     emailPlaceholder: 'you@example.com',
     sendLink: 'Send me a code',
@@ -317,31 +321,35 @@ export const copy = {
   },
 
   welcome: {
-    // Three ideas, in the order someone needs them: what the app does, who
-    // it is with, and the one rule that makes the streak mean anything.
+    // Four screens, in the order someone needs them: the day, the people,
+    // the poke, the proof. Each slide's words are short because the screen
+    // beside them is doing most of the explaining.
     slides: [
       {
         step: 'One',
         title: 'Stack it onto\nyour day.',
-        body:
-          'You already wake up, make coffee, eat lunch. Hang a new habit off one of those and it has somewhere to live. \u201cAfter lunch, a fifteen minute walk\u201d is a plan. \u201cWalk more\u201d is a wish.',
+        body: 'Hang a habit off something you already do and it has somewhere to live.',
       },
       {
         step: 'Two',
-        title: 'Do it with\nyour people.',
+        title: 'Share one\nstreak.',
         body:
-          'Two to five friends share one streak. Everyone does the same habit, but each of you picks your own moment \u2014 your walk after lunch, theirs after work.',
+          'Two to five friends, one streak, each picking their own moment. Miss a day and it is forgiven \u2014 miss twice and it goes.',
       },
       {
         step: 'Three',
-        title: 'Never\nmiss twice.',
-        body:
-          'Miss a day and it is forgiven; the streak survives. Miss again before you check in and it resets. That is what stops a bad week undoing a good month.',
+        title: 'Nudge,\ndon\u2019t nag.',
+        body: 'One a day, only if they still owe it, and never in the middle of the night.',
+      },
+      {
+        step: 'Four',
+        title: 'See where\nit is going.',
+        body: 'Rings for a day, a wall for a week, a line for a month.',
       },
     ],
     next: 'Next',
     start: 'Get started',
-    haveInvite: 'I have an invite link',
+    skip: 'Skip',
     slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
   },
 
