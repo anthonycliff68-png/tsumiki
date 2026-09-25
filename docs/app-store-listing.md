@@ -63,10 +63,10 @@ habit,streak,routine,tracker,friends,accountability,daily,goals,ritual,stacking,
 `87 characters`
 
 ## Support URL
-https://anthonycliff68-png.github.io/tsumiki/support
+https://anthonycliff68-png.github.io/tsumiki/support.html
 
 ## Privacy Policy URL
-https://anthonycliff68-png.github.io/tsumiki/privacy
+https://anthonycliff68-png.github.io/tsumiki/privacy.html
 
 ## Copyright
 2026 Anthony Clifford
