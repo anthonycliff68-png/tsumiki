@@ -316,6 +316,35 @@ export const copy = {
     cancel: 'Cancel',
   },
 
+  welcome: {
+    // Three ideas, in the order someone needs them: what the app does, who
+    // it is with, and the one rule that makes the streak mean anything.
+    slides: [
+      {
+        step: 'One',
+        title: 'Stack it onto\nyour day.',
+        body:
+          'You already wake up, make coffee, eat lunch. Hang a new habit off one of those and it has somewhere to live. \u201cAfter lunch, a fifteen minute walk\u201d is a plan. \u201cWalk more\u201d is a wish.',
+      },
+      {
+        step: 'Two',
+        title: 'Do it with\nyour people.',
+        body:
+          'Two to five friends share one streak. Everyone does the same habit, but each of you picks your own moment \u2014 your walk after lunch, theirs after work.',
+      },
+      {
+        step: 'Three',
+        title: 'Never\nmiss twice.',
+        body:
+          'Miss a day and it is forgiven; the streak survives. Miss again before you check in and it resets. That is what stops a bad week undoing a good month.',
+      },
+    ],
+    next: 'Next',
+    start: 'Get started',
+    haveInvite: 'I have an invite link',
+    slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
+  },
+
   paywall: {
     // Two ways in: the week ran out, or they came looking. The screen is the
     // same; only the opening line changes, because "your week is up" is a
