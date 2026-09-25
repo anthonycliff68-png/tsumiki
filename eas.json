@@ -27,9 +27,21 @@
     "production": {
       "autoIncrement": true,
       "env": {}
+    },
+    "shots": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {}
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6815775979",
+        "appleTeamId": "T2BVK59Q5A"
+      }
+    }
   }
 }
