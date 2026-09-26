@@ -14,8 +14,12 @@ import {
   TRIAL_DAYS,
 } from './entitlement.ts';
 
-/** An account made after the cutoff, so the trial rules actually apply. */
-const AFTER = '2026-10-15T09:00:00.000Z';
+/**
+ * An account made after the cutoff, so the trial rules actually apply.
+ * If GRANDFATHERED_BEFORE moves, this has to move with it — which is what
+ * these tests will tell you, loudly, the moment it does not.
+ */
+const AFTER = '2026-11-15T09:00:00.000Z';
 const at = (iso: string) => new Date(iso);
 
 describe('paying', () => {
@@ -68,26 +72,26 @@ describe('the trial clock', () => {
   });
 
   it('counts down a day at a time', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-10-21T09:00:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-21T09:00:00.000Z') });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
   it('still has a day left with minutes to spare on the last day', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-10-22T08:59:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-22T08:59:00.000Z') });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
   it('locks the moment the seventh day is up, not a day later', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-10-22T09:00:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-22T09:00:00.000Z') });
     assert.deepEqual(a, { state: 'locked' });
   });
 
   it('starts from an explicit trial start when one is given', () => {
     const a = decideAccess({
       accountCreatedAt: AFTER,
-      trialStartedAt: '2026-10-20T09:00:00.000Z',
+      trialStartedAt: '2026-11-20T09:00:00.000Z',
       subscribed: false,
-      now: at('2026-10-22T09:00:00.000Z'),
+      now: at('2026-11-22T09:00:00.000Z'),
     });
     assert.deepEqual(a, { state: 'trial', daysLeft: 5 });
   });
@@ -110,7 +114,7 @@ describe('clocks and data that cannot be trusted', () => {
   });
 
   it('does not punish a device whose clock is set in the past', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-10-01T09:00:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-10T09:00:00.000Z') });
     assert.deepEqual(a, { state: 'trial', daysLeft: TRIAL_DAYS });
   });
 });

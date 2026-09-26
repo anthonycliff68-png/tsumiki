@@ -24,9 +24,19 @@ export const TRIAL_DAYS = 7;
 
 /**
  * Accounts created before this keep the app for nothing, for good.
- * Set to the moment 1.1 ships; until then every existing account qualifies.
+ *
+ * It is set deliberately late — comfortably past when 1.1 is expected to
+ * clear review — because the two ways of being wrong are not equal. Set it
+ * too early and someone who installed a free app is told, without warning,
+ * that it now costs money; that is the version people write reviews about.
+ * Set it too late and a handful of early users keep the app for nothing,
+ * which is a rounding error and arguably money well spent on the people who
+ * showed up first.
+ *
+ * Move it forward if 1.1 slips. Never move it backwards: someone already on
+ * the free side of this line was promised something.
  */
-export const GRANDFATHERED_BEFORE = '2026-10-01T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-11-01T00:00:00.000Z';
 
 export type Access =
   | { state: 'subscribed' }
