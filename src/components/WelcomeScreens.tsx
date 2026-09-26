@@ -123,10 +123,10 @@ function Day({ color, dock }: { color: string; dock: boolean }) {
 }
 
 const MEMBERS = [
-  { n: 'You', i: 'Y', c: habitColors[1], st: 'In' },
-  { n: 'Marcus', i: 'M', c: habitColors[0], st: 'In' },
-  { n: 'Dee', i: 'D', c: habitColors[2], st: 'Nudge' },
-  { n: 'Sam', i: 'S', c: habitColors[3], st: 'In' },
+  { n: 'You', i: 'Y', c: habitColors[1], st: 'In', w: [1, 1, 1, 1, 1, 1, 1] },
+  { n: 'Marcus', i: 'M', c: habitColors[0], st: 'In', w: [1, 1, 1, 1, 1, 1, 1] },
+  { n: 'Dee', i: 'D', c: habitColors[2], st: 'Nudge', w: [1, 1, 0.5, 1, 1, 1, 0] },
+  { n: 'Sam', i: 'S', c: habitColors[3], st: 'In', w: [1, 1, 1, 1, 0.5, 1, 1] },
 ];
 const DAYS = ['done', 'done', 'grace', 'done', 'done', 'done', 'todo'] as const;
 
@@ -155,12 +155,29 @@ function Crew({ color, dock }: { color: string; dock: boolean }) {
           ))}
         </View>
         {MEMBERS.map((m) => (
-          <View key={m.n} style={s.memberRow}>
-            <View style={[s.memberDot, { backgroundColor: m.c }]}>
-              <Text style={s.memberLetter}>{m.i}</Text>
+          <View key={m.n} style={s.member}>
+            <View style={s.memberRow}>
+              <View style={[s.memberDot, { backgroundColor: m.c }]}>
+                <Text style={s.memberLetter}>{m.i}</Text>
+              </View>
+              <Text style={s.memberName}>{m.n}</Text>
+              <Text style={[s.memberState, m.st === 'In' && { color: habitColors[2] }]}>{m.st}</Text>
             </View>
-            <Text style={s.memberName}>{m.n}</Text>
-            <Text style={[s.memberState, m.st === 'In' && { color: habitColors[2] }]}>{m.st}</Text>
+            {/* Everyone's own seven days: a crew is four people keeping the
+                same streak from four different weeks. */}
+            <View style={s.memberWeek}>
+              {m.w.map((v, i) => (
+                <View
+                  key={i}
+                  style={[
+                    s.memberCell,
+                    v === 1 && { backgroundColor: m.c },
+                    v === 0.5 && { backgroundColor: alpha(m.c, 0.2), borderWidth: 1, borderColor: m.c },
+                    v === 0 && { borderWidth: 1, borderColor: alpha(m.c, 0.25) },
+                  ]}
+                />
+              ))}
+            </View>
           </View>
         ))}
       </View>
@@ -201,6 +218,19 @@ function Nudge({ color, dock }: { color: string; dock: boolean }) {
           <Text style={s.ctaLabel}>CHECK IN</Text>
         </View>
         <Text style={s.small}>One nudge each a day, and only if you still owe it.</Text>
+
+        <View style={[s.saved, { borderColor: alpha(color, 0.45), backgroundColor: alpha(color, 0.1) }]}>
+          <Text style={[s.savedN, { color }]}>Streak saved · 23 days</Text>
+          <Text style={s.savedSub}>You were the last one in.</Text>
+        </View>
+
+        <View style={s.reactions}>
+          {['Say thanks', 'Same time tomorrow'].map((r) => (
+            <View key={r} style={[s.reaction, { borderColor: alpha(color, 0.5) }]}>
+              <Text style={[s.reactionLabel, { color }]}>{r}</Text>
+            </View>
+          ))}
+        </View>
       </View>
       {dock && <Dock active="Crews" color={color} />}
     </>
@@ -263,6 +293,24 @@ function Progress({ color, dock }: { color: string; dock: boolean }) {
           ))}
         </View>
         <Text style={s.small}>Thirty days. The shape says more than the number.</Text>
+
+        <View style={s.tabs}>
+          <View style={[s.tab2, s.tab2On]}>
+            <Text style={s.tab2LabelOn}>Needs work</Text>
+            <Text style={s.tab2CountOn}>1</Text>
+          </View>
+          <View style={s.tab2}>
+            <Text style={s.tab2Label}>Going well</Text>
+            <Text style={s.tab2Count}>3</Text>
+          </View>
+        </View>
+
+        <View style={[s.advice, { borderColor: alpha(habitColors[2], 0.5), backgroundColor: alpha(habitColors[2], 0.1) }]}>
+          <Text style={s.adviceName}>Walk 15 min · 66%</Text>
+          <Text style={s.adviceText}>
+            It keeps breaking on Tuesdays. Drop that day and the rest holds.
+          </Text>
+        </View>
       </View>
       {dock && <Dock active="Progress" color={color} />}
     </>
@@ -319,7 +367,10 @@ const makeStyles = (colors: Palette) => ({
   bigStreakL: { fontFamily: fonts.bodyBold, fontSize: 9, letterSpacing: 1.2, color: colors.textMuted },
   weekRow: { flexDirection: 'row', gap: 3, marginBottom: 5 },
   weekCell: { flex: 1, height: 22, borderRadius: 5 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 7 },
+  member: { paddingVertical: 5 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  memberWeek: { flexDirection: 'row', gap: 3, marginTop: 4, marginLeft: 35 },
+  memberCell: { flex: 1, height: 8, borderRadius: 2 },
   memberDot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   memberLetter: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#FFFFFF' },
   memberName: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: colors.text },
@@ -351,6 +402,44 @@ const makeStyles = (colors: Palette) => ({
   quoteText: { fontFamily: fonts.display, fontSize: 24, letterSpacing: -0.4, color: colors.text },
   cta: { borderRadius: 999, alignItems: 'center', paddingVertical: 12, marginTop: 8 },
   ctaLabel: { fontFamily: fonts.bodyBold, fontSize: 13, letterSpacing: 1, color: '#FFFFFF' },
+
+  saved: {
+    borderWidth: 1,
+    borderRadius: radii.card,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  savedN: { fontFamily: fonts.bodyBold, fontSize: 14 },
+  savedSub: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  reactions: { flexDirection: 'row', gap: 6, marginTop: 7 },
+  reaction: { borderWidth: 1, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
+  reactionLabel: { fontFamily: fonts.bodyBold, fontSize: 11 },
+
+  tabs: { flexDirection: 'row', gap: 6, marginTop: spacing.md },
+  tab2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+  },
+  tab2On: { backgroundColor: colors.text, borderColor: 'transparent' },
+  tab2Label: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textMuted },
+  tab2LabelOn: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.bg },
+  tab2Count: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.textFaint },
+  tab2CountOn: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.bg },
+  advice: {
+    borderWidth: 1,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    marginTop: 7,
+  },
+  adviceName: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.text },
+  adviceText: { fontFamily: fonts.body, fontSize: 11, lineHeight: 16, color: colors.textMuted, marginTop: 2 },
 
   ringRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   ringWrap: { alignItems: 'center' },
