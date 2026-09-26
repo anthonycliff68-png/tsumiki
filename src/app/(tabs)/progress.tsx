@@ -7,13 +7,13 @@ import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { AdviceList, type AdviceTab } from '@/components/AdviceList';
+import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
 import { CalendarLegend } from '@/components/HabitCalendar';
 import { HeatWall, RingGrid, TrendBars, type HeatCell } from '@/components/ProgressViews';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
-import { ADVICE_DAYS, adviceRange, splitVerdicts, type Placement } from '@/lib/advice';
+import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
 import {
   calendarFor,
   currentRun,
@@ -145,7 +145,11 @@ export default function ProgressScreen() {
       ]),
     );
     const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
-    return { ...splitVerdicts(over, placements), byHabit: new Map(over.map((h) => [h.habitId, h])) };
+    return {
+      ...splitVerdicts(over, placements),
+      week: adviseWeek(over),
+      byHabit: new Map(over.map((h) => [h.habitId, h])),
+    };
   }, [history, to, today]);
 
   /** Day: a ring per habit, filled by how it has been going lately. */
@@ -282,6 +286,8 @@ export default function ProgressScreen() {
             )}
           </View>
         )}
+
+        {stats.length > 0 && <WeekAdviceBanner advice={advice.week} />}
 
         {stats.length > 0 && (
           <AdviceList

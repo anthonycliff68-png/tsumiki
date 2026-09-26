@@ -8,6 +8,8 @@ import { describe, it } from 'node:test';
 import {
   adviceRange,
   adviseOne,
+  adviseWeek,
+  scheduledDays,
   splitVerdicts,
   weakestWeekday,
   type Placement,
@@ -96,11 +98,13 @@ describe('one suggestion per habit', () => {
     });
   });
 
-  it('leaves a well-placed habit alone rather than inventing a fix', () => {
+  it('asks a well-placed habit for fewer days rather than inventing a fix', () => {
+    // Half the days kept, nowhere in particular to point: the schedule is the
+    // thing that is wrong, so offer back the number they are actually keeping.
     const every = dueDates();
     const checkedOn = every.filter((_, i) => i % 2 === 0);
-    assert.equal(adviseOne(stats({ checkedOn }), STACKED), null);
-    assert.equal(adviseOne(stats({ checkedOn }), TIMED), null);
+    assert.deepEqual(adviseOne(stats({ checkedOn }), STACKED), { kind: 'ease-off', from: 7, to: 4 });
+    assert.deepEqual(adviseOne(stats({ checkedOn }), TIMED), { kind: 'ease-off', from: 7, to: 4 });
   });
 
   it('prefers dropping the bad weekday over moving the habit', () => {
@@ -184,5 +188,125 @@ describe('the two lists', () => {
   it('carries the suggestion through onto the verdict', () => {
     const { needsWork } = splitVerdicts([half], placements);
     assert.deepEqual(needsWork[0]?.advice, { kind: 'stack' });
+  });
+});
+
+describe('asking for fewer days', () => {
+  it('offers back the number they are actually keeping', () => {
+    const checkedOn = dueDates().filter((_, i) => i % 2 === 0);
+    assert.deepEqual(adviseOne(stats({ checkedOn }), STACKED), { kind: 'ease-off', from: 7, to: 4 });
+  });
+
+  it('does not suggest a schedule they are already on', () => {
+    // Three days a week, keeping nearly all of them: there is nothing to give
+    // up, so easing off would be noise.
+    const days = [1, 3, 5];
+    const every = dueDates(days);
+    const checkedOn = every.slice(0, every.length - 1);
+    const a = adviseOne(stats({ daysOfWeek: days, checkedOn }), STACKED);
+    assert.notEqual(a?.kind, 'ease-off');
+  });
+
+  it('never suggests fewer than two days, which would be a different conversation', () => {
+    const days = [1, 2, 3, 4, 5];
+    const every = dueDates(days);
+    // One kept out of every five: a fifth of five rounds to one.
+    const checkedOn = every.filter((_, i) => i % 5 === 0);
+    const a = adviseOne(stats({ daysOfWeek: days, checkedOn }), STACKED);
+    assert.deepEqual(a, { kind: 'ease-off', from: 5, to: 2 });
+  });
+
+  it('counts the days a habit is actually asked for', () => {
+    assert.equal(scheduledDays(stats({ daysOfWeek: [1, 3, 5] })), 3);
+    assert.equal(scheduledDays(stats()), 7);
+  });
+});
+
+describe('letting a habit go', () => {
+  it('says so once the schedule is already light and it still is not happening', () => {
+    const days = [1, 3, 5];
+    const every = dueDates(days);
+    const checkedOn = every.slice(0, 1);
+    assert.deepEqual(adviseOne(stats({ daysOfWeek: days, checkedOn }), STACKED), { kind: 'let-go' });
+  });
+
+  it('asks for fewer days first when there are still days to give up', () => {
+    const every = dueDates();
+    const checkedOn = every.slice(0, 2);
+    const a = adviseOne(stats({ checkedOn }), STACKED);
+    assert.equal(a?.kind, 'ease-off');
+  });
+
+  it('waits for enough days before saying anything so final', () => {
+    // A three-day-a-week habit in its first fortnight has too little history.
+    const days = [1, 3, 5];
+    const short = statsFor(
+      habit({ daysOfWeek: days, createdOn: '2026-09-20', checkedOn: [] }),
+      '2026-09-20',
+      '2026-09-30',
+      '2026-09-30',
+    );
+    assert.notEqual(adviseOne(short, STACKED)?.kind, 'let-go');
+  });
+
+  it('points at the placement before giving up on the habit', () => {
+    const days = [1, 3, 5];
+    const every = dueDates(days);
+    const checkedOn = every.slice(0, 1);
+    // Floating with no cue is a reason it might be failing; try that first.
+    assert.deepEqual(adviseOne(stats({ daysOfWeek: days, checkedOn }), ANY), { kind: 'stack' });
+  });
+});
+
+describe('advice about the week itself', () => {
+  const light = (id: string, days: number[], kept: number) => {
+    const every = dueDates(days);
+    return statsFor(
+      habit({ habitId: id, daysOfWeek: days, checkedOn: every.slice(0, kept) }),
+      '2026-09-01',
+      '2026-09-30',
+      '2026-09-30',
+    );
+  };
+
+  it('says nothing when there is nothing scheduled', () => {
+    assert.equal(adviseWeek([]), null);
+  });
+
+  it('names the day carrying far more than the rest, when it costs something', () => {
+    // Four habits all on Monday and nothing kept, plus one easy Friday habit.
+    const mondays = [0, 1, 2, 3].map((i) => light(`m${i}`, [1], 0));
+    const friday = light('f', [5], 4);
+    const advice = adviseWeek([...mondays, friday]);
+    assert.equal(advice?.kind, 'crowded-day');
+    if (advice?.kind === 'crowded-day') assert.equal(advice.weekday, 1);
+  });
+
+  it('leaves a busy day alone when the busy day is the one going well', () => {
+    const mondays = [0, 1, 2, 3].map((i) => light(`m${i}`, [1], 99));
+    const friday = light('f', [5], 0);
+    assert.notEqual(adviseWeek([...mondays, friday])?.kind, 'crowded-day');
+  });
+
+  it('suggests a day off when every day is spoken for and the week is sagging', () => {
+    const every = dueDates();
+    const half = statsFor(
+      habit({ checkedOn: every.filter((_, i) => i % 2 === 0) }),
+      '2026-09-01',
+      '2026-09-30',
+      '2026-09-30',
+    );
+    assert.deepEqual(adviseWeek([half]), { kind: 'rest-day' });
+  });
+
+  it('does not suggest a day off to someone keeping a full week', () => {
+    const every = dueDates();
+    const kept = statsFor(
+      habit({ checkedOn: every }),
+      '2026-09-01',
+      '2026-09-30',
+      '2026-09-30',
+    );
+    assert.equal(adviseWeek([kept]), null);
   });
 });

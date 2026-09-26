@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import type { Advice, Verdict } from '@/lib/advice';
+import type { Advice, Verdict, WeekAdvice } from '@/lib/advice';
 import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 
 export type AdviceTab = 'needs-work' | 'going-well';
@@ -139,7 +139,36 @@ function adviceText(advice: Advice): string {
   if (advice.kind === 'lighten') {
     return copy.stats.advice.lighten(advice.anchorLabel, advice.load);
   }
+  if (advice.kind === 'ease-off') return copy.stats.advice.easeOff(advice.from, advice.to);
+  if (advice.kind === 'let-go') return copy.stats.advice.letGo;
   return copy.stats.advice.run(advice.days);
+}
+
+/**
+ * The week's own suggestion, above the per-habit lists.
+ *
+ * It sits outside the tabs because it is not about a habit: a crowded Monday
+ * or a week with no gap in it belongs to the schedule, and filing it under
+ * one habit would be picking a scapegoat.
+ */
+export function WeekAdviceBanner({ advice }: { advice: WeekAdvice | null }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
+  if (advice === null) return null;
+  return (
+    <View style={[styles.weekBanner, { borderColor: alpha(colors.text, 0.22) }]}>
+      <Text style={styles.weekLabel}>{copy.stats.weekAdvice.label}</Text>
+      <Text style={styles.weekText}>{weekAdviceText(advice)}</Text>
+    </View>
+  );
+}
+
+/** The one thing worth saying about the whole week, or nothing. */
+export function weekAdviceText(advice: WeekAdvice): string {
+  if (advice.kind === 'crowded-day') {
+    return copy.stats.weekAdvice.crowdedDay(WEEKDAYS[advice.weekday] ?? 'That day', advice.due);
+  }
+  return copy.stats.weekAdvice.restDay;
 }
 
 const makeStyles = (colors: Palette) => ({
@@ -210,4 +239,20 @@ const makeStyles = (colors: Palette) => ({
     paddingTop: spacing.md,
   },
   suggestionText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, fontWeight: '500' },
+
+  weekBanner: {
+    borderWidth: 1,
+    borderRadius: radii.card,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+    gap: 4,
+  },
+  weekLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+  },
+  weekText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.text },
 }) as const;
