@@ -1,5 +1,10 @@
 # Reply to App Review — Guideline 2.1, Information Needed
 
+> **Apple's reply box has a 4,000 character limit.** The shortened version
+> that fits is in `app-review-reply-short.txt` beside this file; the long
+> version below is for the App Review Information → Notes field, which has
+> more room.
+
 Paste everything below into the **Resolution Center** reply, and also into
 **App Review Information → Notes** so future submissions have it.
 

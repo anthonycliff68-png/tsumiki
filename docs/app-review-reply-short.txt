@@ -1,0 +1,39 @@
+Thank you for reviewing Tsumiki. A screen recording from a physical iPhone is attached, showing launch, Sign in with Apple, onboarding, creating and checking in a habit, My Day, Progress, starting a crew, reporting and blocking, and account deletion. The same information has been added to App Review Information Notes.
+
+2. PURPOSE AND AUDIENCE
+
+Tsumiki helps people build habits by attaching them to routines they already have, and doing them alongside a few friends.
+
+Most habit apps are a checklist and a reminder. People know what they want to do; what fails is remembering, and caring whether they did. Tsumiki anchors a habit to an existing moment, for example "after lunch", so there is a natural cue, and shares it with two to five friends who can see whether you turned up.
+
+Audience: adults who have abandoned a habit tracker before and have at least one friend willing to do the same thing. It is not aimed at children, and is rated 9+ because crew members can send each other short messages.
+
+Value: a shared streak that survives one missed day but not two, so a bad week does not undo a good month, and a nudge from a friend rather than a notification from an app.
+
+3. SETUP AND MAIN FEATURES
+
+Tsumiki has no passwords, so there is no demo username or password to supply. On the first screen tap "Sign in with Apple" and use any Apple ID, including a test account. This creates a fresh account and goes straight into onboarding. The alternative emails a six-digit code, which needs an inbox you control. The recording shows Sign in with Apple working end to end.
+
+Then: onboarding asks for the moments of your day, and the defaults can be accepted as they are. Pick a first habit. Choose "Start solo" at the crew step, because a crew needs a second real person and cannot be fully exercised from one device. Today holds the habits left today as a fan of cards: swipe through them, tap one to check it in, tap again to undo. My Day shows the same habits on a timeline against your routine. Progress shows rings for a day, a heat wall for a week and a trend for a month; a new account starts empty and fills in as you check in. You holds quiet hours, blocked people, and Delete my account.
+
+User-generated content is habit names, routine labels, and nudge text, which is limited to 60 characters and can only be sent between members of the same crew. There is no feed, no public profile, and no way for a stranger to reach anyone. Reporting and blocking are on a crew member's row, and blocked people are managed in You.
+
+Delete my account removes the profile, habits, check-ins and crew memberships immediately, and is reachable from outside the main tabs so nothing can block access to it.
+
+There are no paid features in this version.
+
+4. EXTERNAL SERVICES
+
+Supabase (supabase.com): authentication, Postgres database, server functions and scheduled jobs. Hosts all user data.
+Apple, Sign in with Apple: primary authentication.
+Expo Push Notification Service (expo.dev): habit reminders and nudges.
+
+There are no AI services, payment processors, third-party data providers, advertising networks or analytics SDKs.
+
+5. REGIONAL DIFFERENCES
+
+None. Every feature behaves identically in every region and the app is offered in English only. Dates are interpreted in the device's own time zone, so a habit is due on the user's local date wherever they are. That is the only location-dependent behaviour and it uses the device setting: no location permission is requested and no location data is collected.
+
+6. REGULATED INDUSTRY OR PROTECTED MATERIAL
+
+Not applicable. Tsumiki is not a medical, health-data, financial or otherwise regulated product. It records whether a person did something they chose to write down. It gives no advice, makes no claims, and reads no data from HealthKit or any other source. All content is either our own or written by the user.
