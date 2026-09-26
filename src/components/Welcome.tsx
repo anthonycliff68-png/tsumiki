@@ -11,14 +11,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { WelcomeScreen, type ScreenKind } from '@/components/WelcomeScreens';
 import { copy } from '@/copy';
-import { useStyles } from '@/lib/appearance';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
 
 const { width: W } = Dimensions.get('window');
+/** How far up the scrim reaches from the bottom of the slide. */
+const SCRIM = 400;
 
 /** One hue per idea. The bleed cross-fades between them as you swipe. */
 const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[5], habitColors[2]];
@@ -49,6 +53,7 @@ type Props = {
  */
 export function Welcome({ onStart, onSkip }: Props) {
   const styles = useStyles(makeStyles);
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
   const scroller = useRef<ScrollView>(null);
@@ -86,16 +91,31 @@ export function Welcome({ onStart, onSkip }: Props) {
         {slides.map((slide, i) => (
           <View
             key={slide.step}
-            style={[styles.slide, { paddingTop: insets.top + 40 }]}
+            style={styles.slide}
             accessible
             accessibilityLabel={copy.welcome.slideOf(i + 1, slides.length)}
           >
-            <Text style={[styles.step, { color: hue(i) }]}>{slide.step.toUpperCase()}</Text>
-            <Text style={[display(42, 38), styles.title]}>{slide.title}</Text>
-            <Text style={styles.body}>{slide.body}</Text>
+            <View style={[styles.screen, { paddingTop: insets.top }]}>
+              <WelcomeScreen kind={show(i)} color={hue(i)} dock={false} />
+            </View>
 
-            <View style={styles.showcase}>
-              <WelcomeScreen kind={show(i)} color={hue(i)} />
+            {/* A scrim under the words rather than a panel around them, so the
+                screen keeps running behind the headline instead of stopping. */}
+            <Svg width={W} height={SCRIM} style={styles.scrimSvg} pointerEvents="none">
+              <Defs>
+                <LinearGradient id="welcomeScrim" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={colors.bg} stopOpacity="0" />
+                  <Stop offset="0.45" stopColor={colors.bg} stopOpacity="0.86" />
+                  <Stop offset="1" stopColor={colors.bg} stopOpacity="0.99" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width={W} height={SCRIM} fill="url(#welcomeScrim)" />
+            </Svg>
+
+            <View style={styles.words}>
+              <Text style={[styles.step, { color: hue(i) }]}>{slide.step.toUpperCase()}</Text>
+              <Text style={[display(44, 40), styles.title]}>{slide.title}</Text>
+              <Text style={styles.body}>{slide.body}</Text>
             </View>
           </View>
         ))}
@@ -133,10 +153,10 @@ export function Welcome({ onStart, onSkip }: Props) {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  slide: { width: W, paddingHorizontal: spacing.xl, gap: 6, paddingBottom: spacing.md },
-  // The screen takes whatever the words leave, and is never squeezed
-  // below the point where its own type stops being readable.
-  showcase: { flex: 1, marginTop: spacing.md, minHeight: 360 },
+  slide: { width: W },
+  screen: { ...({ position: 'absolute' } as const), top: 0, left: 0, right: 0, bottom: 0 },
+  scrimSvg: { ...({ position: 'absolute' } as const), left: 0, bottom: 0 },
+  words: { marginTop: 'auto', paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: 6 },
   step: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 3.6 },
   title: { color: colors.text },
   body: {

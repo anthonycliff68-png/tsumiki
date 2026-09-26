@@ -7,7 +7,12 @@ import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme
 export type ScreenKind = 'day' | 'crew' | 'nudge' | 'progress';
 
 /**
- * Whole screens, shrunk — not fragments.
+ * Whole screens, full bleed — not fragments, and not framed.
+ *
+ * They had a bordered frame first, which made them read as a brochure of the
+ * app rather than the app: a phone drawn inside a phone, with its type
+ * sized for neither. Edge to edge, under the headline, they read as the
+ * thing itself.
  *
  * A fragment is a diagram of a feature; a full screen is evidence the app
  * exists and has been thought about. Everything here is drawn rather than
@@ -18,19 +23,27 @@ export type ScreenKind = 'day' | 'crew' | 'nudge' | 'progress';
  * as marketing renders of some other app; a thin card reads as "this is the
  * screen".
  */
-export function WelcomeScreen({ kind, color }: { kind: ScreenKind; color: string }) {
+export function WelcomeScreen({
+  kind,
+  color,
+  dock = true,
+}: {
+  kind: ScreenKind;
+  color: string;
+  /** Off when the headline sits over the bottom of the screen. */
+  dock?: boolean;
+}) {
   const s = useStyles(makeStyles);
   const inner =
-    kind === 'day' ? <Day color={color} /> :
-    kind === 'crew' ? <Crew color={color} /> :
-    kind === 'nudge' ? <Nudge color={color} /> :
-    <Progress color={color} />;
+    kind === 'day' ? <Day color={color} dock={dock} /> :
+    kind === 'crew' ? <Crew color={color} dock={dock} /> :
+    kind === 'nudge' ? <Nudge color={color} dock={dock} /> :
+    <Progress color={color} dock={dock} />;
 
   return (
-    <View style={[s.frameWrap, { borderColor: alpha(color, 0.45), shadowColor: color }]}>
-      {/* Glass, not a solid sheet: the colour bleed behind the screen comes
-          through it, so the mock sits in the same light as everything else
-          instead of looking pasted on. */}
+    <View style={s.frameWrap}>
+      {/* Glass, not a solid sheet: the colour bleed behind comes through, so
+          the screen sits in the same light as everything else. */}
       <BlurView intensity={24} tint="dark" style={s.glass} />
       <View style={s.frame}>{inner}</View>
     </View>
@@ -62,7 +75,7 @@ function Head({ small, big }: { small: string; big: string }) {
 }
 
 /** A whole day: moments down the left, habits hanging off them, now in red. */
-function Day({ color }: { color: string }) {
+function Day({ color, dock }: { color: string; dock: boolean }) {
   const s = useStyles(makeStyles);
   const rows: { t: string; a?: string; ac?: string; h?: string; hc?: string; now?: boolean }[] = [
     { t: '8:00', a: 'WAKE UP', ac: habitColors[1] },
@@ -75,6 +88,9 @@ function Day({ color }: { color: string }) {
     { t: '', h: 'WALK 15 MIN', hc: habitColors[4] },
     { t: '6:00', a: 'HOME', ac: habitColors[2] },
     { t: '', h: 'TIDY ONE THING', hc: habitColors[3] },
+    { t: '8:30', a: 'WIND DOWN', ac: habitColors[3] },
+    { t: '', h: 'READ 10 PAGES', hc: habitColors[5] },
+    { t: '11:00', a: 'BED', ac: habitColors[0] },
   ];
   return (
     <>
@@ -101,7 +117,7 @@ function Day({ color }: { color: string }) {
           </View>
         ))}
       </View>
-      <Dock active="My Day" color={color} />
+      {dock && <Dock active="My Day" color={color} />}
     </>
   );
 }
@@ -115,7 +131,7 @@ const MEMBERS = [
 const DAYS = ['done', 'done', 'grace', 'done', 'done', 'done', 'todo'] as const;
 
 /** A whole crew: the shared streak, the week, and who still owes today. */
-function Crew({ color }: { color: string }) {
+function Crew({ color, dock }: { color: string; dock: boolean }) {
   const s = useStyles(makeStyles);
   return (
     <>
@@ -148,13 +164,13 @@ function Crew({ color }: { color: string }) {
           </View>
         ))}
       </View>
-      <Dock active="Crews" color={color} />
+      {dock && <Dock active="Crews" color={color} />}
     </>
   );
 }
 
 /** A whole nudge: the push that lands, and the screen it opens. */
-function Nudge({ color }: { color: string }) {
+function Nudge({ color, dock }: { color: string; dock: boolean }) {
   const s = useStyles(makeStyles);
   return (
     <>
@@ -186,7 +202,7 @@ function Nudge({ color }: { color: string }) {
         </View>
         <Text style={s.small}>One nudge each a day, and only if you still owe it.</Text>
       </View>
-      <Dock active="Crews" color={color} />
+      {dock && <Dock active="Crews" color={color} />}
     </>
   );
 }
@@ -200,7 +216,7 @@ const HABITS = [
 const TREND = [0.4, 0.75, 0.6, 1, 0.85, 0.5, 0.9, 1, 0.7, 1, 0.95, 0.6, 1, 0.8];
 
 /** A whole month of analytics: rings, a heat wall, and a trend, on one screen. */
-function Progress({ color }: { color: string }) {
+function Progress({ color, dock }: { color: string; dock: boolean }) {
   const s = useStyles(makeStyles);
   return (
     <>
@@ -248,21 +264,13 @@ function Progress({ color }: { color: string }) {
         </View>
         <Text style={s.small}>Thirty days. The shape says more than the number.</Text>
       </View>
-      <Dock active="Progress" color={color} />
+      {dock && <Dock active="Progress" color={color} />}
     </>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
-  frameWrap: {
-    flex: 1,
-    borderRadius: 26,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowOpacity: 0.35,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 12 },
-  },
+  frameWrap: { flex: 1, overflow: 'hidden' },
   glass: {
     ...({ position: 'absolute' } as const),
     top: 0,
@@ -272,6 +280,7 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: alpha(colors.bg, 0.52),
   },
   frame: { flex: 1, paddingTop: spacing.md },
+  // Full bleed means the screen owns the whole slide; the words sit on top.
   head: { paddingHorizontal: spacing.md, gap: 1 },
   headSmall: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint },
   headBig: { fontFamily: fonts.display, fontSize: 32, letterSpacing: -0.9, color: colors.text },
