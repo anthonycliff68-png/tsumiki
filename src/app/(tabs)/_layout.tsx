@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router/js-tabs';
 import { ActivityIndicator, View } from 'react-native';
 
 import { Dock, DockClearanceProvider } from '@/components/Dock';
+import { PaywallGate } from '@/components/PaywallGate';
 import { useAnchors } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -32,21 +33,23 @@ export default function TabsLayout() {
   }
 
   return (
-    <DockClearanceProvider>
-      <Tabs
-        tabBar={(props) => <Dock {...props} />}
-        screenOptions={{
-          headerShown: false,
-          sceneStyle: { backgroundColor: colors.bg },
-        }}
-      >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="my-day" />
-        <Tabs.Screen name="crews" />
-        <Tabs.Screen name="progress" />
-        <Tabs.Screen name="you" />
-      </Tabs>
-    </DockClearanceProvider>
+    <PaywallGate>
+      <DockClearanceProvider>
+        <Tabs
+          tabBar={(props) => <Dock {...props} />}
+          screenOptions={{
+            headerShown: false,
+            sceneStyle: { backgroundColor: colors.bg },
+          }}
+        >
+          <Tabs.Screen name="index" />
+          <Tabs.Screen name="my-day" />
+          <Tabs.Screen name="crews" />
+          <Tabs.Screen name="progress" />
+          <Tabs.Screen name="you" />
+        </Tabs>
+      </DockClearanceProvider>
+    </PaywallGate>
   );
 }
 

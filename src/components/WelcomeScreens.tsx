@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { BlurView } from 'expo-blur';
 import { Text, View } from 'react-native';
 
 import { useStyles } from '@/lib/appearance';
@@ -27,8 +27,12 @@ export function WelcomeScreen({ kind, color }: { kind: ScreenKind; color: string
     <Progress color={color} />;
 
   return (
-    <View style={[s.frame, { borderColor: alpha(color, 0.45), shadowColor: color }]}>
-      {inner}
+    <View style={[s.frameWrap, { borderColor: alpha(color, 0.45), shadowColor: color }]}>
+      {/* Glass, not a solid sheet: the colour bleed behind the screen comes
+          through it, so the mock sits in the same light as everything else
+          instead of looking pasted on. */}
+      <BlurView intensity={24} tint="dark" style={s.glass} />
+      <View style={s.frame}>{inner}</View>
     </View>
   );
 }
@@ -250,17 +254,24 @@ function Progress({ color }: { color: string }) {
 }
 
 const makeStyles = (colors: Palette) => ({
-  frame: {
+  frameWrap: {
     flex: 1,
     borderRadius: 26,
     borderWidth: 1,
-    backgroundColor: colors.bg,
     overflow: 'hidden',
-    paddingTop: spacing.md,
     shadowOpacity: 0.35,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
   },
+  glass: {
+    ...({ position: 'absolute' } as const),
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: alpha(colors.bg, 0.52),
+  },
+  frame: { flex: 1, paddingTop: spacing.md },
   head: { paddingHorizontal: spacing.md, gap: 1 },
   headSmall: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint },
   headBig: { fontFamily: fonts.display, fontSize: 32, letterSpacing: -0.9, color: colors.text },

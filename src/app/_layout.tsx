@@ -111,6 +111,8 @@ function RootNavigator() {
           <Stack.Screen name="crew/[id]" />
           <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
+          {/* Outside the tabs on purpose: it has to work from behind the paywall. */}
+          <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={session === null}>
           {/* Welcome comes first and steps aside once it has been seen. */}

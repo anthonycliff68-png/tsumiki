@@ -1,24 +1,27 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Dimensions, Pressable, Text, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
-import { PrimaryButton, TextButton } from '@/components/Button';
-import { Body, Eyebrow, Screen, Title } from '@/components/Screen';
+import { CardCollage } from '@/components/CardCollage';
+import { TextButton } from '@/components/Button';
+import { APP_NAME } from '@/constants/brand';
 import { copy } from '@/copy';
-import { useStyles, useTheme } from '@/lib/appearance';
+import { useStyles } from '@/lib/appearance';
 import type { Access } from '@/lib/entitlement';
-import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+
+const { width: W } = Dimensions.get('window');
 
 export type Plan = 'annual' | 'monthly';
 
 type Props = {
-  /** Why they are seeing this: locked out, or they came looking. */
   access: Access;
-  /** Their own week, shown as a receipt. Null when we do not know yet. */
-  checkIns: number | null;
-  bestRun: number | null;
+  /** The live offering. Null in Expo Go, or if the store cannot be reached. */
+  offering: PurchasesOffering | null | undefined;
   busy: boolean;
   error: string | null;
-  onSubscribe: (plan: Plan) => void;
+  onSubscribe: (pkg: PurchasesPackage | null, plan: Plan) => void;
   onRestore: () => void;
   onDeleteAccount: () => void;
 };
@@ -26,24 +29,19 @@ type Props = {
 /**
  * The paywall.
  *
- * It opens with what the week was actually worth — their own check-ins and
- * their own best run — because asking for money without reminding someone
- * what they got is how a paywall reads as a toll booth. The same numbers can
- * be written as a threat ("don't lose your streak"); they are deliberately
- * not, and the difference is entirely in the wording.
+ * Prices come from the store, not from copy.ts. A hardcoded "$29.99" is wrong
+ * the moment App Store Connect changes, wrong in every country that is not
+ * the United States, and wrong in a way nobody notices until a refund
+ * request. The strings in copy are only a fallback for when the SDK is
+ * absent — Expo Go, or a store that cannot be reached.
  *
- * It says plainly that nothing is deleted. The fear at a paywall in a habit
- * app is that the streak is gone, and that panic is what writes one-star
- * reviews — so it is answered before it is felt.
- *
- * And "Delete my account" stays on this screen. Apple requires the path to
- * remain reachable, and a paywall that traps someone who wants to leave would
- * be indefensible even if it did not.
+ * "Delete my account" stays on this screen. Apple requires the path to remain
+ * reachable, and a paywall that traps someone who wants to leave would be
+ * indefensible even if Apple did not care.
  */
 export function Paywall({
   access,
-  checkIns,
-  bestRun,
+  offering,
   busy,
   error,
   onSubscribe,
@@ -51,159 +49,124 @@ export function Paywall({
   onDeleteAccount,
 }: Props) {
   const styles = useStyles(makeStyles);
-  const colors = useTheme();
   const [plan, setPlan] = useState<Plan>('annual');
-  const locked = access.state === 'locked';
+
+  const annual = offering?.annual ?? null;
+  const monthly = offering?.monthly ?? null;
+  const chosen = plan === 'annual' ? annual : monthly;
+
+  const price =
+    chosen?.product.priceString ??
+    (plan === 'annual' ? copy.paywall.annualPrice : copy.paywall.monthlyPrice);
+  const per = plan === 'annual' ? copy.paywall.perYear : copy.paywall.perMonth;
 
   return (
-    <Screen color={habitColors[0]} underDock={false}>
-      <View style={styles.head}>
-        <Eyebrow>{locked ? copy.paywall.overEyebrow : copy.paywall.browsingEyebrow}</Eyebrow>
-        <Title size={56}>{locked ? copy.paywall.overTitle : copy.paywall.browsingTitle}</Title>
+    <View style={styles.root}>
+      <CardCollage height={400} fadeFrom={60} />
 
-        {access.state === 'trial' && <Body>{copy.paywall.trialLeft(access.daysLeft)}</Body>}
+      <View style={styles.body}>
+        <Text style={[display(72, 62), styles.word]}>{APP_NAME.toUpperCase()}</Text>
+        <Text style={styles.sub}>
+          {access.state === 'locked' ? copy.paywall.overTitle : copy.paywall.browsingTitle}
+        </Text>
 
-        {checkIns !== null && checkIns > 0 && (
-          <Text style={styles.receipt}>
-            {copy.paywall.done(checkIns)}
-            {bestRun !== null && bestRun > 0 ? ` ${copy.paywall.run(bestRun)}` : ''}
+        <View style={styles.priceRow}>
+          <Text style={[styles.price, { color: habitColors[1] }]}>{price}</Text>
+          <Text style={styles.per}>{per}</Text>
+        </View>
+
+        {copy.paywall.features.map((f, i) => (
+          <View key={f.title} style={styles.feature}>
+            <View style={[styles.chip, { backgroundColor: habitColors[i === 0 ? 1 : 0] }]} />
+            <View style={styles.featureText}>
+              <Text style={styles.featureTitle}>{f.title}</Text>
+              <Text style={styles.featureSub}>{f.sub}</Text>
+            </View>
+          </View>
+        ))}
+
+        {error !== null && (
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {error}
           </Text>
         )}
 
-        <Text style={styles.kept}>{copy.paywall.kept}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${copy.paywall.subscribe}, ${price} ${per}`}
+          accessibilityState={{ busy, disabled: busy }}
+          disabled={busy}
+          onPress={() => onSubscribe(chosen, plan)}
+          style={({ pressed }) => [styles.cta, (pressed || busy) && styles.ctaDim]}
+        >
+          <Svg width="100%" height={62} style={styles.ctaFill}>
+            <Defs>
+              <LinearGradient id="ctaGrad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor={habitColors[5]} />
+                <Stop offset="0.5" stopColor={habitColors[1]} />
+                <Stop offset="1" stopColor={habitColors[4]} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="62" rx="31" fill="url(#ctaGrad)" />
+          </Svg>
+          <Text style={styles.ctaLabel}>
+            {busy ? copy.paywall.subscribing : copy.paywall.subscribe}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: plan === 'monthly' }}
+          accessibilityLabel={plan === 'annual' ? copy.paywall.seeMonthly : copy.paywall.seeAnnual}
+          onPress={() => setPlan(plan === 'annual' ? 'monthly' : 'annual')}
+          style={styles.secondary}
+        >
+          <Text style={styles.secondaryLabel}>
+            {plan === 'annual' ? copy.paywall.seeMonthly : copy.paywall.seeAnnual}
+          </Text>
+        </Pressable>
+
+        <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
+        <Text style={styles.terms}>{copy.paywall.terms}</Text>
+        {/* Apple requires this to stay reachable, paywall or not. */}
+        <TextButton label={copy.paywall.deleteAccount} onPress={onDeleteAccount} disabled={busy} />
       </View>
-
-      <View style={styles.list}>
-        <Text style={styles.listTitle}>{copy.paywall.carriesOn}</Text>
-        {copy.paywall.features.map((feature) => (
-          <View key={feature} style={styles.row}>
-            <View style={[styles.tick, { backgroundColor: colors.success }]} />
-            <Text style={styles.rowText}>{feature}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.plans}>
-        <PlanCard
-          selected={plan === 'annual'}
-          onPress={() => setPlan('annual')}
-          name={copy.paywall.annual}
-          price={copy.paywall.annualPrice}
-          aside={copy.paywall.annualAside}
-        />
-        <PlanCard
-          selected={plan === 'monthly'}
-          onPress={() => setPlan('monthly')}
-          name={copy.paywall.monthly}
-          price={copy.paywall.monthlyPrice}
-          aside={copy.paywall.monthlyAside}
-        />
-      </View>
-
-      {error !== null && (
-        <Text style={styles.error} accessibilityLiveRegion="polite">
-          {error}
-        </Text>
-      )}
-
-      <PrimaryButton
-        label={busy ? copy.paywall.subscribing : copy.paywall.subscribe}
-        busy={busy}
-        onPress={() => onSubscribe(plan)}
-      />
-      <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
-      <Text style={styles.terms}>{copy.paywall.terms}</Text>
-
-      {/* Apple requires this to stay reachable, paywall or not. */}
-      <TextButton label={copy.paywall.deleteAccount} onPress={onDeleteAccount} disabled={busy} />
-    </Screen>
-  );
-}
-
-function PlanCard({
-  selected,
-  onPress,
-  name,
-  price,
-  aside,
-}: {
-  selected: boolean;
-  onPress: () => void;
-  name: string;
-  price: string;
-  aside: string;
-}) {
-  const styles = useStyles(makeStyles);
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      accessibilityLabel={`${name}, ${price}, ${aside}`}
-      onPress={onPress}
-      style={[styles.plan, selected && styles.planOn]}
-    >
-      <View style={styles.planText}>
-        <Text style={[styles.planName, selected && styles.planNameOn]}>{name}</Text>
-        <Text style={[styles.planAside, selected && styles.planAsideOn]}>{aside}</Text>
-      </View>
-      <Text style={[styles.planPrice, selected && styles.planNameOn]}>{price}</Text>
-    </Pressable>
+    </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
-  head: { gap: spacing.md },
-  receipt: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.text,
-  },
-  kept: {
+  root: { flex: 1, backgroundColor: colors.bg },
+  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: 300, gap: spacing.md },
+  word: { color: colors.text, textAlign: 'center' },
+  sub: {
     fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
     color: colors.textMuted,
-  },
-
-  list: { gap: spacing.sm, marginTop: spacing.lg },
-  listTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    color: colors.textFaint,
-    marginBottom: 2,
-  },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  tick: { width: 6, height: 6, borderRadius: 3 },
-  rowText: { flex: 1, fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
-
-  plans: { gap: spacing.sm, marginTop: spacing.lg },
-  plan: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 68,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  planOn: { borderColor: colors.text, backgroundColor: alpha(colors.overlay, 0.06) },
-  planText: { flex: 1 },
-  planName: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.textMuted },
-  planNameOn: { color: colors.text },
-  planAside: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint, marginTop: 2 },
-  planAsideOn: { color: colors.textMuted },
-  planPrice: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textMuted },
-
-  terms: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.textFaint,
     textAlign: 'center',
+    marginTop: -4,
   },
-  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1] },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6 },
+  price: { fontFamily: fonts.bodyBold, fontSize: 40 },
+  per: { fontFamily: fonts.bodyBold, fontSize: 20, color: colors.text },
+  feature: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', marginTop: spacing.sm },
+  chip: { width: 12, height: 12, borderRadius: 3, marginTop: 5 },
+  featureText: { flex: 1 },
+  featureTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.text },
+  featureSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textMuted, marginTop: 2 },
+  cta: { height: 62, justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg },
+  ctaDim: { opacity: 0.7 },
+  ctaFill: { position: 'absolute', top: 0, left: 0 },
+  ctaLabel: { fontFamily: fonts.bodyBold, fontSize: 17, letterSpacing: 1.4, color: '#FFFFFF' },
+  secondary: {
+    height: 58,
+    borderRadius: radii.chip,
+    borderWidth: 1.5,
+    borderColor: alpha(habitColors[5], 0.75),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryLabel: { fontFamily: fonts.bodyBold, fontSize: 15, letterSpacing: 1.2, color: colors.text },
+  terms: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, color: colors.textFaint, textAlign: 'center' },
+  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1], textAlign: 'center' },
 }) as const;
