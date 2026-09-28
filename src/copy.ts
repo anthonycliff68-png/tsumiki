@@ -75,6 +75,15 @@ export const copy = {
     // to get someone in. Apple first, because it is one tap and no inbox.
     tagline: 'Build habits with your people.',
     orEmail: 'or use your email',
+    // Present but not advertised: nobody is offered a password here, and
+    // nobody can make one. It exists so an account can be signed into
+    // without an inbox, which App Review needs and a video could not give.
+    usePassword: 'Use a password instead',
+    useCode: 'Email me a code instead',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'Your password',
+    signIn: 'Sign in',
+    wrongPassword: 'That email and password do not match an account.',
     emailLabel: 'Email address',
     emailPlaceholder: 'you@example.com',
     sendLink: 'Send me a code',

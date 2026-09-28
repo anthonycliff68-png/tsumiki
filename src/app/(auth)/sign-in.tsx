@@ -32,7 +32,7 @@ function sayWhy(message: string): string {
 
 export default function SignInScreen() {
   const styles = useStyles(makeStyles);
-  const { signInWithEmail, verifyEmailCode, signInWithApple } = useAuth();
+  const { signInWithEmail, verifyEmailCode, signInWithApple, signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -40,6 +40,8 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const [password, setPassword] = useState('');
+  const [withPassword, setWithPassword] = useState(false);
   /**
    * Seconds until another code may be asked for.
    *
@@ -148,6 +150,28 @@ export default function SignInScreen() {
   const onCodeChange = (raw: string) => {
     setCode(normaliseCode(raw));
     if (error) setError(null);
+  };
+
+  const signInPassword = async () => {
+    const trimmed = email.trim();
+    if (!EMAIL_PATTERN.test(trimmed)) {
+      setError(copy.auth.invalidEmail);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await signInWithPassword(trimmed, password);
+      // The provider picks the session up; the router moves us on.
+    } catch (e) {
+      // Supabase says "Invalid login credentials", which is true and unhelpful.
+      const message = e instanceof Error ? e.message : '';
+      setError(/invalid login/i.test(message) ? copy.auth.wrongPassword : message || copy.auth.genericError);
+      setPassword('');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const signInApple = async () => {
@@ -259,10 +283,47 @@ export default function SignInScreen() {
             onSubmitEditing={sendLink}
             editable={!busy}
           />
+          {withPassword && (
+            <Field
+              label={copy.auth.passwordLabel}
+              placeholder={copy.auth.passwordPlaceholder}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={signInPassword}
+              editable={!busy}
+            />
+          )}
+
           <PrimaryButton
-            label={busy ? copy.auth.sending : copy.auth.sendLink}
-            onPress={sendLink}
+            label={
+              withPassword
+                ? busy
+                  ? copy.auth.verifying
+                  : copy.auth.signIn
+                : busy
+                  ? copy.auth.sending
+                  : copy.auth.sendLink
+            }
+            onPress={withPassword ? signInPassword : sendLink}
             busy={busy}
+          />
+
+          {/* Quiet on purpose: no one is offered a password, and no one can
+              make one here. It is a way in for an account that already has
+              one. */}
+          <TextButton
+            label={withPassword ? copy.auth.useCode : copy.auth.usePassword}
+            onPress={() => {
+              setWithPassword(!withPassword);
+              setPassword('');
+              setError(null);
+            }}
+            disabled={busy}
           />
         </View>
       )}

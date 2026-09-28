@@ -21,6 +21,7 @@ type AuthState = {
   /** Exchange the six-digit code from the email for a session. */
   verifyEmailCode: (email: string, code: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -88,6 +89,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.from('profiles').update({ timezone }).eq('id', userId);
   }, [session?.user.id]);
 
+  /**
+   * The password route.
+   *
+   * Tsumiki does not want passwords and does not offer to create one: this
+   * exists because App Review needs an account it can sign into without an
+   * inbox, and a video was explicitly not enough. It is a real sign-in
+   * against a real account rather than a mode that behaves differently for a
+   * secret input, which is the version that would be worth worrying about.
+   */
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    setAuthError(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) throw error;
+  }, []);
+
   const signInWithEmail = useCallback(async (email: string) => {
     setAuthError(null);
     const { error } = await supabase.auth.signInWithOtp({
@@ -154,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       verifyEmailCode,
       signInWithApple,
+      signInWithPassword,
       signOut,
     }),
     [
@@ -164,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       verifyEmailCode,
       signInWithApple,
+      signInWithPassword,
       signOut,
     ],
   );
