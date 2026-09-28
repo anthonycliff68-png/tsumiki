@@ -445,6 +445,16 @@ export type CrewDetail = {
   members: CrewMemberState[];
   /** Oldest first: did the whole crew get through each of the last 7 days? */
   lastSevenDays: { date: string; complete: boolean; isToday: boolean }[];
+  /** Whoever started it: the only person who can rename it or remove anyone. */
+  createdBy: string;
+  /**
+   * True until the very first check-in, ever.
+   *
+   * The habit's name can be corrected while this holds. After it, the streak
+   * counts days of a specific thing, and renaming that thing underneath the
+   * number would make the number a lie.
+   */
+  habitUntouched: boolean;
 };
 
 /** One crew, with every member's state for today and the week behind it. */
@@ -457,14 +467,16 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
     queryFn: async (): Promise<CrewDetail> => {
       const { data: crew, error: crewError } = await supabase
         .from('crews')
-        .select('id, name, habit_id, streak_current, streak_best, habits!crews_habit_id_fkey(name, color)')
+        .select(
+          'id, name, habit_id, created_by, streak_current, streak_best, habits!crews_habit_id_fkey(name, color)',
+        )
         .eq('id', crewId ?? '')
         .single();
       if (crewError) throw crewError;
 
       const habit = (crew as unknown as { habits: { name: string; color: string } | null }).habits;
 
-      const [memberRows, profileRows, scheduleRows, checkinRows] = await Promise.all([
+      const [memberRows, profileRows, scheduleRows, checkinRows, everCheckedIn] = await Promise.all([
         supabase.from('crew_members').select('user_id, role, grace_used').eq('crew_id', crewId ?? ''),
         supabase.from('crew_profiles').select('id, display_name, avatar_color'),
         supabase.from('habit_schedules').select('user_id, mode, at_time, anchors(label)').eq('habit_id', crew.habit_id),
@@ -474,6 +486,12 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
           .eq('habit_id', crew.habit_id)
           .gte('local_date', localDateString(addDays(date, -6)))
           .lte('local_date', localDate),
+        // Has anyone, ever? One row is enough to know.
+        supabase
+          .from('checkins')
+          .select('id', { head: true, count: 'exact' })
+          .eq('habit_id', crew.habit_id)
+          .limit(1),
       ]);
 
       if (memberRows.error) throw memberRows.error;
@@ -533,6 +551,11 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
         streakBest: crew.streak_best,
         members,
         lastSevenDays,
+        // Not null in the schema, but nullable in the generated types. An
+        // empty string matches nobody, which is the safe way to be wrong.
+        createdBy: crew.created_by ?? '',
+        // A failed count should not unlock renaming: assume it has been used.
+        habitUntouched: (everCheckedIn.count ?? 1) === 0,
       };
     },
   });
@@ -565,6 +588,69 @@ export function useLeaveCrew() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['crews'] });
       void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['today'] });
+    },
+  });
+}
+
+/** Rename a crew. The database only lets the creator through. */
+export function useRenameCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ crewId, name }: { crewId: string; name: string }) => {
+      const { error } = await supabase.from('crews').update({ name }).eq('id', crewId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+    },
+  });
+}
+
+/**
+ * Take someone out of a crew.
+ *
+ * The creator only, and never themselves — leaving your own crew is a
+ * different act with different consequences, and it has its own path.
+ */
+export function useRemoveCrewMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ crewId, userId }: { crewId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('crew_members')
+        .delete()
+        .eq('crew_id', crewId)
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+    },
+  });
+}
+
+/**
+ * Rename the habit a crew is doing.
+ *
+ * Only worth offering before anyone has checked in. After that the streak
+ * counts days of a specific thing, and quietly changing what that thing was
+ * would make the number a lie. The screen enforces the timing; the database
+ * only knows that the creator owns the habit row.
+ */
+export function useRenameCrewHabit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ habitId, name }: { habitId: string; name: string }) => {
+      const { error } = await supabase.from('habits').update({ name }).eq('id', habitId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
       void queryClient.invalidateQueries({ queryKey: ['today'] });
     },
   });
