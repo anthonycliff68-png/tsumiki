@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
+import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
@@ -22,7 +23,6 @@ type Props = {
   stacked: number;
   busy: boolean;
   onChange: (draft: MomentDraft) => void;
-  onPickTime: (which: 'start' | 'end') => void;
   onSave: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -41,7 +41,6 @@ export function MomentSheet({
   stacked,
   busy,
   onChange,
-  onPickTime,
   onSave,
   onDelete,
   onClose,
@@ -50,6 +49,15 @@ export function MomentSheet({
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  /**
+   * Which time is being picked, owned here rather than by the screen.
+   *
+   * It used to live a level up and render its own Modal as a sibling of this
+   * one. Two sibling modals on iOS means the second is presented behind the
+   * first, so tapping a time appeared to do nothing at all. Nested inside
+   * this Modal it comes up over the sheet, which is where it belongs.
+   */
+  const [picking, setPicking] = useState<'start' | 'end' | null>(null);
   if (draft === null) return null;
 
   const swatch = draft.color ?? momentColor({ label: draft.label, color: null });
@@ -95,7 +103,7 @@ export function MomentSheet({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`${copy.schedule.starts}, ${formatTime(draft.usualTime)}`}
-                onPress={() => onPickTime('start')}
+                onPress={() => setPicking('start')}
                 style={styles.timeButton}
               >
                 <Text style={styles.timeText}>{formatTime(draft.usualTime)}</Text>
@@ -108,7 +116,7 @@ export function MomentSheet({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${copy.schedule.ends}, ${formatTime(draft.endsAt as string)}`}
-                  onPress={() => onPickTime('end')}
+                  onPress={() => setPicking('end')}
                   style={styles.timeButton}
                 >
                   <Text style={styles.timeText}>{formatTime(draft.endsAt as string)}</Text>
@@ -177,6 +185,16 @@ export function MomentSheet({
               <TextButton label={copy.schedule.delete} onPress={() => setConfirmingDelete(true)} />
             ))}
         </ScrollView>
+
+        <TimePickerSheet
+          visible={picking !== null}
+          value={picking === 'end' ? (draft.endsAt ?? '17:00') : draft.usualTime}
+          label={picking === 'end' ? copy.schedule.ends : copy.schedule.starts}
+          onChange={(value) =>
+            onChange(picking === 'end' ? { ...draft, endsAt: value } : { ...draft, usualTime: value })
+          }
+          onClose={() => setPicking(null)}
+        />
       </View>
     </Modal>
   );

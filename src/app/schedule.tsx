@@ -1,12 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { MomentSheet, type MomentDraft } from '@/components/MomentSheet';
-import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
@@ -20,7 +19,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
-import { display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
 
 
 
@@ -42,23 +41,31 @@ export default function ScheduleScreen() {
 
   const { id: openId } = useLocalSearchParams<{ id?: string }>();
   const [draft, setDraft] = useState<MomentDraft | null>(null);
-  const [picking, setPicking] = useState<'start' | 'end' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Opened from My Day by tapping a moment: start on that one.
+  /**
+   * Opened from My Day by tapping a moment: start on that one, once.
+   *
+   * "Once" is the whole fix. This used to re-run whenever draft went back to
+   * null, and the id stays in the route params for as long as the screen is
+   * open — so saving closed the sheet and this immediately reopened it on the
+   * same moment. From the outside that looked like a frozen screen where no
+   * other moment could be tapped.
+   */
+  const consumedOpenId = useRef(false);
   useEffect(() => {
-    if (!openId || draft) return;
+    if (!openId || consumedOpenId.current) return;
     const anchor = anchors.find((item) => item.id === openId);
-    if (anchor) {
-      setDraft({
-        id: anchor.id,
-        label: anchor.label,
-        usualTime: anchor.usual_time.slice(0, 5),
-        endsAt: anchor.ends_at ? anchor.ends_at.slice(0, 5) : null,
-        color: anchor.color,
-      });
-    }
-  }, [openId, anchors, draft]);
+    if (!anchor) return;
+    consumedOpenId.current = true;
+    setDraft({
+      id: anchor.id,
+      label: anchor.label,
+      usualTime: anchor.usual_time.slice(0, 5),
+      endsAt: anchor.ends_at ? anchor.ends_at.slice(0, 5) : null,
+      color: anchor.color,
+    });
+  }, [openId, anchors]);
 
   const sorted = [...anchors].sort(
     (a, b) => minutesOfDay(a.usual_time) - minutesOfDay(b.usual_time),
@@ -120,25 +127,12 @@ export default function ScheduleScreen() {
         {sorted.length === 0 && <Text style={styles.blurb}>{copy.schedule.empty}</Text>}
 
         {sorted.map((anchor) => (
-          <Pressable
+          <MomentRow
             key={anchor.id}
-            accessibilityRole="button"
-            accessibilityLabel={anchor.label}
+            anchor={anchor}
+            open={draft?.id === anchor.id}
             onPress={() => openExisting(anchor)}
-            style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
-          >
-            <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: momentColor(anchor) }]}>
-                {anchor.label}
-              </Text>
-              <Text style={styles.rowTime}>
-                {anchor.ends_at
-                  ? copy.schedule.range(formatTime(anchor.usual_time), formatTime(anchor.ends_at))
-                  : formatTime(anchor.usual_time)}
-              </Text>
-            </View>
-            {anchor.ends_at && <View style={styles.blockMark} />}
-          </Pressable>
+          />
         ))}
 
         <TextButton label={`+ ${copy.schedule.add}`} onPress={openNew} />
@@ -151,7 +145,6 @@ export default function ScheduleScreen() {
         busy={createAnchor.isPending || updateAnchor.isPending || deleteAnchor.isPending}
         error={error}
         onChange={setDraft}
-        onPickTime={setPicking}
         onSave={save}
         onDelete={() =>
           draft?.id
@@ -163,17 +156,6 @@ export default function ScheduleScreen() {
           setError(null);
         }}
       />
-
-      <TimePickerSheet
-        visible={picking !== null}
-        value={picking === 'end' ? (draft?.endsAt ?? '17:00') : (draft?.usualTime ?? '09:00')}
-        label={picking === 'end' ? copy.schedule.ends : copy.schedule.starts}
-        onChange={(value) => {
-          if (!draft) return;
-          setDraft(picking === 'end' ? { ...draft, endsAt: value } : { ...draft, usualTime: value });
-        }}
-        onClose={() => setPicking(null)}
-      />
     </View>
   );
 }
@@ -182,6 +164,65 @@ export default function ScheduleScreen() {
 function shiftHour(time: string): string {
   const minutes = Math.min(23 * 60 + 59, minutesOfDay(time) + 60);
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/**
+ * A moment in the list, which answers a tap before the sheet arrives.
+ *
+ * Pressing used to dim the row slightly and then, some frames later, a sheet
+ * slid up — with nothing in between to say the two were connected. It now
+ * lifts and takes on its own colour while it is the one being edited, so the
+ * row you touched is visibly the thing on screen.
+ */
+function MomentRow({
+  anchor,
+  open,
+  onPress,
+}: {
+  anchor: Anchor;
+  open: boolean;
+  onPress: () => void;
+}) {
+  const styles = useStyles(makeStyles);
+  const lift = useRef(new Animated.Value(0)).current;
+  const color = momentColor(anchor);
+
+  useEffect(() => {
+    Animated.spring(lift, {
+      toValue: open ? 1 : 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  }, [open, lift]);
+
+  const scale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={anchor.label}
+        accessibilityState={{ expanded: open }}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.row,
+          open && { borderColor: color, backgroundColor: alpha(color, 0.14) },
+          pressed && !open && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+        ]}
+      >
+        <View style={styles.rowText}>
+          <Text style={[styles.rowLabel, { color }]}>{anchor.label}</Text>
+          <Text style={styles.rowTime}>
+            {anchor.ends_at
+              ? copy.schedule.range(formatTime(anchor.usual_time), formatTime(anchor.ends_at))
+              : formatTime(anchor.usual_time)}
+          </Text>
+        </View>
+        {anchor.ends_at && <View style={styles.blockMark} />}
+      </Pressable>
+    </Animated.View>
+  );
 }
 
 const makeStyles = (colors: Palette) => ({
