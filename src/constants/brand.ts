@@ -13,11 +13,19 @@ export const TERMS_URL = 'https://tsumiki.app/terms';
 export const PRIVACY_URL = 'https://tsumiki.app/privacy';
 
 /**
- * Where invite links point. The domain is still an open question in the brief,
- * so this is a placeholder: change it once the real one is registered, and set
- * up Universal Links and App Links on it at the same time.
+ * Where invite links point.
+ *
+ * This was tsumiki.app, a domain nobody owns, so every invite ever sent led
+ * to a 404. It now points at the GitHub Pages site, which is real and which
+ * serves 404.html for any path it does not recognise — that page reads the
+ * code out of the URL and hands off to the app.
+ *
+ * It is still a stopgap. On a domain you own you can host an
+ * apple-app-site-association file and the link opens the app directly,
+ * without the page appearing at all. Change this when the domain is
+ * registered and set up Universal Links and App Links at the same time.
  */
-export const INVITE_BASE_URL = 'https://tsumiki.app/j';
+export const INVITE_BASE_URL = 'https://anthonycliff68-png.github.io/tsumiki/j';
 
 /** The shared message that goes out with an invite link. */
 export function inviteMessage(crewName: string, habitName: string): string {

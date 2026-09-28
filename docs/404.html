@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tsumiki</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#0B0B0C;color:#F4F1EC;padding:32px 24px;
+font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:420px;width:100%;text-align:center}
+h1{font-size:40px;line-height:1.05;letter-spacing:-1px;margin:0 0 12px}
+p{color:#BDB7AD;margin:0 0 20px}
+.code{display:inline-block;font:700 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+letter-spacing:4px;color:#F4F1EC;background:rgba(255,255,255,.07);
+border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:14px 20px;margin-bottom:24px}
+a.btn{display:block;text-decoration:none;border-radius:999px;padding:17px 20px;
+font-weight:700;font-size:16px;margin-bottom:12px}
+.primary{background:#F4F1EC;color:#0B0B0C}
+.secondary{border:1px solid rgba(255,255,255,.2);color:#F4F1EC}
+small{display:block;color:#9D978D;font-size:13px;margin-top:20px;line-height:1.5}
+</style></head>
+<body><main>
+  <h1 id="head">You have been invited</h1>
+  <p id="sub">Someone wants to build a habit with you.</p>
+  <div class="code" id="code" hidden></div>
+  <a class="btn primary" id="open" href="#">Open in Tsumiki</a>
+  <a class="btn secondary" href="https://apps.apple.com/app/id6815775979">Get Tsumiki for iPhone</a>
+  <small id="note">Already have the app? Open it and the invite will be waiting.</small>
+</main>
+<script>
+// GitHub Pages serves this file for any path it does not recognise, which is
+// how /j/<code> is handled without a server. Anything else that lands here is
+// a genuine wrong turn and says so.
+(function () {
+  var parts = location.pathname.split('/').filter(Boolean);
+  var i = parts.indexOf('j');
+  var code = i >= 0 ? (parts[i + 1] || '') : '';
+
+  if (!/^[A-Za-z0-9-]{4,24}$/.test(code)) {
+    document.getElementById('head').textContent = 'Page not found';
+    document.getElementById('sub').textContent =
+      'That link does not lead anywhere. If it was an invite, ask for a fresh one.';
+    document.getElementById('open').hidden = true;
+    document.getElementById('note').textContent = '';
+    return;
+  }
+
+  var el = document.getElementById('code');
+  el.textContent = code.toUpperCase();
+  el.hidden = false;
+
+  var deep = 'tsumiki://j/' + encodeURIComponent(code);
+  document.getElementById('open').setAttribute('href', deep);
+  // Try it straight away: someone who has the app should not have to tap
+  // twice, and someone who does not will simply stay on this page.
+  setTimeout(function () { location.href = deep; }, 350);
+})();
+</script>
+</body></html>
