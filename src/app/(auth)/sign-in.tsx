@@ -10,7 +10,14 @@ import { APP_NAME } from '@/constants/brand';
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useAuth } from '@/lib/auth';
-import { CODE_MAX, longEnough, normaliseCode, readCodeError } from '@/lib/otp.ts';
+import {
+  CODE_MAX,
+  longEnough,
+  normaliseCode,
+  readCodeError,
+  readSendError,
+  RESEND_COOLDOWN_SECONDS,
+} from '@/lib/otp.ts';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { alpha, display, fonts, habitColors, spacing, type Palette } from '@/theme';
 
@@ -33,6 +40,20 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  /**
+   * Seconds until another code may be asked for.
+   *
+   * The provider refuses two in quick succession, and refuses quietly enough
+   * that a second tap can look exactly like a working one. Counting down in
+   * the open is better than finding out by being ignored.
+   */
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((left) => left - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
@@ -52,17 +73,28 @@ export default function SignInScreen() {
       await signInWithEmail(trimmed);
       setSentTo(trimmed);
       setCode('');
+      setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (e) {
-      // Supabase throttles resends; its message says how long to wait, which
-      // is more use than anything generic.
-      setError(e instanceof Error ? e.message : copy.auth.genericError);
+      const problem = readSendError(e instanceof Error ? e.message : '');
+      if (problem.kind === 'too-soon') {
+        // Being refused a second code almost always means a first one is
+        // already sitting in their inbox. Showing the error and nothing else
+        // strands someone who has the thing they need — so go to the code
+        // screen anyway and say why no new one is coming.
+        setSentTo(trimmed);
+        setCode('');
+        setNotice(copy.auth.tooSoon(problem.seconds));
+        setCooldown(problem.seconds);
+      } else {
+        setError(e instanceof Error ? e.message : copy.auth.genericError);
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const resend = async () => {
-    if (!sentTo) return;
+    if (!sentTo || cooldown > 0) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -70,8 +102,17 @@ export default function SignInScreen() {
       await signInWithEmail(sentTo);
       setCode('');
       setNotice(copy.auth.resent);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (e) {
-      setError(e instanceof Error ? e.message : copy.auth.genericError);
+      const problem = readSendError(e instanceof Error ? e.message : '');
+      if (problem.kind === 'too-soon') {
+        // Not an error they caused, and the code they already have still
+        // works — say that rather than showing them a failure.
+        setNotice(copy.auth.tooSoon(problem.seconds));
+        setCooldown(problem.seconds);
+      } else {
+        setError(e instanceof Error ? e.message : copy.auth.genericError);
+      }
     } finally {
       setBusy(false);
     }
@@ -165,7 +206,11 @@ export default function SignInScreen() {
 
           <Text style={styles.hint}>{copy.auth.linkAlsoWorks}</Text>
 
-          <TextButton label={copy.auth.resend} onPress={resend} />
+          <TextButton
+            label={cooldown > 0 ? copy.auth.resendIn(cooldown) : copy.auth.resend}
+            onPress={resend}
+            disabled={cooldown > 0 || busy}
+          />
           <TextButton
             label={copy.auth.useAnotherEmail}
             onPress={() => {

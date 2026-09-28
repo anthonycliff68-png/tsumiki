@@ -87,7 +87,11 @@ export const copy = {
     verify: 'Sign in',
     verifying: 'Checking\u2026',
     resend: 'Send another code',
-    resent: 'Sent. Check your email again.',
+    resent: 'Sent. Check your email again \u2014 including spam.',
+    // The button says how long it will be, so nobody presses it into silence.
+    resendIn: (seconds: number) => `Send another code in ${seconds}s`,
+    tooSoon: (seconds: number) =>
+      `One code at a time. Try again in ${seconds}s \u2014 the last one is still good.`,
     codeTooShort: 'That looks too short \u2014 enter the whole code from the email.',
     codeWrong: 'That code is not right. Check the email and try again.',
     codeExpired: 'That code has expired or was already used. Ask for another.',

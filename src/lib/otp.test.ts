@@ -5,7 +5,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { CODE_MAX, CODE_MIN, longEnough, normaliseCode, readCodeError } from './otp.ts';
+import {
+  CODE_MAX,
+  CODE_MIN,
+  longEnough,
+  normaliseCode,
+  readCodeError,
+  readSendError,
+  RESEND_COOLDOWN_SECONDS,
+} from './otp.ts';
 
 describe('what counts as a code', () => {
   it('keeps a six-digit code whole', () => {
@@ -59,5 +67,30 @@ describe('why a code was refused', () => {
   it('does not dress up something it has never seen', () => {
     assert.equal(readCodeError('Network request failed'), 'other');
     assert.equal(readCodeError('For security purposes, you can only request this after 51s'), 'other');
+  });
+});
+
+describe('why a code could not be sent', () => {
+  it('pulls the wait out of Supabase\'s wording', () => {
+    assert.deepEqual(
+      readSendError('For security purposes, you can only request this after 51 seconds'),
+      { kind: 'too-soon', seconds: 51 },
+    );
+  });
+
+  it('knows a rate limit even when no number is offered', () => {
+    assert.deepEqual(readSendError('Email rate limit exceeded'), {
+      kind: 'too-soon',
+      seconds: RESEND_COOLDOWN_SECONDS,
+    });
+    assert.deepEqual(readSendError('429 Too Many Requests'), {
+      kind: 'too-soon',
+      seconds: RESEND_COOLDOWN_SECONDS,
+    });
+  });
+
+  it('does not dress up a problem it has never seen', () => {
+    assert.deepEqual(readSendError('Network request failed'), { kind: 'other' });
+    assert.deepEqual(readSendError(''), { kind: 'other' });
   });
 });
