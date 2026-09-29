@@ -10,6 +10,7 @@ import {
   currentRun,
   datesBetween,
   endOfMonth,
+  lifetimeTotals,
   isDue,
   overallOf,
   periodRange,
@@ -331,5 +332,41 @@ describe('days that have not happened yet', () => {
       '2026-09-22',
     );
     assert.equal(cal.find((d) => d.date === '2026-09-25')?.state, 'done');
+  });
+});
+
+describe('lifetime totals', () => {
+  it('counts every check-in but only distinct days', () => {
+    // Two habits, both done on the 2nd: two check-ins, one day.
+    const totals = lifetimeTotals(['2026-09-01', '2026-09-02', '2026-09-02']);
+    assert.equal(totals.checkins, 3);
+    assert.equal(totals.days, 2);
+  });
+
+  it('finds the longest run and is not fooled by a gap', () => {
+    const totals = lifetimeTotals([
+      '2026-09-01', '2026-09-02', '2026-09-03',
+      // gap
+      '2026-09-06', '2026-09-07',
+    ]);
+    assert.equal(totals.bestRun, 3);
+  });
+
+  it('counts a run across a month boundary', () => {
+    assert.equal(lifetimeTotals(['2026-09-29', '2026-09-30', '2026-10-01']).bestRun, 3);
+  });
+
+  it('does not let one habit’s duplicate inflate a run', () => {
+    // Same day twice from two habits must not read as two consecutive days.
+    assert.equal(lifetimeTotals(['2026-09-01', '2026-09-01']).bestRun, 1);
+  });
+
+  it('is empty before the first check-in', () => {
+    const totals = lifetimeTotals([]);
+    assert.deepEqual(totals, { checkins: 0, days: 0, bestRun: 0, firstDay: null });
+  });
+
+  it('reports the first day regardless of the order it was given', () => {
+    assert.equal(lifetimeTotals(['2026-09-09', '2026-09-02']).firstDay, '2026-09-02');
   });
 });

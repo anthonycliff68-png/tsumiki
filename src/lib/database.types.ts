@@ -561,6 +561,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_color: string
+          avatar_emoji: string
           created_at: string
           display_name: string
           id: string
@@ -571,6 +572,7 @@ export type Database = {
         }
         Insert: {
           avatar_color?: string
+          avatar_emoji?: string
           created_at?: string
           display_name?: string
           id: string
@@ -581,6 +583,7 @@ export type Database = {
         }
         Update: {
           avatar_color?: string
+          avatar_emoji?: string
           created_at?: string
           display_name?: string
           id?: string
@@ -753,16 +756,19 @@ export type Database = {
       crew_profiles: {
         Row: {
           avatar_color: string | null
+          avatar_emoji: string | null
           display_name: string | null
           id: string | null
         }
         Insert: {
           avatar_color?: string | null
+          avatar_emoji?: string | null
           display_name?: string | null
           id?: string | null
         }
         Update: {
           avatar_color?: string | null
+          avatar_emoji?: string | null
           display_name?: string | null
           id?: string | null
         }

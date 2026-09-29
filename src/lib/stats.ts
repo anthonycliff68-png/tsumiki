@@ -213,3 +213,38 @@ export function calendarFor(
     return { date, state: isDue(habit, date, today) ? 'missed' : 'not-due' };
   });
 }
+
+export type Lifetime = {
+  /** Every check-in ever, counting two habits on one day as two. */
+  checkins: number;
+  /** Days with at least one check-in. */
+  days: number;
+  /** The longest run of consecutive days with at least one check-in. */
+  bestRun: number;
+  /** The first day anything was checked in, or null before there is one. */
+  firstDay: string | null;
+};
+
+/**
+ * The numbers on your own profile.
+ *
+ * Deliberately not "perfect days": that would need every habit's schedule and
+ * would quietly punish anyone who has ever added a habit mid-week. Showing up
+ * at all is the thing worth counting, and it is a number nobody has to have
+ * explained to them.
+ *
+ * Takes every check-in date across every habit, duplicates included — two
+ * habits done on one Tuesday is two check-ins but one day.
+ */
+export function lifetimeTotals(dates: readonly string[]): Lifetime {
+  const unique = [...new Set(dates)].sort();
+  let bestRun = 0;
+  let run = 0;
+  let previous: string | null = null;
+  for (const day of unique) {
+    run = previous !== null && shiftDate(previous, 1) === day ? run + 1 : 1;
+    if (run > bestRun) bestRun = run;
+    previous = day;
+  }
+  return { checkins: dates.length, days: unique.length, bestRun, firstDay: unique[0] ?? null };
+}

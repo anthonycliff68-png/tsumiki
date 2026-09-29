@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { faceOf } from '@/lib/models';
 
 type Props = {
   visible: boolean;
@@ -70,7 +71,9 @@ export function NudgeSheet({ visible, crewId, member, remaining, moment, onClose
 
         <View style={styles.header}>
           <View style={[styles.avatar, { backgroundColor: member.avatarColor }]}>
-            <Text style={styles.avatarText}>{member.displayName.slice(0, 2).toUpperCase()}</Text>
+            <Text style={[styles.avatarText, member.avatarEmoji ? styles.avatarEmoji : null]}>
+              {faceOf(member.displayName, member.avatarEmoji)}
+            </Text>
           </View>
           <View style={styles.headerText}>
             <Text style={display(26, 26)}>{copy.nudge.sendTitle(member.displayName)}</Text>
@@ -157,6 +160,7 @@ const makeStyles = (colors: Palette) => ({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.white },
+  avatarEmoji: { fontFamily: undefined, fontSize: 20 },
   headerText: { flex: 1, gap: 2 },
   sub: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
   label: {

@@ -6,6 +6,8 @@ import { fonts, radii, type Palette } from '@/theme';
 
 type Props = {
   label: string;
+  /** Read out instead of the label, when the visible word is too terse alone. */
+  accessibilityLabel?: string;
   onPress: () => void;
   disabled?: boolean;
   busy?: boolean;
@@ -13,14 +15,14 @@ type Props = {
 };
 
 /** The pale pill from the canvas: the one thing to do on a screen. */
-export function PrimaryButton({ label, onPress, disabled, busy, icon }: Props) {
+export function PrimaryButton({ label, accessibilityLabel, onPress, disabled, busy, icon }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const inactive = disabled || busy;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!busy }}
       disabled={inactive}
       onPress={onPress}
@@ -43,12 +45,12 @@ export function PrimaryButton({ label, onPress, disabled, busy, icon }: Props) {
 }
 
 /** The quieter second option underneath it. */
-export function TextButton({ label, onPress, disabled }: Omit<Props, 'busy' | 'icon'>) {
+export function TextButton({ label, accessibilityLabel, onPress, disabled }: Omit<Props, 'busy' | 'icon'>) {
   const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}

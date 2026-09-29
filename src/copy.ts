@@ -132,8 +132,27 @@ export const copy = {
     skip: 'Skip',
     progress: (step: number, total: number) => `Step ${step} of ${total}`,
 
+    profile: {
+      eyebrow: 'Step 1 · You',
+      title: 'Who should\nwe call you?',
+      blurb: 'Your crew sees this name and this face. Nothing else about you is shared.',
+      nameLabel: 'Your name',
+      namePlaceholder: 'First name is plenty',
+      nameMissing: 'Pick something for your crew to call you.',
+      faceLabel: 'Pick a face',
+      faceHint: 'Or leave it and your initials do the job.',
+      initials: 'Initials',
+      pickEmoji: (emoji: string) => `Use ${emoji} as your face`,
+      pickInitials: 'Use my initials instead',
+      colourLabel: 'And a colour',
+      pickColour: (index: number) => `Colour ${index + 1}`,
+      next: 'That\u2019s me',
+      saving: 'Saving\u2026',
+      failed: 'Could not save that. Try again.',
+    },
+
     routine: {
-      eyebrow: 'Step 1 · Your routine',
+      eyebrow: 'Step 2 · Your routine',
       title: 'What does your\nday look like?',
       blurb: 'These are the moments your habits will stack onto. Rough times are fine.',
       addOwn: 'Your own',
@@ -148,7 +167,7 @@ export const copy = {
     },
 
     habit: {
-      eyebrow: 'Step 2 · First habit',
+      eyebrow: 'Step 3 · First habit',
       title: 'Start with\none.',
       blurb: 'Small beats ambitious. We matched each one to a moment in your day.',
       after: (anchor: string) => `After ${anchor}`,
@@ -159,7 +178,7 @@ export const copy = {
     },
 
     crew: {
-      eyebrow: 'Step 3 · Your crew',
+      eyebrow: 'Step 4 · Your crew',
       title: 'It\u2019s in\nyour day.',
       justYou: 'Just you, for now',
       isNew: 'New',
@@ -538,6 +557,17 @@ export const copy = {
   },
 
   you: {
+    profile: 'You',
+    editProfile: 'Edit',
+    editProfileLabel: 'Edit your name, face and colour',
+    doneEditing: 'Done',
+    cancelEditing: 'Cancel',
+    memberSince: (date: string) => `Here since ${date}`,
+    statCheckins: 'Check-ins',
+    statDays: 'Days shown up',
+    statBestRun: 'Best run',
+    statBestRunUnit: (days: number) => (days === 1 ? 'day' : 'days'),
+    noStatsYet: 'Your first check-in starts the count.',
     appearance: 'Appearance',
     themeLight: 'Light',
     themeDark: 'Dark',

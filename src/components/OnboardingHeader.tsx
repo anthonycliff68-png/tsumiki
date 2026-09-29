@@ -6,14 +6,15 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { fonts, radii, type Palette } from '@/theme';
 
-/** Four steps: welcome, routine, first habit, crew. */
-const TOTAL_STEPS = 4;
+/** Five steps: welcome, you, routine, first habit, crew. */
+const TOTAL_STEPS = 5;
 
 type Props = {
   /** 0-based, counting the welcome screen as step 0. */
   step: number;
   onBack?: () => void;
-  onSkip: () => void;
+  /** Left out by a step with nothing to skip to. */
+  onSkip?: () => void;
 };
 
 export function OnboardingHeader({ step, onBack, onSkip }: Props) {
@@ -31,7 +32,7 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
           <ChevronLeftIcon size={18} color={colors.text} />
         </Pressable>
       ) : (
-        <View style={styles.back} />
+        <View style={styles.spacer} />
       )}
 
       <View
@@ -51,14 +52,19 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
         ))}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={copy.onboarding.skip}
-        onPress={onSkip}
-        style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
-      >
-        <Text style={styles.skipLabel}>{copy.onboarding.skip}</Text>
-      </Pressable>
+      {onSkip ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copy.onboarding.skip}
+          onPress={onSkip}
+          style={({ pressed }) => [styles.skip, pressed && styles.pressed]}
+        >
+          <Text style={styles.skipLabel}>{copy.onboarding.skip}</Text>
+        </Pressable>
+      ) : (
+        // Keeps the dots centred with nothing on the right.
+        <View style={styles.skip} />
+      )}
     </View>
   );
 }
@@ -80,6 +86,7 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  spacer: { width: 44, height: 44 },
   dots: {
     flexDirection: 'row',
     alignItems: 'center',

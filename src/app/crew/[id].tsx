@@ -21,6 +21,7 @@ import {
 } from '@/lib/api';
 import { NudgeSheet } from '@/components/NudgeSheet';
 import { SafetySheet } from '@/components/SafetySheet';
+import { faceOf } from '@/lib/models';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
 
@@ -237,8 +238,13 @@ function MemberTile({
   return (
     <View style={styles.member}>
       <View style={[styles.tile, { backgroundColor: member.avatarColor }]}>
-        <Text style={styles.tileInitials}>
-          {isMe ? copy.crews.you.toUpperCase() : initials(member.displayName)}
+        <Text
+          style={[
+            styles.tileInitials,
+            !isMe && member.avatarEmoji ? styles.tileEmoji : null,
+          ]}
+        >
+          {isMe ? copy.crews.you.toUpperCase() : faceOf(member.displayName, member.avatarEmoji)}
         </Text>
       </View>
       <Text style={styles.memberName} numberOfLines={1}>
@@ -313,12 +319,6 @@ function MemberTile({
   );
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return (parts[0] ?? '').slice(0, 2).toUpperCase();
-  return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
-}
-
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
@@ -383,6 +383,8 @@ const makeStyles = (colors: Palette) => ({
   member: { width: 100, gap: 6 },
   tile: { width: 100, height: 100, borderRadius: radii.card, alignItems: 'center', justifyContent: 'center' },
   tileInitials: { ...display(34, 34), color: colors.white },
+  // An emoji is a glyph, not type: the display face would letter-space it.
+  tileEmoji: { fontFamily: undefined, fontSize: 34, letterSpacing: 0 },
   memberName: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   memberMoment: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   memberButton: {

@@ -1,5 +1,6 @@
 /**
- * Friendly names for the generated row types.
+ * Friendly names for the generated row types, and the small rules about how a
+ * person is shown.
  *
  * These live outside database.types.ts because that file is overwritten every
  * time the schema changes (`npm run db:types`).
@@ -42,4 +43,29 @@ export type StatusKind = Enums<'status_kind'>;
  */
 export function personName(name: string | null | undefined, fallback: string): string {
   return name?.trim() || fallback;
+}
+
+/**
+ * The two letters standing in for a face. Two words give their initials, one
+ * word gives its first two letters — "Ada Lovelace" is AL, "Ada" is AD.
+ */
+export function initialsOf(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '??';
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return trimmed.slice(0, 2).toUpperCase();
+  return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
+}
+
+/**
+ * What to draw inside someone's disc: their emoji if they picked one, their
+ * initials otherwise.
+ *
+ * One rule in one place because there are three discs — the crew tile, the
+ * nudge sheet and the profile header — and they were each deriving initials
+ * their own way. A stale one is not a crash, just a member who looks like a
+ * different person depending on the screen.
+ */
+export function faceOf(name: string, emoji: string | null | undefined): string {
+  return emoji?.trim() || initialsOf(name);
 }

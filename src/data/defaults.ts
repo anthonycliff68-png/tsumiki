@@ -50,6 +50,21 @@ export const HABIT_SUGGESTIONS: HabitSuggestion[] = [
 ];
 
 /** Every day of the week, the default schedule for a new habit. */
+/**
+ * The faces to choose from.
+ *
+ * A fixed set rather than the system emoji keyboard: a crew tile is 32px, and
+ * plenty of emoji are unreadable at that size or are two glyphs wide. These
+ * were picked to stay distinct from each other when they are small and next to
+ * one another, which is the only place they are ever seen.
+ */
+export const PROFILE_EMOJI = [
+  '\u{1F98A}', '\u{1F43B}', '\u{1F438}', '\u{1F989}',
+  '\u{1F419}', '\u{1F98B}', '\u{1F335}', '\u{1F344}',
+  '\u{26A1}', '\u{1F525}', '\u{1F319}', '\u{2B50}',
+  '\u{1F30A}', '\u{1F3A7}', '\u{2615}', '\u{1F3C0}',
+] as const;
+
 export const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 
 /** "22:30" or "22:30:00" → "10:30 pm", the canvas's format. */

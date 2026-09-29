@@ -4,7 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { Dock, DockClearanceProvider } from '@/components/Dock';
 import { PaywallGate } from '@/components/PaywallGate';
-import { useAnchors } from '@/lib/api';
+import { useAnchors, useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { type Palette } from '@/theme';
@@ -15,14 +15,22 @@ export default function TabsLayout() {
   const { session } = useAuth();
   const userId = session?.user.id;
   const { data: anchors, isPending, isError } = useAnchors(userId);
+  const { data: profile, isPending: profilePending, isError: profileError } = useMyProfile(userId);
 
   // Hold here rather than flashing the tabs and bouncing into onboarding.
-  if (isPending) {
+  if (isPending || profilePending) {
     return (
       <View style={styles.holding}>
         <ActivityIndicator color={colors.text} />
       </View>
     );
+  }
+
+  // No name means a blank tile to everyone sharing a crew with you, so this
+  // comes before the routine. It also catches accounts made before the step
+  // existed — anyone who signed in by email was never asked.
+  if (!profileError && profile && profile.display_name.trim() === '') {
+    return <Redirect href="/profile" />;
   }
 
   // A day with no anchors has nothing to stack onto: set the routine up first.

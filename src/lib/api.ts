@@ -426,6 +426,7 @@ export type CrewMemberState = {
   userId: string;
   displayName: string;
   avatarColor: string;
+  avatarEmoji: string;
   role: CrewRole;
   graceUsed: boolean;
   /** Checked in for the date being shown. */
@@ -480,7 +481,7 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
 
       const [memberRows, profileRows, scheduleRows, checkinRows, everCheckedIn] = await Promise.all([
         supabase.from('crew_members').select('user_id, role, grace_used').eq('crew_id', crewId ?? ''),
-        supabase.from('crew_profiles').select('id, display_name, avatar_color'),
+        supabase.from('crew_profiles').select('id, display_name, avatar_color, avatar_emoji'),
         supabase.from('habit_schedules').select('user_id, mode, at_time, anchors(label)').eq('habit_id', crew.habit_id),
         supabase
           .from('checkins')
@@ -521,6 +522,7 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
           userId: member.user_id,
           displayName: personName(profiles.get(member.user_id)?.display_name, copy.crews.someone),
           avatarColor: profiles.get(member.user_id)?.avatar_color ?? habitColors[0],
+          avatarEmoji: profiles.get(member.user_id)?.avatar_emoji ?? '',
           role: member.role,
           graceUsed: member.grace_used,
           checkedIn: doneToday.has(member.user_id),
@@ -672,6 +674,7 @@ export type ReceivedNudge = {
   fromUserId: string;
   fromName: string;
   fromColor: string;
+  fromEmoji: string;
   message: string;
   checkedIn: boolean;
   /** A thanks already sent for this nudge. */
@@ -704,7 +707,7 @@ export function useNudgesForMe(userId: string | undefined, date: Date = new Date
       if (rows.length === 0) return [];
 
       const [profiles, checkins, reactions] = await Promise.all([
-        supabase.from('crew_profiles').select('id, display_name, avatar_color'),
+        supabase.from('crew_profiles').select('id, display_name, avatar_color, avatar_emoji'),
         supabase
           .from('checkins')
           .select('habit_id')
@@ -730,6 +733,7 @@ export function useNudgesForMe(userId: string | undefined, date: Date = new Date
         fromUserId: row.from_user,
         fromName: personName(byId.get(row.from_user)?.display_name, copy.crews.someone),
         fromColor: byId.get(row.from_user)?.avatar_color ?? habitColors[0],
+        fromEmoji: byId.get(row.from_user)?.avatar_emoji ?? '',
         message: row.message,
         checkedIn: done.has(row.crews.habit_id),
         reactionKind: thanked.get(row.id) ?? null,
@@ -857,6 +861,35 @@ export function useCrewStatuses(crewId: string | undefined) {
 }
 
 /** Your own profile row — name, colour, timezone, quiet hours. */
+/**
+ * Change your own name, colour or emoji.
+ *
+ * Only ever your own row — the profiles_update_own policy enforces that, so a
+ * wrong id here fails at the database rather than editing someone else. The
+ * crew queries are invalidated too, because your face appears on their screens
+ * as well as yours.
+ */
+export function useUpdateProfile(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: { displayName?: string; avatarColor?: string; avatarEmoji?: string }) => {
+      if (!userId) throw new Error('Not signed in.');
+      const row: { display_name?: string; avatar_color?: string; avatar_emoji?: string } = {};
+      if (patch.displayName !== undefined) row.display_name = patch.displayName.trim();
+      if (patch.avatarColor !== undefined) row.avatar_color = patch.avatarColor;
+      if (patch.avatarEmoji !== undefined) row.avatar_emoji = patch.avatarEmoji;
+      const { error } = await supabase.from('profiles').update(row).eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['nudges'] });
+    },
+  });
+}
+
 export function useMyProfile(userId: string | undefined) {
   return useQuery({
     queryKey: ['profile', userId],
@@ -1245,7 +1278,7 @@ export function useBlocked(userId: string | undefined) {
       // blocked stranger falls back to their id.
       const { data: profiles } = await supabase
         .from('crew_profiles')
-        .select('id, display_name, avatar_color');
+        .select('id, display_name, avatar_color, avatar_emoji');
       const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
 
       return data.map((row) => ({

@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
+import { ProfileCard } from '@/components/ProfileCard';
 import { Body, Screen, Stub, Title } from '@/components/Screen';
 import { TextButton } from '@/components/Button';
 import { APP_NAME, APP_TAGLINE, TERMS_URL } from '@/constants/brand';
@@ -61,6 +62,9 @@ export default function YouScreen() {
         {APP_NAME} — {APP_TAGLINE}
       </Body>
       {session?.user.email && <Body>Signed in as {session.user.email}</Body>}
+
+      <Text style={styles.label}>{copy.you.profile}</Text>
+      <ProfileCard userId={userId} />
 
       <Text style={styles.label}>{copy.you.appearance}</Text>
       <View style={styles.themes}>

@@ -44,7 +44,7 @@ export default function CrewPromptScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingHeader step={3} onBack={() => router.back()} onSkip={() => router.replace('/')} />
+        <OnboardingHeader step={4} onBack={() => router.back()} onSkip={() => router.replace('/')} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.crew.eyebrow}</Text>

@@ -106,7 +106,7 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <OnboardingHeader step={1} onBack={() => router.back()} onSkip={() => void save(() => router.replace('/'))} />
+        <OnboardingHeader step={2} onBack={() => router.back()} onSkip={() => void save(() => router.replace('/'))} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.routine.eyebrow}</Text>
