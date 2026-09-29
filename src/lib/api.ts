@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EVERY_DAY } from '@/data/defaults';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
 import type { Enums } from '@/lib/database.types';
+import { copy } from '@/copy';
+import { personName } from '@/lib/models';
 import type { Anchor, CrewRole, Habit, ReactionKind, ScheduleMode } from '@/lib/models';
 import { supabase } from '@/lib/supabase';
 import { habitColors } from '@/theme';
@@ -517,7 +519,7 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
         const schedule = schedules.get(member.user_id);
         return {
           userId: member.user_id,
-          displayName: profiles.get(member.user_id)?.display_name ?? 'Someone',
+          displayName: personName(profiles.get(member.user_id)?.display_name, copy.crews.someone),
           avatarColor: profiles.get(member.user_id)?.avatar_color ?? habitColors[0],
           role: member.role,
           graceUsed: member.grace_used,
@@ -726,7 +728,7 @@ export function useNudgesForMe(userId: string | undefined, date: Date = new Date
         habitName: row.crews.habits?.name ?? '',
         habitColor: row.crews.habits?.color ?? habitColors[0],
         fromUserId: row.from_user,
-        fromName: byId.get(row.from_user)?.display_name ?? 'Someone',
+        fromName: personName(byId.get(row.from_user)?.display_name, copy.crews.someone),
         fromColor: byId.get(row.from_user)?.avatar_color ?? habitColors[0],
         message: row.message,
         checkedIn: done.has(row.crews.habit_id),
@@ -1248,7 +1250,7 @@ export function useBlocked(userId: string | undefined) {
 
       return data.map((row) => ({
         userId: row.blocked_id,
-        displayName: byId.get(row.blocked_id)?.display_name ?? 'Someone',
+        displayName: personName(byId.get(row.blocked_id)?.display_name, copy.crews.someone),
         avatarColor: byId.get(row.blocked_id)?.avatar_color ?? habitColors[0],
       }));
     },

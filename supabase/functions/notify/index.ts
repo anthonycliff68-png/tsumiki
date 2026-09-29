@@ -224,7 +224,7 @@ Deno.serve(async () => {
       done.has(doneKey(row.crews.habit_id, member.user_id, local.date)),
     ).length;
 
-    const sender = byProfile.get(row.from_user)?.display_name ?? 'Someone';
+    const sender = byProfile.get(row.from_user)?.display_name?.trim() || 'Someone';
     messages.push({
       to: profile.push_token,
       title: `${sender} nudged you`,

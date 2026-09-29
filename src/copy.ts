@@ -309,6 +309,10 @@ export const copy = {
     sameHabit: (habit: string) => `${habit}. Same habit, everyone\u2019s own anchor.`,
     crewLine: (inCount: number, total: number) => `Crew \u00b7 ${inCount} of ${total} in`,
     spots: (count: number) => `${count}/5 crew`,
+    // Someone who has not told us their name yet. Reached more often than it
+    // looks: a name is only asked for once, and Apple withholds it entirely
+    // when someone declines to share it.
+    someone: 'Someone',
     memberIn: 'In',
     memberNotYet: 'Not yet',
     you: 'You',
