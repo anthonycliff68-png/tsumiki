@@ -16,6 +16,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { LinesIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
+import { orderForDay } from '@/lib/today';
 import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, display, fonts, radii, shade, spacing, tint, type Palette } from '@/theme';
@@ -91,6 +92,14 @@ const TRAVEL = 96;
 const FLICK = 0.11;
 /** How far past either end the fan stretches before it pulls back. */
 const OVERRUN = 0.45;
+/**
+ * How long the finished card takes to travel back into the deck.
+ *
+ * It runs at the end of the fill rather than after it, so the water settling
+ * and the card leaving are one movement — the card is already standing in its
+ * new place at the moment the hand re-sorts underneath it.
+ */
+const DEAL_MS = 260;
 
 type Props = {
   habits: TodayHabit[];
@@ -158,6 +167,62 @@ export function HabitFan({
   const [focus, setFocus] = useState(0);
   const focusRef = useRef(0);
   const settled = useRef(0);
+
+  /**
+   * The card on its way back into the deck, and how many slots it has to go.
+   *
+   * A finished habit belongs behind everything still open, and it used to get
+   * there by vanishing from the front and reappearing at the back. So it is
+   * walked there instead: the same offsets its destination slot would give it,
+   * animated from where it is. Where it is going is not guessed — the fan runs
+   * the same order the screen does, so the card travels to the slot it will
+   * actually have.
+   */
+  const deal = useRef(new Animated.Value(0)).current;
+  const [dealt, setDealt] = useState<{ id: string; from: number; slots: number } | null>(null);
+  const wereDone = useRef<ReadonlySet<string>>(new Set());
+  const dealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (dealTimer.current !== null) clearTimeout(dealTimer.current);
+  }, []);
+
+  useEffect(() => {
+    const done = new Set(habits.filter((habit) => habit.checkedIn).map((habit) => habit.id));
+    const fresh = habits.find((habit) => habit.checkedIn && !wereDone.current.has(habit.id));
+    wereDone.current = done;
+    if (fresh === undefined) return;
+    const from = habits.findIndex((habit) => habit.id === fresh.id);
+    const to = orderForDay(habits).findIndex((habit) => habit.id === fresh.id);
+    // Undoing, or a habit already in its place, has nowhere to travel.
+    if (to <= from) return;
+    // Deliberately not cleaned up when habits changes: the check-in updates
+    // the array again before this fires, and tearing the timer down there
+    // would mean the card never travelled at all.
+    if (dealTimer.current !== null) clearTimeout(dealTimer.current);
+    dealTimer.current = setTimeout(() => {
+      setDealt({ id: fresh.id, from, slots: to - from });
+      deal.setValue(0);
+      Animated.timing(deal, {
+        toValue: 1,
+        duration: DEAL_MS,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, Math.max(0, FILL_MS - DEAL_MS));
+  }, [habits, deal]);
+
+  // It has arrived when the hand re-sorts under it: from there its own slot
+  // draws it exactly where the travel left it, so the offset comes off. Doing
+  // this on the re-sort rather than on the animation ending means a frame of
+  // slack either way is invisible — both states put the card in one place.
+  useEffect(() => {
+    if (dealt === null) return;
+    const stillThere = habits[dealt.from]?.id === dealt.id;
+    const stillDone = habits.find((habit) => habit.id === dealt.id)?.checkedIn === true;
+    if (stillThere && stillDone) return;
+    deal.setValue(0);
+    setDealt(null);
+  }, [habits, dealt, deal]);
 
   const last = Math.max(0, habits.length - 1);
 
@@ -334,9 +399,10 @@ export function HabitFan({
               inputRange: [index - 3, index, index + 3],
               outputRange: [3 * DROP, 0, 3 * DROP],
             });
-            const lean = position.interpolate({
+            // Degrees, not a string, so the travel below can be added to it.
+            const leanBy = position.interpolate({
               inputRange: [index - 3, index + 3],
-              outputRange: [`${3 * LEAN}deg`, `${-3 * LEAN}deg`],
+              outputRange: [3 * LEAN, -3 * LEAN],
             });
             const scale = position.interpolate({
               inputRange: [index - 2, index, index + 2],
@@ -364,7 +430,36 @@ export function HabitFan({
               extrapolate: 'clamp',
             });
 
-            const isFront = index === focus;
+            // How many slots this card is currently walking back, and the
+            // offsets its destination slot would hand it. Adding them to the
+            // live ones means the two agree exactly when the hand re-sorts.
+            const going = dealt !== null && dealt.id === habit.id ? dealt.slots : 0;
+            const out = (to: number) =>
+              deal.interpolate({ inputRange: [0, 1], outputRange: [0, to] });
+            const slideTo = going === 0 ? slide : Animated.add(slide, out(going * SPREAD));
+            const dropTo = going === 0 ? drop : Animated.add(drop, out(going * DROP));
+            const leanTo = going === 0 ? leanBy : Animated.add(leanBy, out(going * LEAN));
+            const lean = leanTo.interpolate({
+              inputRange: [-90, 90],
+              outputRange: ['-90deg', '90deg'],
+            });
+            // The scale its destination gives it, so it shrinks into the deck
+            // rather than shrinking and then being resized on arrival.
+            // A multiplier that runs from 1 to whatever the destination wants,
+            // rather than from 0 — the offsets above start at nothing, but a
+            // scale starting at nothing is a card that is not there.
+            const toward = (end: number) =>
+              deal.interpolate({ inputRange: [0, 1], outputRange: [1, end] });
+            const scaleTo =
+              going === 0
+                ? scale
+                : Animated.multiply(scale, toward(Math.max(0.86, 1 - 0.07 * going)));
+            // Darkens and gives up its name on the way, exactly as a card that
+            // was dragged to the same place would.
+            const behindTo = going === 0 ? behind : Animated.add(behind, out(0.58));
+            const nameTo = going === 0 ? nameIn : Animated.multiply(nameIn, toward(0));
+
+            const isFront = index === focus && going === 0;
             const missed =
               !habit.checkedIn && nowMinutes !== null && habit.sortKey < nowMinutes;
 
@@ -375,13 +470,15 @@ export function HabitFan({
                   styles.slot,
                   {
                     left,
-                    zIndex: MOUNTED + 1 - Math.abs(index - focus),
+                    // A card on its way back goes under the hand as it leaves,
+                    // or it travels across the top of the cards it is joining.
+                    zIndex: going === 0 ? MOUNTED + 1 - Math.abs(index - focus) : 0,
                     opacity: fade,
                     transform: [
-                      { translateX: slide },
-                      { translateY: drop },
+                      { translateX: slideTo },
+                      { translateY: dropTo },
                       { rotate: lean },
-                      { scale },
+                      { scale: scaleTo },
                     ],
                   },
                 ]}
@@ -391,8 +488,8 @@ export function HabitFan({
                   isFront={isFront}
                   missed={missed}
                   busy={busy}
-                  behind={behind}
-                  nameIn={nameIn}
+                  behind={behindTo}
+                  nameIn={nameTo}
                   onPress={() => (isFront ? onToggle(habit) : land(index))}
                   onEdit={() => onEdit(habit)}
                   
