@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassContainer, GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useAppearance } from '@/lib/appearance';
@@ -75,5 +75,46 @@ export function GlassSurface({ style, tint, blurFallback = false, children }: Pr
     );
   }
 
+  return <View style={style}>{children}</View>;
+}
+
+/**
+ * Holds glass shapes that should notice each other.
+ *
+ * Two GlassSurfaces inside one of these fuse as they come close and pull apart
+ * as they separate, the way droplets do — which is the whole reason the check-in
+ * orb is its own shape rather than a circle drawn inside the bar. `spacing` is
+ * the distance at which they start reaching for each other.
+ *
+ * Note this is the opposite of nesting glass inside glass: that stacks two
+ * panes and turns to mush. Here they are siblings, and the container resolves
+ * them into one surface.
+ *
+ * Dark ground only. GlassContainer composites its children onto a surface of
+ * its own and, unlike GlassView, takes no colorScheme — its whole API is
+ * `spacing` — so on the light ground it renders the bar a dark olive-grey
+ * whatever the children are told. Measured: (239,235,228) without it,
+ * (99,95,84) with. Until it can be told which ground it is on, light mode gets
+ * the shapes without the merging, which is a smaller loss than an unreadable
+ * dock.
+ */
+export function GlassGroup({
+  spacing,
+  style,
+  children,
+}: {
+  spacing?: number;
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const { theme } = useAppearance();
+
+  if (LIQUID_GLASS && theme === 'dark') {
+    return (
+      <GlassContainer spacing={spacing} style={style}>
+        {children}
+      </GlassContainer>
+    );
+  }
   return <View style={style}>{children}</View>;
 }

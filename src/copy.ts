@@ -9,7 +9,15 @@ export const copy = {
     /** e.g. "UP NEXT · AFTER LUNCH" — the display face uppercases it anyway. */
     upNextAnchor: (anchor: string) => `Up next · ${anchor}`,
     upNextTime: (time: string) => `Up next · ${time}`,
-    upNextAnytime: 'Up next · anytime today',
+    upNextAnytime: 'Up next \u00b7 anytime today',
+    /**
+     * The same moment without the "up next", for a habit you picked off the
+     * timeline yourself. Calling something up next when you deliberately
+     * reached past it to something else is just untrue.
+     */
+    pickedAnchor: (anchor: string) => anchor,
+    pickedTime: (time: string) => time,
+    pickedAnytime: 'Anytime today',
     /** e.g. "Lunch Loop · 1 of 3 done today" */
     crewProgress: (crew: string, done: number, total: number) =>
       `${crew} · ${done} of ${total} done today`,
