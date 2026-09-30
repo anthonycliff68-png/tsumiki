@@ -379,35 +379,36 @@ export const copy = {
 
   welcome: {
     /**
-     * Why, not how.
+     * One slide per thing the app has: moments, crews, the streak.
      *
-     * These used to explain the mechanics — stacking, the streak rule, the
-     * nudge limits, the charts — to someone who had touched none of them, and
-     * a reader came out unable to say what the app did. Mechanics are now
-     * taught inside the setup and by the walkthrough, at the moment they are
-     * used. What is left here is the argument: why hanging a habit on your day
-     * beats a list, why other people make it stick, and why one bad day is not
-     * the end. Somebody deciding whether to sign up needs the case, not the
-     * manual.
+     * These were the argument — why hanging a habit on your day beats a list,
+     * why other people make it stick, why one bad day is not the end. It read
+     * well and left people unable to say what the app was. Three abstractions
+     * in a row is an essay, and nobody signs up for an essay.
+     *
+     * So each slide now names one thing, says what it is, and says what it
+     * does with it. The reasoning has not gone: it is the second half of each
+     * body, where it lands on something concrete instead of floating. The
+     * screenshot behind each slide is the screen that thing actually lives on.
      */
     slides: [
       {
-        step: 'The cue',
-        title: 'A list will not\nremind you.',
+        step: 'Moments',
+        title: 'The fixed points\nin your day.',
         body:
-          'Habits fail because nothing sets them off. Hang one on something you already do every single day \u2014 coffee, lunch, getting home \u2014 and the thing you already do becomes the reminder.',
+          'Wake up, coffee, lunch, getting home. You already have these, at roughly the same time every day \u2014 you tell Tsumiki yours once, and every habit hangs off one of them. That is what makes it happen: the thing you already do becomes the reminder.',
       },
       {
-        step: 'The people',
-        title: 'Alone, the only\none you let\ndown is you.',
+        step: 'Crews',
+        title: 'Two to five,\none habit.',
         body:
-          'Up to five of you do the same habit, each at your own moment, and the streak belongs to all of you. Turning up stops being something you owe yourself and starts being something you owe them.',
+          'Everyone in a crew does the same habit, each hung on their own moment \u2014 yours after lunch, theirs after work. You can see who has still to go, and send them one nudge. Alone, the only person you let down is you.',
       },
       {
-        step: 'The rule',
-        title: 'One bad day\nis just a day.',
+        step: 'The streak',
+        title: 'One streak,\nshared.',
         body:
-          'Missing once is normal, and most apps punish it anyway. Tsumiki forgives the first miss and only counts the second \u2014 because one missed day is a day, and two in a row is how a habit ends.',
+          'The crew keeps a single streak, not one each. Miss a day and it is forgiven; miss two in a row and it starts again. One bad day costs you nothing, which is the whole point \u2014 two in a row is how a habit actually ends.',
       },
     ],
     next: 'Next',

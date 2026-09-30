@@ -31,7 +31,12 @@ const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[5],
 const hue = (i: number): string => HUES[i % HUES.length] ?? habitColors[0];
 
 /** Each slide shows the piece of the app it is talking about. */
-const SHOWS: readonly ScreenKind[] = ['day', 'crew', 'progress', 'nudge'];
+/**
+ * The screen each slide is about: moments live on My Day, crews on the crew
+ * screen, and the streak is most itself at the moment it is saved. Slide and
+ * screenshot have to name the same thing, or the picture is decoration.
+ */
+const SHOWS: readonly ScreenKind[] = ['day', 'crew', 'nudge'];
 const show = (i: number): ScreenKind => SHOWS[i % SHOWS.length] ?? 'day';
 
 type Props = {
