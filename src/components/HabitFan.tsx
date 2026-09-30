@@ -16,7 +16,6 @@ import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { LinesIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { orderForDay } from '@/lib/today';
 import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, display, fonts, radii, shade, spacing, tint, type Palette } from '@/theme';
@@ -136,14 +135,6 @@ const TRAVEL = 96;
 const FLICK = 0.11;
 /** How far past either end the fan stretches before it pulls back. */
 const OVERRUN = 0.45;
-/**
- * How long the finished card takes to travel back into the deck.
- *
- * It runs at the end of the fill rather than after it, so the water settling
- * and the card leaving are one movement — the card is already standing in its
- * new place at the moment the hand re-sorts underneath it.
- */
-const DEAL_MS = 300;
 
 type Props = {
   habits: TodayHabit[];
@@ -211,65 +202,6 @@ export function HabitFan({
   const [focus, setFocus] = useState(0);
   const focusRef = useRef(0);
   const settled = useRef(0);
-
-  /**
-   * The card on its way back into the deck, and how many slots it has to go.
-   *
-   * A finished habit belongs behind everything still open, and it used to get
-   * there by vanishing from the front and reappearing at the back. So it is
-   * walked there instead: the same offsets its destination slot would give it,
-   * animated from where it is. Where it is going is not guessed — the fan runs
-   * the same order the screen does, so the card travels to the slot it will
-   * actually have.
-   */
-  const deal = useRef(new Animated.Value(0)).current;
-  const [dealt, setDealt] = useState<{ id: string; from: number; slots: number } | null>(null);
-  const wereDone = useRef<ReadonlySet<string>>(new Set());
-  const dealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (dealTimer.current !== null) clearTimeout(dealTimer.current);
-  }, []);
-
-  useEffect(() => {
-    const done = new Set(habits.filter((habit) => habit.checkedIn).map((habit) => habit.id));
-    const fresh = habits.find((habit) => habit.checkedIn && !wereDone.current.has(habit.id));
-    wereDone.current = done;
-    if (fresh === undefined) return;
-    const from = habits.findIndex((habit) => habit.id === fresh.id);
-    const to = orderForDay(habits).findIndex((habit) => habit.id === fresh.id);
-    // Undoing, or a habit already in its place, has nowhere to travel.
-    if (to <= from) return;
-    // Deliberately not cleaned up when habits changes: the check-in updates
-    // the array again before this fires, and tearing the timer down there
-    // would mean the card never travelled at all.
-    if (dealTimer.current !== null) clearTimeout(dealTimer.current);
-    dealTimer.current = setTimeout(() => {
-      setDealt({ id: fresh.id, from, slots: to - from });
-      deal.setValue(0);
-      Animated.timing(deal, {
-        toValue: 1,
-        duration: DEAL_MS,
-        // Loads up, then throws. A symmetrical curve made the card drift back
-        // politely; this one holds still for a beat and then goes, which is
-        // what makes it read as being dealt rather than as sliding.
-        easing: Easing.bezier(0.62, -0.28, 0.2, 1),
-        useNativeDriver: true,
-      }).start();
-    }, Math.max(0, FILL_MS - DEAL_MS));
-  }, [habits, deal]);
-
-  // It has arrived when the hand re-sorts under it: from there its own slot
-  // draws it exactly where the travel left it, so the offset comes off. Doing
-  // this on the re-sort rather than on the animation ending means a frame of
-  // slack either way is invisible — both states put the card in one place.
-  useEffect(() => {
-    if (dealt === null) return;
-    const stillThere = habits[dealt.from]?.id === dealt.id;
-    const stillDone = habits.find((habit) => habit.id === dealt.id)?.checkedIn === true;
-    if (stillThere && stillDone) return;
-    deal.setValue(0);
-    setDealt(null);
-  }, [habits, dealt, deal]);
 
   const last = Math.max(0, habits.length - 1);
 
@@ -443,133 +375,23 @@ export function HabitFan({
     <View>
       <GestureDetector gesture={pan}>
         <View style={styles.stage}>
-          {habits.map((habit, index) => {
-            if (Math.abs(index - focus) > MOUNTED) return null;
-
-            // Every value below reads "how far is this card from the front",
-            // as a continuous distance rather than a slot.
-            const slide = position.interpolate({
-              inputRange: [index - 3, index + 3],
-              outputRange: [3 * SPREAD, -3 * SPREAD],
-            });
-            const drop = position.interpolate({
-              inputRange: [index - 3, index, index + 3],
-              outputRange: [3 * DROP, 0, 3 * DROP],
-            });
-            // Degrees, not a string, so the travel below can be added to it.
-            const leanBy = position.interpolate({
-              inputRange: [index - 3, index + 3],
-              outputRange: [3 * LEAN, -3 * LEAN],
-            });
-            const scale = position.interpolate({
-              inputRange: [index - 2, index, index + 2],
-              outputRange: [0.86, 1, 0.86],
-              extrapolate: 'clamp',
-            });
-            // Cards stay solid: depth comes from shading, not transparency.
-            // Half-lit cards overlapping each other read as mush mid-drag.
-            // Opacity only sees the card off the end of the fan out.
-            const fade = position.interpolate({
-              inputRange: [index - 3, index - 2.3, index + 2.3, index + 3],
-              outputRange: [0, 1, 1, 0],
-              extrapolate: 'clamp',
-            });
-            // A card behind the front one darkens and gives up its name, both
-            // continuously, so nothing pops as the fan turns.
-            const behind = position.interpolate({
-              inputRange: [index - 1.3, index, index + 1.3],
-              outputRange: [0.58, 0, 0.58],
-              extrapolate: 'clamp',
-            });
-            const nameIn = position.interpolate({
-              inputRange: [index - 0.55, index, index + 0.55],
-              outputRange: [0, 1, 0],
-              extrapolate: 'clamp',
-            });
-
-            // How many slots this card is currently walking back, and the
-            // offsets its destination slot would hand it. Adding them to the
-            // live ones means the two agree exactly when the hand re-sorts.
-            const going = dealt !== null && dealt.id === habit.id ? dealt.slots : 0;
-            const out = (to: number) =>
-              deal.interpolate({ inputRange: [0, 1], outputRange: [0, to] });
-            const slideTo = going === 0 ? slide : Animated.add(slide, out(going * SPREAD));
-            const dropTo = going === 0 ? drop : Animated.add(drop, out(going * DROP));
-            const leanTo = going === 0 ? leanBy : Animated.add(leanBy, out(going * LEAN));
-            const lean = leanTo.interpolate({
-              inputRange: [-90, 90],
-              outputRange: ['-90deg', '90deg'],
-            });
-            // The scale its destination gives it, so it shrinks into the deck
-            // rather than shrinking and then being resized on arrival.
-            // A multiplier that runs from 1 to whatever the destination wants,
-            // rather than from 0 — the offsets above start at nothing, but a
-            // scale starting at nothing is a card that is not there.
-            const toward = (end: number) =>
-              deal.interpolate({ inputRange: [0, 1], outputRange: [1, end] });
-            // Rises off the deck before it goes back into it, rather than
-            // shrinking the whole way — the lift is what gives the throw
-            // somewhere to come from.
-            const scaleTo =
-              going === 0
-                ? scale
-                : Animated.multiply(
-                    scale,
-                    deal.interpolate({
-                      inputRange: [0, 0.22, 1],
-                      outputRange: [1, 1.07, Math.max(0.86, 1 - 0.07 * going)],
-                    }),
-                  );
-            // Darkens and gives up its name on the way, exactly as a card that
-            // was dragged to the same place would.
-            const behindTo = going === 0 ? behind : Animated.add(behind, out(0.58));
-            const nameTo = going === 0 ? nameIn : Animated.multiply(nameIn, toward(0));
-
-            const isFront = index === focus && going === 0;
-            const missed =
-              !habit.checkedIn && nowMinutes !== null && habit.sortKey < nowMinutes;
-
-            return (
-              <Animated.View
+          {habits.map((habit, index) =>
+            Math.abs(index - focus) > MOUNTED ? null : (
+              <FanSlot
                 key={habit.id}
-                style={[
-                  styles.slot,
-                  {
-                    left,
-                    // A card on its way back goes under the hand as it leaves,
-                    // or it travels across the top of the cards it is joining.
-                    zIndex: going === 0 ? MOUNTED + 1 - Math.abs(index - focus) : 0,
-                    opacity: fade,
-                    transform: [
-                      { translateX: slideTo },
-                      { translateY: dropTo },
-                      { rotate: lean },
-                      { scale: scaleTo },
-                    ],
-                  },
-                ]}
-              >
-                <FanCard
-                  habit={habit}
-                  isFront={isFront}
-                  missed={missed}
-                  busy={busy}
-                  behind={behindTo}
-                  nameIn={nameTo}
-                  onPress={() => (isFront ? onToggle(habit) : land(index))}
-                  onEdit={() => onEdit(habit)}
-                  
-                  style={[
-                    styles.card,
-                    {
-                      borderColor: habit.checkedIn ? alpha(colors.overlay, 0.16) : habit.color,
-                      borderWidth: habit.checkedIn ? 1 : 1.5,
-                    },
-                  ]}
-                />
-              </Animated.View>
-            );
-          })}
+                habit={habit}
+                index={index}
+                focus={focus}
+                position={position}
+                left={left}
+                nowMinutes={nowMinutes}
+                busy={busy}
+                onToggle={onToggle}
+                onEdit={onEdit}
+                onLand={land}
+              />
+            ),
+          )}
         </View>
       </GestureDetector>
 
@@ -630,6 +452,150 @@ export function HabitFan({
  * tappable and do nothing. The edit handle is a gesture of its own, nested
  * deeper so it wins the tap that lands on it.
  */
+/**
+ * One card's place in the hand.
+ *
+ * The slot is an animated value rather than the card's index in the array, and
+ * that is the whole point. Every index changes at once when the hand re-sorts,
+ * so reading them straight made the rest of the fan jump a slot the instant the
+ * finished card left — the one card that had been animated carefully went, and
+ * everything behind it snapped forward. Springing to the new index instead
+ * makes a re-sort something the whole hand does together.
+ *
+ * It also replaced the machinery that used to walk the finished card back by
+ * hand. A dealt card is just a card whose slot moved further than the others',
+ * so it travels for free, to wherever it actually landed, with no second
+ * description of the destination to keep in step with the first.
+ */
+function FanSlot({
+  habit,
+  index,
+  focus,
+  position,
+  left,
+  nowMinutes,
+  busy,
+  onToggle,
+  onEdit,
+  onLand,
+}: {
+  habit: TodayHabit;
+  index: number;
+  focus: number;
+  position: Animated.Value;
+  left: number;
+  nowMinutes: number | null;
+  busy: boolean;
+  onToggle: (habit: TodayHabit) => void;
+  onEdit: (habit: TodayHabit) => void;
+  onLand: (index: number) => void;
+}) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
+
+  const at = useRef(new Animated.Value(index)).current;
+  const was = useRef(index);
+  /** A short lift as the card is thrown back, so the throw has somewhere to come from. */
+  const lift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (was.current === index) return;
+    // Going backwards by more than a neighbour means it was dealt away rather
+    // than shuffled along by something else moving.
+    const thrown = index > was.current + 1;
+    was.current = index;
+    Animated.spring(at, {
+      toValue: index,
+      // Loose enough to overshoot slightly on arrival: the hand should settle
+      // rather than stop.
+      speed: 11,
+      bounciness: 7,
+      useNativeDriver: true,
+    }).start();
+
+    if (!thrown) return;
+    lift.setValue(0);
+    Animated.sequence([
+      Animated.timing(lift, {
+        toValue: 1,
+        duration: 110,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(lift, { toValue: 0, speed: 10, bounciness: 8, useNativeDriver: true }),
+    ]).start();
+  }, [at, index, lift]);
+
+  // How far this card is from the front, as a continuous distance rather than
+  // a slot. Everything below reads off it.
+  const away = Animated.subtract(position, at);
+  const slide = away.interpolate({ inputRange: [-3, 3], outputRange: [3 * SPREAD, -3 * SPREAD] });
+  const drop = away.interpolate({ inputRange: [-3, 0, 3], outputRange: [3 * DROP, 0, 3 * DROP] });
+  const lean = away.interpolate({
+    inputRange: [-3, 3],
+    outputRange: [`${3 * LEAN}deg`, `${-3 * LEAN}deg`],
+  });
+  const scale = Animated.multiply(
+    away.interpolate({ inputRange: [-2, 0, 2], outputRange: [0.86, 1, 0.86], extrapolate: 'clamp' }),
+    lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }),
+  );
+  // Cards stay solid: depth comes from shading, not transparency. Half-lit
+  // cards overlapping each other read as mush mid-drag. Opacity only sees the
+  // card off the end of the fan out.
+  const fade = away.interpolate({
+    inputRange: [-3, -2.3, 2.3, 3],
+    outputRange: [0, 1, 1, 0],
+    extrapolate: 'clamp',
+  });
+  // A card behind the front one darkens and gives up its name, both
+  // continuously, so nothing pops as the fan turns.
+  const behind = away.interpolate({
+    inputRange: [-1.3, 0, 1.3],
+    outputRange: [0.58, 0, 0.58],
+    extrapolate: 'clamp',
+  });
+  const nameIn = away.interpolate({
+    inputRange: [-0.55, 0, 0.55],
+    outputRange: [0, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const isFront = index === focus;
+  const missed = !habit.checkedIn && nowMinutes !== null && habit.sortKey < nowMinutes;
+
+  return (
+    <Animated.View
+      style={[
+        styles.slot,
+        {
+          left,
+          zIndex: MOUNTED + 1 - Math.abs(index - focus),
+          opacity: fade,
+          transform: [{ translateX: slide }, { translateY: drop }, { rotate: lean }, { scale }],
+        },
+      ]}
+    >
+      <FanCard
+        habit={habit}
+        isFront={isFront}
+        missed={missed}
+        busy={busy}
+        behind={behind}
+        nameIn={nameIn}
+        onPress={() => (isFront ? onToggle(habit) : onLand(index))}
+        onEdit={() => onEdit(habit)}
+        style={[
+          styles.card,
+          {
+            borderColor: habit.checkedIn ? alpha(colors.overlay, 0.16) : habit.color,
+            borderWidth: habit.checkedIn ? 1 : 1.5,
+          },
+        ]}
+      />
+    </Animated.View>
+  );
+}
+
 function FanCard({
   habit,
   isFront,
@@ -822,17 +788,30 @@ function FanCard({
             habit's own colour, which is the only thing telling you whose card
             this is once the fill is gone. */}
         {isFront && (
-          <GlassSurface
-            variant="clear"
-            style={StyleSheet.absoluteFill as ViewStyle}
-            tint={alpha(habit.color, 0.2)}
-          />
+          // Fading on the same curve as the name, rather than appearing the
+          // instant the card becomes the front one. Front-ness arrives over
+          // the length of a slide now, so anything that switches on it has to
+          // arrive that way too or it is the one thing that still pops.
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { opacity: nameIn }]}
+          >
+            <GlassSurface
+              variant="clear"
+              style={StyleSheet.absoluteFill as ViewStyle}
+              tint={alpha(habit.color, 0.2)}
+            />
+          </Animated.View>
         )}
         {/* Glass has whatever is behind it, and what is behind it moves. The
             name needs its own ground or it is legible on some days and not
             others. Under the check-in floor, so the floor still reads. */}
         {isFront && LIQUID_GLASS && (
-          <Svg width={CARD_W} height={NAME_SHADE} style={styles.nameShade} pointerEvents="none">
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.nameShade, { opacity: nameIn }]}
+          >
+          <Svg width={CARD_W} height={NAME_SHADE}>
             <Defs>
               <LinearGradient id={`fanShade-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0" stopColor={colors.bg} stopOpacity="0" />
@@ -842,6 +821,7 @@ function FanCard({
             </Defs>
             <Rect x="0" y="0" width={CARD_W} height={NAME_SHADE} fill={`url(#fanShade-${habit.id})`} />
           </Svg>
+          </Animated.View>
         )}
 
         {/* Everything below rocks together, pivoting on the bottom of the

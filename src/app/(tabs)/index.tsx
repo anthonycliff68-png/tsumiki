@@ -242,15 +242,16 @@ export default function TodayScreen() {
           />
         )}
 
-        {habits.length > 0 && openCount === 0 && (
-          <View style={styles.padded}>
-            <Text style={styles.allDone}>{copy.today.allDone}</Text>
-          </View>
-        )}
-
         {habits.length > 0 && (
           <View style={styles.padded}>
-            <Text style={styles.fanHint}>{copy.today.fanHint}</Text>
+            {/* Finishing the day used to add a block here, so the page grew by
+                its height on the check-in that finished it and shrank again on
+                the undo — everything below jumped, and if you were scrolled at
+                all the fan moved under your thumb. One line replacing another
+                says the same thing and leaves the page exactly as tall. */}
+            <Text style={styles.fanHint} numberOfLines={1}>
+              {openCount === 0 ? copy.today.allDone : copy.today.fanHint}
+            </Text>
 
             <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
 
@@ -322,13 +323,6 @@ const makeStyles = (colors: Palette) => ({
     color: colors.textFaint,
     textAlign: 'center',
     marginTop: spacing.sm,
-  },
-  allDone: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingVertical: spacing.xl,
   },
   chips: {
     flexDirection: 'row',
