@@ -6,7 +6,6 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { fromTimeString, toTimeString } from '@/data/defaults';
 import { fonts, radii, spacing, type Palette } from '@/theme';
-import { GlassSurface } from '@/components/GlassSurface';
 
 type Props = {
   visible: boolean;
@@ -42,7 +41,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose} visible>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={copy.onboarding.routine.done} />
-      <GlassSurface style={styles.sheet}>
+      <View style={styles.sheet}>
         <Text style={styles.title}>{label}</Text>
         <DateTimePicker
           mode="time"
@@ -55,7 +54,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
           }}
         />
         <PrimaryButton label={copy.onboarding.routine.done} onPress={onClose} />
-      </GlassSurface>
+      </View>
     </Modal>
   );
 }
@@ -65,6 +64,10 @@ const makeStyles = (colors: Palette) => ({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
+  // Stays solid on purpose. This one is presented from inside MomentSheet's
+  // Modal, so glass here is glass over glass — and the colour row underneath
+  // reads straight through the number wheel, which is unusable. Apple says not
+  // to stack the material for exactly this reason.
   sheet: {
     gap: spacing.md,
     padding: spacing.xl,
