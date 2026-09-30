@@ -38,7 +38,14 @@ type Props = {
    * change on iOS 18 that nobody asked for.
    */
   blurFallback?: boolean;
-  children: React.ReactNode;
+  /**
+   * "regular" is the everyday material and carries its own dimming, which is
+   * what chrome wants. "clear" lets far more through — right where the surface
+   * is meant to be a window onto what is behind it rather than a panel over it.
+   */
+  variant?: 'regular' | 'clear';
+  /** Optional: a surface used purely as a backdrop has nothing inside it. */
+  children?: React.ReactNode;
 };
 
 /**
@@ -49,13 +56,13 @@ type Props = {
  * six of these — the dock and five sheets — and a material that disagrees with
  * itself between two of them reads as a bug rather than a style.
  */
-export function GlassSurface({ style, tint, blurFallback = false, children }: Props) {
+export function GlassSurface({ style, tint, blurFallback = false, variant = 'regular', children }: Props) {
   const { theme } = useAppearance();
 
   if (LIQUID_GLASS) {
     return (
       <GlassView
-        glassEffectStyle="regular"
+        glassEffectStyle={variant}
         tintColor={tint}
         // The app has its own light/dark choice and does not always agree with
         // the phone, so the glass is told which one it is sitting on.

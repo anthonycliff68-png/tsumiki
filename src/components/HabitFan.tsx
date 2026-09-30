@@ -19,6 +19,7 @@ import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
+import { GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
 
 /** Cards either side of the front one that stay mounted — one spare, so a card
     slides in rather than appearing. */
@@ -33,6 +34,20 @@ const SPREAD = 46;
 const DROP = 16;
 const LEAN = 7;
 /** The colour left showing along the bottom of a card still to do. */
+/**
+ * The card's own shade, over the whole of it.
+ *
+ * Flat rather than a gradient. It was an SVG gradient sized at 100%, which
+ * react-native-svg does not resolve to the parent's real size — the shade
+ * stopped short of the bottom and the right, leaving the name's second line
+ * outside it with a hard edge. At the opacities this needs, the gradient was
+ * doing almost nothing anyway, so the fix and the simplification are the same
+ * change.
+ *
+ * It also mutes the seam where the card behind shows through clear glass, which
+ * is what made the card look lit from one side.
+ */
+const CARD_SHADE = 0.78;
 const FLOOR = 6;
 /** The corner of the front card that opens it for editing. */
 const HANDLE_HIT = 56;
@@ -508,9 +523,33 @@ function FanCard({
         }}
         style={[
           style,
+          // The front card gives up its fill so the glass behind it can do the
+          // work. The ones behind stay opaque — four stacked panes of glass is
+          // the mush the time picker taught us about.
+          isFront && LIQUID_GLASS && { backgroundColor: 'transparent' },
           { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] },
         ]}
       >
+        {/* First child, so everything else sits on top of it. Tinted with the
+            habit's own colour, which is the only thing telling you whose card
+            this is once the fill is gone. */}
+        {isFront && (
+          <GlassSurface
+            variant="clear"
+            style={StyleSheet.absoluteFill as ViewStyle}
+            tint={alpha(habit.color, 0.2)}
+          />
+        )}
+        {/* Glass has whatever is behind it, and what is behind it moves. The
+            card needs its own ground or it is legible on some days and not
+            others. Under the check-in floor, so the floor still reads. */}
+        {isFront && LIQUID_GLASS && (
+          <View
+            pointerEvents="none"
+            style={[styles.cardShade, { backgroundColor: alpha(colors.bg, CARD_SHADE) }]}
+          />
+        )}
+
         <Animated.View
           pointerEvents="none"
           style={[
@@ -552,7 +591,10 @@ function FanCard({
 
         <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: behind }]} />
 
-        <View style={styles.cardTop}>
+        {/* Fades on the same curve as the name. The name already gave itself
+            up on the cards behind; the chips did not, so through clear glass
+            you read the next habit's time through this one's. */}
+        <Animated.View style={[styles.cardTop, { opacity: nameIn }]}>
           <View style={styles.tags}>
             <View style={[styles.tag, !habit.checkedIn && styles.tagHollow]}>
               <Text style={styles.tagText} numberOfLines={1}>
@@ -573,7 +615,7 @@ function FanCard({
           <View style={styles.handle}>
             <LinesIcon size={18} color={alpha(colors.overlay, 0.55)} />
           </View>
-        </View>
+        </Animated.View>
 
         <Animated.View style={{ opacity: nameIn }}>
           <Display size={30} line={27} numberOfLines={3}>
@@ -616,6 +658,7 @@ const makeStyles = (colors: Palette) => ({
     shadowOffset: { width: 0, height: 18 },
     elevation: 12,
   },
+  cardShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   surface: {
     position: 'absolute',
     left: 0,
@@ -643,7 +686,13 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: 12,
     maxWidth: CARD_W - spacing.lg * 2 - 26,
   },
-  tagHollow: { backgroundColor: alpha(colors.overlay, 0.1) },
+  // Was a tenth, which disappeared against clear glass. It reads on an opaque
+  // card too, so there is no need for two of them.
+  tagHollow: {
+    backgroundColor: alpha(colors.overlay, 0.18),
+    borderWidth: 1,
+    borderColor: alpha(colors.overlay, 0.18),
+  },
   tagText: {
     fontFamily: fonts.body,
     fontSize: 11,
