@@ -18,6 +18,7 @@ import { copy } from '@/copy';
 import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Cards either side of the front one that stay mounted — one spare, so a card
     slides in rather than appearing. */
@@ -379,9 +380,9 @@ export function HabitFan({
       )}
 
       <View style={styles.caption}>
-        <Text style={display(30, 28)} numberOfLines={2}>
+        <Display size={30} line={28} numberOfLines={2}>
           {current.name}
-        </Text>
+        </Display>
         <Text style={styles.captionSub}>{whenLongOf(current)}</Text>
       </View>
 
@@ -575,9 +576,9 @@ function FanCard({
         </View>
 
         <Animated.View style={{ opacity: nameIn }}>
-          <Text style={display(30, 27)} numberOfLines={3}>
+          <Display size={30} line={27} numberOfLines={3}>
             {habit.name}
-          </Text>
+          </Display>
           <Text style={styles.cardSub} numberOfLines={1}>
             {describeDays(habit.daysOfWeek)}
             {habit.checkedIn ? ` \u00b7 ${copy.today.doneTag}` : ''}

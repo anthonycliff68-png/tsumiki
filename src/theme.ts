@@ -24,6 +24,8 @@ export type Palette = {
   overlay: string;
   /** Actual white, for the few places that genuinely mean it. */
   white: string;
+  /** Which ground this is. Read by ink(), which has to mix the other way on light. */
+  dark: boolean;
 };
 
 export const darkPalette: Palette = {
@@ -41,6 +43,7 @@ export const darkPalette: Palette = {
   success: '#7FD1A4',
   overlay: '#FFFFFF',
   white: '#FFFFFF',
+  dark: true,
 };
 
 /**
@@ -62,6 +65,7 @@ export const lightPalette: Palette = {
   success: '#2F8F5B',
   overlay: '#16161A',
   white: '#FFFFFF',
+  dark: false,
 };
 
 export const palettes = { dark: darkPalette, light: lightPalette };
@@ -120,6 +124,15 @@ export const HIT_SIZE = 44;
  * 0.82, which slices the bottoms off the letters on device, so the line height
  * never drops below the font size here.
  */
+/**
+ * The display face: size, tracking and casing, but deliberately no colour.
+ *
+ * It used to set one, taken from the dark palette because this is a plain
+ * function and cannot read the theme. In light mode that painted every
+ * heading near-white on near-white — the date on Today and the habit name on
+ * its own card both disappeared completely. Callers supply the colour: from
+ * makeStyles, which is handed the live palette, or through <Display>.
+ */
 export const display = (size: number, lineHeight = size) =>
   ({
     fontFamily: fonts.display,
@@ -127,7 +140,6 @@ export const display = (size: number, lineHeight = size) =>
     lineHeight: Math.max(lineHeight, size),
     letterSpacing: -1,
     textTransform: 'uppercase',
-    color: colors.text,
   }) as const;
 
 // --- colour helpers ------------------------------------------------------
@@ -177,6 +189,18 @@ export function shade(hex: string, amount: number): string {
   const { r, g, b } = hexToRgb(hex);
   const mix = (c: number) => Math.round(c * (1 - amount));
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+/**
+ * A habit colour you can read as text on the current ground.
+ *
+ * tint() only mixes towards white, which is right on the dark ground and
+ * invisible on the light one — a habit colour lightened 75% towards white is
+ * very nearly the light background it is sitting on. On light it has to go the
+ * other way, and less far, or the colour stops being recognisable.
+ */
+export function ink(color: string, colors: Palette): string {
+  return colors.dark ? tint(color, 0.55) : shade(color, 0.3);
 }
 
 /**

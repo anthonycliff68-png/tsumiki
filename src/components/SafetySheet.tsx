@@ -8,8 +8,9 @@ import { copy } from '@/copy';
 import { useBlockUser, useReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Enums } from '@/lib/database.types';
-import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { GlassSurface } from '@/components/GlassSurface';
+import { Display } from '@/components/Screen';
 
 type Props = {
   visible: boolean;
@@ -64,7 +65,7 @@ export function SafetySheet({
 
         {mode === 'choose' && (
           <>
-            <Text style={display(26, 26)}>{copy.safety.reportTitle}</Text>
+            <Display size={26} line={26}>{copy.safety.reportTitle}</Display>
             <PrimaryButton label={copy.safety.report} onPress={() => setMode('report')} />
             <TextButton
               label={copy.safety.blockName(personName)}
@@ -76,7 +77,7 @@ export function SafetySheet({
 
         {mode === 'report' && (
           <>
-            <Text style={display(26, 26)}>{copy.safety.reportTitle}</Text>
+            <Display size={26} line={26}>{copy.safety.reportTitle}</Display>
             <Text style={styles.body}>{copy.safety.reportBody}</Text>
             <TextInput
               accessibilityLabel={copy.safety.reasonPlaceholder}
@@ -110,7 +111,7 @@ export function SafetySheet({
 
         {mode === 'block' && (
           <>
-            <Text style={display(26, 26)}>{copy.safety.blockTitle(personName)}</Text>
+            <Display size={26} line={26}>{copy.safety.blockTitle(personName)}</Display>
             <Text style={styles.body}>{copy.safety.blockBody}</Text>
             {error && <Text style={styles.error}>{error}</Text>}
             <Pressable
@@ -134,7 +135,7 @@ export function SafetySheet({
 
         {mode === 'done' && (
           <>
-            <Text style={display(26, 26)}>{copy.safety.sent}</Text>
+            <Display size={26} line={26}>{copy.safety.sent}</Display>
             <TextButton label={copy.safety.cancel} onPress={close} />
           </>
         )}

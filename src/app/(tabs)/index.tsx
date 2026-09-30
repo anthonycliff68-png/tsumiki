@@ -13,7 +13,8 @@ import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
-import { alpha, display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Today. Artboard: TodayDark. */
 export default function TodayScreen() {
@@ -160,9 +161,9 @@ export default function TodayScreen() {
         </View>
 
         <View style={styles.header}>
-          <Text style={display(76, 62)}>{formatBigDate(viewedDate)}</Text>
+          <Display size={76} line={62}>{formatBigDate(viewedDate)}</Display>
           <View style={styles.count}>
-            <Text style={[display(30, 30), { color: tint(bleedColor, 0.55) }]}>
+            <Text style={[display(30, 30), { color: ink(bleedColor, colors) }]}>
               {done}/{habits.length}
             </Text>
             <Text style={styles.countLabel}>{copy.today.doneCount}</Text>
@@ -262,7 +263,7 @@ export default function TodayScreen() {
                   pressed && { opacity: 0.85 },
                 ]}
               >
-                <Text style={[styles.chipText, { color: tint(bleedColor, 0.75) }]}>
+                <Text style={[styles.chipText, { color: ink(bleedColor, colors) }]}>
                   + {copy.today.newHabit}
                 </Text>
               </Pressable>
@@ -372,7 +373,7 @@ const makeStyles = (colors: Palette) => ({
     justifyContent: 'space-between',
   },
   sectionTitle: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
-  sectionLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: tint(habitColors[0], 0.55) },
+  sectionLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: ink(habitColors[0], colors) },
   listBlock: { gap: spacing.md },
   addRow: {
     minHeight: 56,
@@ -397,7 +398,7 @@ const makeStyles = (colors: Palette) => ({
     borderColor: colors.border,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  emptyTitle: { ...display(30, 30) },
+  emptyTitle: { ...display(30, 30), color: colors.text },
   emptyBody: {
     fontFamily: fonts.body,
     fontSize: 15,
@@ -417,7 +418,7 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   missedDot: { width: 10, height: 10, borderRadius: 5 },
-  missedName: { flex: 1, ...display(20, 20) },
+  missedName: { flex: 1, ...display(20, 20), color: colors.text },
   missedWhen: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.textFaint },
   nudgeBanner: {
     flexDirection: 'row',

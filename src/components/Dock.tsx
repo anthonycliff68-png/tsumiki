@@ -18,7 +18,7 @@ import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { alpha, display, fonts, radii, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, ink, radii, tint, type Palette } from '@/theme';
 
 /**
  * Row heights from the canvas: 12 + 56 + 12, then 4 + 44 + 10. Only a starting
@@ -114,7 +114,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
     );
   }, [habits]);
 
-  const accent = habit ? tint(habit.color, 0.55) : tint(colors.textMuted, 0.2);
+  const accent = habit ? ink(habit.color, colors) : ink(colors.textMuted, colors);
 
   const whenLabel = !habit
     ? ''
@@ -315,7 +315,9 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             // Where the app actually is. A screen reader should hear the truth,
             // not the preview.
             const selected = index === tabIndex;
-            const color = lit ? colors.white : colors.textInactive;
+            // colors.text, not colors.white: the tab row sits on the dock, which is
+            // pale on a light ground, and white on pale is not a label.
+            const color = lit ? colors.text : colors.textInactive;
 
             const onPress = () => {
               const event = navigation.emit({
@@ -389,6 +391,7 @@ const makeStyles = (colors: Palette) => ({
   },
   upNextName: {
     ...display(24, 24),
+    color: colors.text,
   },
   upNextStatus: {
     fontFamily: fonts.body,

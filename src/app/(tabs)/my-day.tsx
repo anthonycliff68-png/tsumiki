@@ -18,6 +18,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** My Day. Artboard: MyDay, as a full hour grid you can rearrange. */
 export default function MyDayScreen() {
@@ -104,7 +105,7 @@ export default function MyDayScreen() {
         </View>
 
         <View style={styles.header}>
-          <Text style={display(56, 50)}>{copy.myDay.title}</Text>
+          <Display size={56} line={50}>{copy.myDay.title}</Display>
           <View style={styles.counts}>
             <Text style={[display(24, 24), { color: colors.textMuted }]}>
               {copy.myDay.habitCount(habits.length)}

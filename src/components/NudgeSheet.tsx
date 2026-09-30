@@ -13,9 +13,10 @@ import {
   type CrewMemberState,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { faceOf } from '@/lib/models';
 import { GlassSurface } from '@/components/GlassSurface';
+import { Display } from '@/components/Screen';
 
 type Props = {
   visible: boolean;
@@ -77,7 +78,7 @@ export function NudgeSheet({ visible, crewId, member, remaining, moment, onClose
             </Text>
           </View>
           <View style={styles.headerText}>
-            <Text style={display(26, 26)}>{copy.nudge.sendTitle(member.displayName)}</Text>
+            <Display size={26} line={26}>{copy.nudge.sendTitle(member.displayName)}</Display>
             <Text style={styles.sub}>{copy.nudge.sendSub(moment, remaining)}</Text>
           </View>
         </View>

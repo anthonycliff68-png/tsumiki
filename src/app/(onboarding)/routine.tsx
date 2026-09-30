@@ -14,6 +14,7 @@ import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeShort } from '@/data/defaults
 import { useSaveRoutine } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 type Row = {
   id: string;
@@ -110,7 +111,7 @@ export default function RoutineScreen() {
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.routine.eyebrow}</Text>
-          <Text style={display(48, 42)}>{copy.onboarding.routine.title}</Text>
+          <Display size={48} line={42}>{copy.onboarding.routine.title}</Display>
           <Text style={styles.blurb}>{copy.onboarding.routine.blurb}</Text>
         </View>
 

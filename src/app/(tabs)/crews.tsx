@@ -11,7 +11,8 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCreateCrew, useCrews, useHabits } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
+import { display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Crews. Artboards: GroupDark, CrewWalk. */
 export default function CrewsScreen() {
@@ -71,7 +72,7 @@ export default function CrewsScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={display(64, 58)}>{copy.crews.title}</Text>
+        <Display size={64} line={58}>{copy.crews.title}</Display>
 
         {crews.map((crew) => (
           <Pressable
@@ -191,7 +192,7 @@ const makeStyles = (colors: Palette) => ({
     borderColor: colors.border,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  emptyTitle: { ...display(30, 30) },
+  emptyTitle: { ...display(30, 30), color: colors.text },
   emptyBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
   form: { gap: spacing.md },
   label: {
@@ -227,5 +228,5 @@ const makeStyles = (colors: Palette) => ({
     color: colors.text,
   },
   hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
-  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: tint(habitColors[1], 0.2) },
+  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: ink(habitColors[1], colors) },
 }) as const;

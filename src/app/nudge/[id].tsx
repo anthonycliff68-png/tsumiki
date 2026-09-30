@@ -19,6 +19,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** A nudge, opened. Artboards: NudgeOpen, then NudgeDone once you check in. */
 export default function NudgeScreen() {
@@ -132,7 +133,7 @@ export default function NudgeScreen() {
               </View>
             </View>
 
-            <Text style={display(46, 44)}>{copy.nudge.openTitle(myName)}</Text>
+            <Display size={46} line={44}>{copy.nudge.openTitle(myName)}</Display>
 
             <Text style={styles.body}>
               {copy.nudge.from(nudge.fromName)} · {copy.crews.crewLine(inCount, total)}

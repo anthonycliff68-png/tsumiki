@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import type { ScheduleMode } from '@/lib/models';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Create a habit, or edit one when opened with ?id=. Artboard: NewHabitDark. */
 export default function NewHabitScreen() {
@@ -110,7 +111,7 @@ export default function NewHabitScreen() {
           </View>
         </View>
 
-        <Text style={display(56, 50)}>{isEdit ? copy.newHabit.titleEdit : copy.newHabit.titleNew}</Text>
+        <Display size={56} line={50}>{isEdit ? copy.newHabit.titleEdit : copy.newHabit.titleNew}</Display>
 
         <View style={styles.section}>
           <Text style={styles.label}>{copy.newHabit.iWill}</Text>
@@ -322,6 +323,7 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 2,
     backgroundColor: 'rgba(255,255,255,0.05)',
     ...display(24, 28),
+    color: colors.text,
   },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   previewDot: { width: 8, height: 8, borderRadius: 4 },
@@ -363,7 +365,7 @@ const makeStyles = (colors: Palette) => ({
     borderColor: colors.border,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  timeText: { ...display(28, 30) },
+  timeText: { ...display(28, 30), color: colors.text },
   swatches: { flexDirection: 'row', gap: spacing.md },
   swatch: {
     width: 44,

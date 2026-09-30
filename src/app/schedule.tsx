@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/auth';
 import { minutesOfDay } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
 import { alpha, display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 
 
@@ -121,7 +122,7 @@ export default function ScheduleScreen() {
           </Pressable>
         </View>
 
-        <Text style={display(56, 50)}>{copy.schedule.title}</Text>
+        <Display size={56} line={50}>{copy.schedule.title}</Display>
         <Text style={styles.blurb}>{copy.schedule.blurb}</Text>
 
         {sorted.length === 0 && <Text style={styles.blurb}>{copy.schedule.empty}</Text>}
@@ -251,7 +252,7 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   rowText: { flex: 1, gap: 2 },
-  rowLabel: { ...display(19, 21) },
+  rowLabel: { ...display(19, 21), color: colors.text },
   rowTime: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
   blockMark: { width: 4, height: 28, borderRadius: 2, backgroundColor: colors.border },
   editor: {
@@ -291,7 +292,7 @@ const makeStyles = (colors: Palette) => ({
     borderColor: colors.border,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  timeText: { ...display(22, 24) },
+  timeText: { ...display(22, 24), color: colors.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   switchText: { flex: 1, gap: 2 },
   hint: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.textFaint },

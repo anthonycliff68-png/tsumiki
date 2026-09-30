@@ -25,6 +25,7 @@ import {
   type StatsWindow,
 } from '@/lib/stats';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [
   { key: 'day', label: copy.stats.day },
@@ -210,7 +211,7 @@ export default function ProgressScreen() {
           />
         }
       >
-        <Text style={display(56, 50)}>{copy.stats.title}</Text>
+        <Display size={56} line={50}>{copy.stats.title}</Display>
 
         <View style={styles.windows}>
           {WINDOWS.map((option) => {
@@ -361,7 +362,7 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   habitHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  habitName: { flex: 1, ...display(22, 22) },
+  habitName: { flex: 1, ...display(22, 22), color: colors.text },
   habitRate: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.textMuted },
   track: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)' },
   fill: { height: 8, borderRadius: 4 },

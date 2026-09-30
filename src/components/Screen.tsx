@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
-import { useStyles } from '@/lib/appearance';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { display, fonts, spacing, type Palette } from '@/theme';
 
 type Props = {
@@ -48,7 +48,39 @@ export function Eyebrow({ children, color }: { children: ReactNode; color?: stri
 }
 
 export function Title({ children, size = 56 }: { children: ReactNode; size?: number }) {
-  return <Text style={display(size, size * 0.9)}>{children}</Text>;
+  return <Display size={size} line={size * 0.9}>{children}</Display>;
+}
+
+/**
+ * A heading in the display face, in the colour of whichever theme is on.
+ *
+ * display() deliberately sets no colour — it is a plain function and cannot
+ * read the theme, and baking in the dark palette's near-white is what made
+ * every heading vanish on a light background. The colour belongs here, where
+ * the theme is actually readable.
+ */
+export function Display({
+  size,
+  line,
+  numberOfLines,
+  style,
+  children,
+}: {
+  size: number;
+  line?: number;
+  numberOfLines?: number;
+  style?: StyleProp<TextStyle>;
+  children: ReactNode;
+}) {
+  const colors = useTheme();
+  return (
+    <Text
+      numberOfLines={numberOfLines}
+      style={[display(size, line ?? size), { color: colors.text }, style]}
+    >
+      {children}
+    </Text>
+  );
 }
 
 export function Body({ children }: { children: ReactNode }) {

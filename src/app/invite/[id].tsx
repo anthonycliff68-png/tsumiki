@@ -10,6 +10,7 @@ import { copy } from '@/copy';
 import { INVITE_BASE_URL, inviteMessage } from '@/constants/brand';
 import { useCreateInvite, useCrew } from '@/lib/api';
 import { display, fonts, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Share a crew's invite link. Artboard: InviteSend. */
 export default function InviteScreen() {
@@ -64,7 +65,7 @@ export default function InviteScreen() {
           </View>
         </View>
 
-        <Text style={display(56, 50)}>{copy.invite.title}</Text>
+        <Display size={56} line={50}>{copy.invite.title}</Display>
 
         <Text style={styles.label}>{copy.invite.whatTheyGet}</Text>
         <View style={styles.bubble}>

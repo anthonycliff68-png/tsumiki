@@ -21,6 +21,7 @@ import { useAuth } from '@/lib/auth';
 import { rememberInvite } from '@/lib/invite';
 import type { ScheduleMode } from '@/lib/models';
 import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** An invite link, opened. Artboards: InviteJoin, then InviteJoined. */
 export default function JoinScreen() {
@@ -98,7 +99,7 @@ export default function JoinScreen() {
       >
         {joinedCrewId ? (
           <>
-            <Text style={display(64, 58)}>{copy.invite.joinedTitle}</Text>
+            <Display size={64} line={58}>{copy.invite.joinedTitle}</Display>
             <Text style={styles.body}>
               {copy.invite.joinedBody(invite.crewName, invite.memberCount + 1)}
             </Text>
@@ -121,7 +122,7 @@ export default function JoinScreen() {
         ) : (
           <>
             <Text style={styles.eyebrow}>{copy.invite.invitedBy}</Text>
-            <Text style={display(56, 50)}>{copy.invite.joinTitle(invite.crewName)}</Text>
+            <Display size={56} line={50}>{copy.invite.joinTitle(invite.crewName)}</Display>
 
             <View style={[styles.card, { backgroundColor: invite.habitColor }]}>
               <Text style={styles.cardHabit}>{invite.habitName}</Text>

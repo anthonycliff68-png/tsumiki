@@ -109,7 +109,7 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 2,
   },
   text: { flex: 1, gap: 2, paddingVertical: 10 },
-  name: { ...display(22, 22) },
+  name: { ...display(22, 22), color: colors.text },
   when: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   whenDone: { color: 'rgba(255,255,255,0.8)' },
   edit: {

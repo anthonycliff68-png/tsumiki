@@ -14,6 +14,7 @@ import { useAnchors, useCreateFirstHabit } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Anchor } from '@/lib/models';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /**
  * Suggestions are written against the default routine, so match them back to
@@ -87,7 +88,7 @@ export default function FirstHabitScreen() {
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.habit.eyebrow}</Text>
-          <Text style={display(48, 42)}>{copy.onboarding.habit.title}</Text>
+          <Display size={48} line={42}>{copy.onboarding.habit.title}</Display>
           <Text style={styles.blurb}>{copy.onboarding.habit.blurb}</Text>
         </View>
 

@@ -15,6 +15,7 @@ import { useAnchors, useMyProfile, useUpdateProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { faceOf } from '@/lib/models';
 import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** How big the preview disc is. Large enough that an emoji reads as a choice. */
 const PREVIEW = 96;
@@ -104,7 +105,7 @@ export default function ProfileScreen() {
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.profile.eyebrow}</Text>
-          <Text style={display(48, 42)}>{copy.onboarding.profile.title}</Text>
+          <Display size={48} line={42}>{copy.onboarding.profile.title}</Display>
           <Text style={styles.blurb}>{copy.onboarding.profile.blurb}</Text>
         </View>
 

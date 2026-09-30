@@ -12,6 +12,7 @@ import { formatTimeShort } from '@/data/defaults';
 import { useAnchors } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 /** Step 3. Artboard: OnbCrew. Shows where the new habit sits, then crew or solo. */
 export default function CrewPromptScreen() {
@@ -48,7 +49,7 @@ export default function CrewPromptScreen() {
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.crew.eyebrow}</Text>
-          <Text style={display(48, 42)}>{copy.onboarding.crew.title}</Text>
+          <Display size={48} line={42}>{copy.onboarding.crew.title}</Display>
         </View>
 
         <View style={styles.timeline}>
@@ -91,7 +92,7 @@ export default function CrewPromptScreen() {
             ))}
           </View>
           <View style={styles.pitchText}>
-            <Text style={display(26, 25)}>{copy.onboarding.crew.pitch}</Text>
+            <Display size={26} line={25}>{copy.onboarding.crew.pitch}</Display>
             <Text style={styles.pitchBlurb}>{copy.onboarding.crew.pitchBlurb}</Text>
           </View>
         </View>

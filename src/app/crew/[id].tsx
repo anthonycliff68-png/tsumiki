@@ -23,7 +23,8 @@ import { NudgeSheet } from '@/components/NudgeSheet';
 import { SafetySheet } from '@/components/SafetySheet';
 import { faceOf } from '@/lib/models';
 import { useAuth } from '@/lib/auth';
-import { alpha, display, fonts, habitColors, radii, spacing, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
+import { Display } from '@/components/Screen';
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -126,7 +127,7 @@ export default function CrewScreen() {
         </View>
 
         <View style={styles.headerBlock}>
-          <Text style={display(48, 44)}>{crew.name}</Text>
+          <Display size={48} line={44}>{crew.name}</Display>
           <Text style={styles.subtitle}>{copy.crews.sameHabit(crew.habitName)}</Text>
         </View>
 
@@ -135,7 +136,7 @@ export default function CrewScreen() {
           {crew.members.length < 5 && (
             <Text
               accessibilityRole="button"
-              style={[styles.crewLine, { color: tint(crew.habitColor, 0.5) }]}
+              style={[styles.crewLine, { color: ink(crew.habitColor, colors) }]}
               onPress={() => router.push({ pathname: '/invite/[id]', params: { id: crew.id } })}
             >
               {copy.crews.invite}

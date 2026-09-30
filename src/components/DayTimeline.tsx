@@ -527,7 +527,7 @@ const makeStyles = (colors: Palette) => ({
   gutterNow: { fontFamily: fonts.bodyBold, color: habitColors[1] },
   lineBody: { flex: 1, gap: 6, justifyContent: 'center' },
   momentGroup: { gap: 6, borderRadius: radii.card },
-  momentLabel: { ...display(19, 21) },
+  momentLabel: { ...display(19, 21), color: colors.text },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
