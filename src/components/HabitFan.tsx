@@ -50,6 +50,15 @@ const LEAN = 7;
 const NAME_SHADE = 168;
 const FLOOR = 6;
 /**
+ * How long the colour takes to flood the card.
+ *
+ * Exported because the Today screen has to know it: the hand re-sorts a done
+ * habit to the back, and if it did that on the tap it would take this
+ * animation with it. The two numbers being one constant is what stops them
+ * drifting into a card that leaves before it has filled.
+ */
+export const FILL_MS = 460;
+/**
  * How thick the lit edge of the water is.
  *
  * It is also how far short of the card top the edge stops, so the two are one
@@ -180,10 +189,17 @@ export function HabitFan({
   useEffect(() => {
     if (!opened.current || held.current === null) return;
     const at = habits.findIndex((habit) => habit.id === held.current);
-    const start = at === -1 ? clamp(focusRef.current, 0, Math.max(0, habits.length - 1)) : at;
+    // ...unless it moved because you just finished it. The order deals a done
+    // habit to the back of the hand on purpose, and following it there would
+    // park you on the card you are done with. Hold the slot instead, so the
+    // next thing to do comes forward under your thumb.
+    const follow = at !== -1 && !habits[at]?.checkedIn;
+    const start = follow ? at : clamp(focusRef.current, 0, Math.max(0, habits.length - 1));
+    // Re-point first and always: held has to name the card actually in front,
+    // or the next change chases a habit that is no longer the one you can see.
+    held.current = habits[start]?.id ?? null;
     if (start === focusRef.current) return;
     focusRef.current = start;
-    held.current = habits[start]?.id ?? null;
     settled.current = start;
     setFocus(start);
     position.setValue(start);
@@ -494,7 +510,7 @@ function FanCard({
 
     Animated.timing(rise, {
       toValue: done ? 1 : 0,
-      duration: done ? 460 : 240,
+      duration: done ? FILL_MS : 240,
       // Out fast, then a long settle — the part that feels like arriving.
       easing: done ? Easing.bezier(0.16, 1, 0.3, 1) : Easing.in(Easing.quad),
       useNativeDriver: true,

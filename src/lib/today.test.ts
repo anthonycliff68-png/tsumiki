@@ -1,6 +1,6 @@
 /**
- * The order the day is shown in. The rule that matters: checking a habit in
- * must never move it.
+ * The order the day is shown in. The rule that matters: the front of the hand
+ * is always the next thing to do, so checking one in deals it away.
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -32,6 +32,33 @@ describe('the order of the day', () => {
     assert.deepEqual(names(orderForDay(day)).slice(-2), ['call', 'laundry']);
   });
 
+  it('puts the done ones behind everything still to do', () => {
+    const half = day.map((h) => (h.id === 'bed' || h.id === 'laundry' ? { ...h, checkedIn: true } : h));
+    assert.deepEqual(names(orderForDay(half)), ['walk', 'floss', 'call', 'bed', 'laundry']);
+  });
+
+  it('keeps the done ones in time order among themselves', () => {
+    const allDone = day.map((h) => ({ ...h, checkedIn: true }));
+    assert.deepEqual(names(orderForDay(allDone)), ['bed', 'walk', 'floss', 'call', 'laundry']);
+  });
+
+  it('puts an untimed habit behind the timed ones in its own half', () => {
+    // The open half and the done half each run timed-then-untimed, rather than
+    // every untimed habit collecting at the very end of the hand.
+    const mixed = [
+      habit({ id: 'open-untimed', sortKey: ANYTIME }),
+      habit({ id: 'done-timed', sortKey: 600, checkedIn: true }),
+      habit({ id: 'open-timed', sortKey: 900 }),
+      habit({ id: 'done-untimed', sortKey: ANYTIME, checkedIn: true }),
+    ];
+    assert.deepEqual(names(orderForDay(mixed)), [
+      'open-timed',
+      'open-untimed',
+      'done-timed',
+      'done-untimed',
+    ]);
+  });
+
   it('breaks a tie on name, so a shared moment keeps a fixed order', () => {
     const stacked = [
       habit({ id: 'c', name: 'Vitamins', sortKey: 480 }),
@@ -44,21 +71,19 @@ describe('the order of the day', () => {
     );
   });
 
-  it('does not move a habit when it is checked in', () => {
-    const before = names(orderForDay(day));
-    const after = names(
-      orderForDay(day.map((h) => (h.id === 'walk' ? { ...h, checkedIn: true } : h))),
-    );
-    assert.deepEqual(after, before);
+  it('sends a habit to the back when it is checked in', () => {
+    const after = orderForDay(day.map((h) => (h.id === 'walk' ? { ...h, checkedIn: true } : h)));
+    assert.equal(names(after).at(-1), 'walk');
   });
 
-  it('does not move a habit when it is checked back out', () => {
+  it('brings a habit back to its time when it is checked back out', () => {
+    // Undoing has to be the exact reverse, or a mistap would leave the habit
+    // stranded at the back of a hand it no longer belongs to.
     const allDone = day.map((h) => ({ ...h, checkedIn: true }));
-    const before = names(orderForDay(allDone));
-    const after = names(
-      orderForDay(allDone.map((h) => (h.id === 'floss' ? { ...h, checkedIn: false } : h))),
+    const after = orderForDay(
+      allDone.map((h) => (h.id === 'floss' ? { ...h, checkedIn: false } : h)),
     );
-    assert.deepEqual(after, before);
+    assert.equal(names(after)[0], 'floss');
   });
 
   it('leaves the original list alone', () => {

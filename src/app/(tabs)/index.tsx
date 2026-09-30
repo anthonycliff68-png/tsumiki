@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,12 +7,13 @@ import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
 import { DayList } from '@/components/DayList';
-import { HabitFan } from '@/components/HabitFan';
+import { FILL_MS, HabitFan } from '@/components/HabitFan';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
+import { openFocus, orderForDay } from '@/lib/today';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
@@ -76,27 +77,48 @@ export default function TodayScreen() {
   const finished = useMemo(() => habits.filter((habit) => habit.checkedIn), [habits]);
   const openCount = open.length;
 
-  /**
-   * The day in the order it happens, and nothing moves it. Checking a habit in
-   * must not shuffle the hand, so the sort never looks at whether it is done.
-   * Habits with no set time sit at the end — that is where the app already
-   * treats them, and the only place that never jumps ahead of a real time.
-   * Ties break on name, so two habits on the same moment keep a fixed order.
-   */
-  const inHand = useMemo(
-    () =>
-      [...habits].sort(
-        (a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name),
-      ),
-    [habits],
-  );
+  // Both rules live in lib/today, under test. This screen had drifted its own
+  // copy of each, which is how the order and the tests covering it came to
+  // disagree without anything failing.
+  const wanted = useMemo(() => orderForDay(habits), [habits]);
 
-  // Open on the first thing still to do. Once the day is done that is nothing,
-  // so fall back to the start of the day rather than an arbitrary card.
-  const initialFocus = useMemo(() => {
-    const at = inHand.findIndex((habit) => !habit.checkedIn);
-    return at === -1 ? 0 : at;
-  }, [inHand]);
+  /**
+   * The order lags the data by one animation.
+   *
+   * Checking in floods the card with colour, and the same check-in sends it to
+   * the back of the hand. Done on the tap those fight: the card left the front
+   * before it had filled, so you watched it slide away rather than fill. The
+   * habits themselves stay live — that is what makes the card start filling
+   * the instant you tap it — and only the order waits for the fill to land
+   * before dealing the card away.
+   *
+   * A habit arriving or leaving is not a check-in and lands at once, or the
+   * first load, every new habit and every change of day would each spend half
+   * a second showing the wrong hand.
+   */
+  const [order, setOrder] = useState<readonly string[]>(() => wanted.map((h) => h.id));
+  useEffect(() => {
+    const next = wanted.map((habit) => habit.id);
+    if (next.length === order.length && next.every((id, at) => id === order[at])) return;
+    const sameHabits = next.length === order.length && next.every((id) => order.includes(id));
+    if (!sameHabits) {
+      setOrder(next);
+      return;
+    }
+    const timer = setTimeout(() => setOrder(next), FILL_MS);
+    return () => clearTimeout(timer);
+  }, [wanted, order]);
+
+  const inHand = useMemo(() => {
+    const slot = new Map(order.map((id, at) => [id, at]));
+    // A habit the held order has not seen yet sits at the end for the one
+    // render it takes the effect above to catch up.
+    return [...wanted].sort(
+      (a, b) => (slot.get(a.id) ?? order.length) - (slot.get(b.id) ?? order.length),
+    );
+  }, [wanted, order]);
+
+  const initialFocus = useMemo(() => openFocus(inHand), [inHand]);
 
   // A new day is a new hand: remount so the focus rule runs again.
   const dayKey = viewedDate.toDateString();
