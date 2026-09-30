@@ -414,6 +414,14 @@ export const copy = {
     slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
   },
 
+  hints: {
+    dismiss: 'Got it',
+    /** The dock's pips are the only undiscoverable thing the walkthrough skips. */
+    dockPips: 'The bars at the top of the dock are the rest of your day. Tap one and the dock points at it, so you can check anything off from anywhere.',
+    /** The reviewer's exact complaint: rings, a wall and a line, unexplained. */
+    progressViews: 'Day shows what is due today. Week is every habit against every day, so gaps are obvious. Month is the shape over time.',
+  },
+
   walkthrough: {
     /**
      * How, by doing it once.

@@ -26,6 +26,7 @@ import {
 } from '@/lib/stats';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
+import { FirstTimeHint } from '@/components/FirstTimeHint';
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [
   { key: 'day', label: copy.stats.day },
@@ -212,6 +213,8 @@ export default function ProgressScreen() {
         }
       >
         <Display size={56} line={50}>{copy.stats.title}</Display>
+
+        <FirstTimeHint id="progress-views">{copy.hints.progressViews}</FirstTimeHint>
 
         <View style={styles.windows}>
           {WINDOWS.map((option) => {

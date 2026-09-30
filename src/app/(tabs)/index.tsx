@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
+import { FirstTimeHint } from '@/components/FirstTimeHint';
 
 /** Today. Artboard: TodayDark. */
 export default function TodayScreen() {
@@ -228,6 +229,8 @@ export default function TodayScreen() {
         {habits.length > 0 && (
           <View style={styles.padded}>
             <Text style={styles.fanHint}>{copy.today.fanHint}</Text>
+
+            <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
 
             <View style={styles.chips}>
               {finished.length > 0 && (
