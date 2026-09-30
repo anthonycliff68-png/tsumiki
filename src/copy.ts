@@ -559,6 +559,28 @@ export const copy = {
       notDue: 'Not scheduled',
     },
     title: 'Progress',
+
+    // --- the streak sections ------------------------------------------------
+    // The screen is ordered by what is at stake rather than by period, because
+    // a percentage has no stakes and a run you can still save does.
+    atRisk: 'One miss',
+    /** Said kindly and with the way out, because the streak is not gone yet. */
+    atRiskBody: (days: number) =>
+      days === 1
+        ? 'A day, then a miss. Do it today and it carries on.'
+        : `${days} days, then a miss. Do it today and it carries on.`,
+    running: 'Running',
+    /** Habits with nothing going. Not a telling-off — an offer. */
+    cold: 'Start again',
+    coldBody: 'Two missed in a row ends a run. Today starts the next one.',
+    longestRun: 'Longest run',
+    dayUnit: (days: number) => (days === 1 ? 'day' : 'days'),
+    /** e.g. "Inbox zero, every weekday since the 8th" is too clever; say it plainly. */
+    longestRunOn: (habit: string) => `On ${habit}`,
+    overTime: 'Over time',
+    lastDays: (days: number) => `Last ${days} days`,
+    nothingRunning: 'Nothing running yet. One check-in starts a run.',
+
     day: 'Day',
     week: 'Week',
     month: 'Month',

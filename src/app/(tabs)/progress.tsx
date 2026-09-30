@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -8,77 +8,48 @@ import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
-import { CalendarLegend } from '@/components/HabitCalendar';
-import { HeatWall, RingGrid, TrendBars, type HeatCell } from '@/components/ProgressViews';
-import { useHabitHistory, useResetHistory } from '@/lib/api';
+import { FirstTimeHint } from '@/components/FirstTimeHint';
+import { TrendBars } from '@/components/ProgressViews';
+import { Display } from '@/components/Screen';
+import { useCheckIn, useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
 import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
-import {
-  calendarFor,
-  currentRun,
-  datesBetween,
-  isDue,
-  overallOf,
-  periodRange,
-  statsFor,
-  type StatsWindow,
-} from '@/lib/stats';
-import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
-import { Display } from '@/components/Screen';
-import { FirstTimeHint } from '@/components/FirstTimeHint';
+import { datesBetween, isDue, shiftDate, statsFor, type HabitStats } from '@/lib/stats';
+import { streakOf, type Streak } from '@/lib/streaks';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
-const WINDOWS: { key: StatsWindow; label: string }[] = [
-  { key: 'day', label: copy.stats.day },
-  { key: 'week', label: copy.stats.week },
-  { key: 'month', label: copy.stats.month },
-];
+/** How far back "over time" looks. Long enough to have a shape, short enough to be this month. */
+const TREND_DAYS = 30;
+/** Marks in a habit's row. A week reads at a glance; a month is a chart. */
+const STRIP_DAYS = 7;
 
-/** What to call the period on screen. */
-function periodLabel(window: StatsWindow, offset: number, from: string, to: string): string {
-  if (offset === 0) {
-    if (window === 'day') return copy.stats.today;
-    if (window === 'week') return copy.stats.thisWeek;
-    return copy.stats.thisMonth;
-  }
-  if (window === 'day') return longDate(from);
-  if (window === 'month') return monthLabel(from);
-  return `${shortDate(from)} – ${shortDate(to)}`;
-}
+type Row = {
+  stats: HabitStats;
+  streak: Streak;
+  /** The last few due days, oldest first, for the strip. */
+  recent: { date: string; done: boolean }[];
+  /** True when today is due and already checked in. */
+  doneToday: boolean;
+};
 
-function asUtc(date: string): Date {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1));
-}
-
-function longDate(date: string): string {
-  return asUtc(date).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  });
-}
-
-function monthLabel(date: string): string {
-  return asUtc(date).toLocaleDateString('en-GB', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/** "2026-08-24" -> "24 Aug". */
-function shortDate(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  });
-}
-
-/** Progress. How often each habit actually gets done. */
+/**
+ * Progress, ordered by what is at stake.
+ *
+ * It used to be a Day / Week / Month switcher over a percentage, and a reader
+ * said it read as information placed on a page rather than a hierarchy. The
+ * percentage was the reason: a rate has no stakes, so nothing could be more
+ * important than anything else.
+ *
+ * Streaks give it an order. What is one miss from ending comes first and is the
+ * only thing here you can act on; what is running comes next; what has stopped
+ * sits quietly at the bottom with a way back in.
+ *
+ * The three periods are gone rather than rearranged. Today is the dock, on every
+ * screen. The week is the strip under each habit — the old heat wall, handed
+ * back to the habit it belongs to. The month is the trend at the bottom, which
+ * is the only one that was ever really about a period.
+ */
 export default function ProgressScreen() {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
@@ -86,15 +57,13 @@ export default function ProgressScreen() {
   const clearance = useDockClearance();
   const { session } = useAuth();
   const userId = session?.user.id;
-
   const { data: history = [], refetch, isRefetching } = useHabitHistory(userId);
   const resetHistory = useResetHistory(userId);
+  const checkIn = useCheckIn(userId);
 
-  const [window, setWindow] = useState<StatsWindow>('week');
-  /** How many periods back from the current one we are looking. */
-  const [offset, setOffset] = useState(0);
-  const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState<AdviceTab>('needs-work');
+  const [confirming, setConfirming] = useState(false);
+  const today = localDateString(new Date());
 
   useFocusEffect(
     useCallback(() => {
@@ -102,44 +71,34 @@ export default function ProgressScreen() {
     }, [refetch]),
   );
 
-  const today = localDateString();
-  const earliest = useMemo(
-    () =>
-      history.reduce((oldest, habit) => {
-        const firstCheck = habit.checkedOn[0];
-        const start =
-          firstCheck && firstCheck < habit.createdOn ? firstCheck : habit.createdOn;
-        return start < oldest ? start : oldest;
-      }, today),
-    [history, today],
-  );
-
-  const { from, to } = useMemo(
-    () => periodRange(window, today, offset),
-    [window, today, offset],
-  );
-
-  // Stepping back stops where the history does; there is no forward past today.
-  const canGoBack = from > earliest;
-  const canGoForward = offset > 0;
-
-  const stats = useMemo(() => {
+  /**
+   * Every habit against the advice window, which is the trailing stretch rather
+   * than a calendar period — a streak does not restart because a month did.
+   */
+  const rows = useMemo<Row[]>(() => {
+    const span = adviceRange(today);
     return history
-      .map((habit) => ({
-        ...statsFor(habit, from, to, today),
-        calendar: calendarFor(habit, from, to, today),
-      }))
-      .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
-  }, [history, from, to, today]);
+      .map((habit) => {
+        const stats = statsFor(habit, span.from, span.to, today);
+        return {
+          stats,
+          streak: streakOf(stats.days, today),
+          recent: stats.days.slice(-STRIP_DAYS),
+          doneToday: stats.days.some((day) => day.date === today && day.done),
+        };
+      })
+      .sort((a, b) => b.streak.days - a.streak.days);
+  }, [history, today]);
 
-  const overall = useMemo(() => overallOf(stats), [stats]);
-  const accent = stats[0]?.color ?? habitColors[0];
+  const atRisk = rows.filter((row) => row.streak.state === 'at-risk');
+  const running = rows.filter((row) => row.streak.state === 'running');
+  const cold = rows.filter((row) => row.streak.state === 'cold');
+  const longest = running[0];
 
-  // Advice reads its own trailing stretch, ending where the period on screen
-  // ends, so stepping back through history still tells you what was slipping
-  // then — and a single day never decides which habit needs work.
+  const accent = atRisk[0]?.stats.color ?? longest?.stats.color ?? habitColors[0];
+
   const advice = useMemo(() => {
-    const span = adviceRange(to);
+    const span = adviceRange(today);
     const placements = new Map<string, Placement>(
       history.map((habit) => [
         habit.habitId,
@@ -147,41 +106,13 @@ export default function ProgressScreen() {
       ]),
     );
     const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
-    return {
-      ...splitVerdicts(over, placements),
-      week: adviseWeek(over),
-      byHabit: new Map(over.map((h) => [h.habitId, h])),
-    };
-  }, [history, to, today]);
+    return { ...splitVerdicts(over, placements), week: adviseWeek(over) };
+  }, [history, today]);
 
-  /** Day: a ring per habit, filled by how it has been going lately. */
-  const ringData = useMemo(
-    () =>
-      stats.map((habit) => {
-        const recent = advice.byHabit.get(habit.habitId);
-        return {
-          stats: habit,
-          run: recent ? currentRun(recent) : 0,
-          recent: recent?.rate ?? null,
-        };
-      }),
-    [stats, advice],
-  );
-
-  /** Week: seven marks a habit, weakest habit on top. */
-  const wallData = useMemo(
-    () =>
-      stats
-        .slice()
-        .sort((a, b) => (a.rate ?? 2) - (b.rate ?? 2))
-        .map((habit) => ({ stats: habit, cells: habit.calendar as HeatCell[] })),
-    [stats],
-  );
-
-  /** Month: one bar a day, how much of that day's list got done. */
-  const trendData = useMemo(() => {
-    if (window !== 'month') return [];
-    return datesBetween(from, to).map((date) => {
+  /** One bar a day: how much of that day's list got done. */
+  const trend = useMemo(() => {
+    const from = shiftDate(today, -(TREND_DAYS - 1));
+    return datesBetween(from, today).map((date) => {
       let due = 0;
       let done = 0;
       for (const habit of history) {
@@ -191,17 +122,38 @@ export default function ProgressScreen() {
       }
       return { date, rate: due === 0 ? null : done / due };
     });
-  }, [window, from, to, history, today]);
+  }, [history, today]);
+
+  /**
+   * Always STRIP_DAYS wide. A habit made on Tuesday has three due days and
+   * would otherwise draw a stub next to a full week, which reads as a worse
+   * week rather than a shorter history. The padding is blank, not missed.
+   */
+  const strip = (row: Row) => (
+    <View style={styles.strip}>
+      {Array.from({ length: STRIP_DAYS - row.recent.length }, (_, i) => (
+        <View key={`pad-${i}`} style={styles.mark} />
+      ))}
+      {row.recent.map((day) => (
+        <View
+          key={day.date}
+          style={[
+            styles.mark,
+            { backgroundColor: day.done ? row.stats.color : alpha(colors.overlay, 0.14) },
+          ]}
+        />
+      ))}
+    </View>
+  );
 
   return (
     <View style={styles.root}>
       <Bleed color={accent} />
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + spacing.xl,
+          paddingTop: insets.top + spacing.xxl,
           paddingBottom: clearance,
           paddingHorizontal: spacing.xl,
-          gap: spacing.lg,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -214,96 +166,139 @@ export default function ProgressScreen() {
       >
         <Display size={56} line={50}>{copy.stats.title}</Display>
 
-        <FirstTimeHint id="progress-views">{copy.hints.progressViews}</FirstTimeHint>
+        {rows.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
 
-        <View style={styles.windows}>
-          {WINDOWS.map((option) => {
-            const active = option.key === window;
-            return (
-              <Pressable
-                key={option.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                onPress={() => setWindow(option.key)}
-                style={[styles.window, active && styles.windowActive]}
+        {/* The only thing on this screen you can act on, so it comes first and
+            it comes with the action. A run you can still save is a decision
+            with a deadline, not a statistic. */}
+        {atRisk.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.label, { color: atRisk[0]?.stats.color }]}>
+              {copy.stats.atRisk}
+            </Text>
+            {atRisk.map((row) => (
+              <View
+                key={row.stats.habitId}
+                style={[styles.riskCard, { borderColor: row.stats.color }]}
               >
-                <Text style={[styles.windowText, active && styles.windowTextActive]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.stepper}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.stats.earlier}
-            accessibilityState={{ disabled: !canGoBack }}
-            disabled={!canGoBack}
-            onPress={() => setOffset((current) => current + 1)}
-            style={[styles.step, !canGoBack && styles.stepOff]}
-          >
-            <Text style={styles.stepText}>‹</Text>
-          </Pressable>
-
-          <Text style={styles.period}>{periodLabel(window, offset, from, to)}</Text>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.stats.later}
-            accessibilityState={{ disabled: !canGoForward }}
-            disabled={!canGoForward}
-            onPress={() => setOffset((current) => Math.max(0, current - 1))}
-            style={[styles.step, !canGoForward && styles.stepOff]}
-          >
-            <Text style={styles.stepText}>›</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.headline}>
-          <Text style={[display(64, 58), { color: colors.text }]}>
-            {overall.rate === null ? '—' : `${Math.round(overall.rate * 100)}%`}
-          </Text>
-          <Text style={styles.headlineSub}>
-            {overall.rate === null
-              ? copy.stats.nothingHere
-              : copy.stats.doneOf(overall.done, overall.due)}
-          </Text>
-          <Text style={styles.range}>{copy.stats.covering(shortDate(from), shortDate(to))}</Text>
-          {window === 'week' && <CalendarLegend color={colors.text} />}
-        </View>
-
-        {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
-
-        {stats.length > 0 && (
-          <View style={styles.view}>
-            {window === 'day' && <RingGrid habits={ringData} />}
-            {window === 'week' && <HeatWall habits={wallData} />}
-            {window === 'month' && (
-              <TrendBars
-                days={trendData}
-                color={accent}
-                from={shortDate(from)}
-                to={shortDate(to)}
-              />
-            )}
+                <Display size={26} line={26}>{row.stats.name}</Display>
+                <Text style={styles.riskBody}>{copy.stats.atRiskBody(row.streak.days)}</Text>
+                {!row.doneToday && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={copy.dock.checkInLabel(row.stats.name)}
+                    onPress={() => checkIn.mutate({ habitId: row.stats.habitId })}
+                    style={({ pressed }) => [
+                      styles.riskAction,
+                      { backgroundColor: row.stats.color },
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Text style={styles.riskActionText}>{copy.crews.checkIn}</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
           </View>
         )}
 
-        {stats.length > 0 && <WeekAdviceBanner advice={advice.week} />}
+        {/* With nothing at risk the screen opens with the reward instead. */}
+        {atRisk.length === 0 && longest && (
+          <View style={styles.section}>
+            <Text style={styles.label}>{copy.stats.longestRun}</Text>
+            <View style={styles.headline}>
+              <Display size={68} line={60}>{String(longest.streak.days)}</Display>
+              <Text style={styles.headlineUnit}>{copy.stats.dayUnit(longest.streak.days)}</Text>
+            </View>
+            <Text style={styles.riskBody}>{copy.stats.longestRunOn(longest.stats.name)}</Text>
+          </View>
+        )}
 
-        {stats.length > 0 && (
-          <AdviceList
-            tab={tab}
-            onTab={setTab}
-            needsWork={advice.needsWork}
-            goingWell={advice.goingWell}
-            windowDays={ADVICE_DAYS}
-            onOpen={(habitId) =>
-              router.push({ pathname: '/new-habit', params: { id: habitId } })
-            }
-          />
+        {running.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.label}>{copy.stats.running}</Text>
+            {running.map((row) => (
+              <Pressable
+                key={row.stats.habitId}
+                accessibilityRole="button"
+                accessibilityLabel={`${row.stats.name}. ${copy.stats.runDays(row.streak.days)}`}
+                onPress={() =>
+                  router.push({ pathname: '/new-habit', params: { id: row.stats.habitId } })
+                }
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+              >
+                <View style={[styles.bar, { backgroundColor: row.stats.color }]} />
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {row.stats.name}
+                  </Text>
+                  {strip(row)}
+                </View>
+                <Display size={24} line={24}>{String(row.streak.days)}</Display>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {running.length === 0 && atRisk.length === 0 && rows.length > 0 && (
+          <Text style={styles.empty}>{copy.stats.nothingRunning}</Text>
+        )}
+
+        {/* Quiet, and phrased as an offer. Nobody needs a list of their failures
+            at full contrast. */}
+        {cold.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.label}>{copy.stats.cold}</Text>
+            <Text style={styles.riskBody}>{copy.stats.coldBody}</Text>
+            {cold.map((row) => (
+              <Pressable
+                key={row.stats.habitId}
+                accessibilityRole="button"
+                accessibilityLabel={copy.stats.openHabit(row.stats.name)}
+                onPress={() =>
+                  router.push({ pathname: '/new-habit', params: { id: row.stats.habitId } })
+                }
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+              >
+                <View style={[styles.bar, { backgroundColor: alpha(row.stats.color, 0.35) }]} />
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowNameCold} numberOfLines={1}>
+                    {row.stats.name}
+                  </Text>
+                  {strip(row)}
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {rows.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={styles.label}>{copy.stats.overTime}</Text>
+              <Text style={styles.labelQuiet}>{copy.stats.lastDays(TREND_DAYS)}</Text>
+            </View>
+            {/* Neutral on purpose: six habit colours in one aggregate reads as a
+                fruit salad, and this view is about the shape, not whose it is. */}
+            <TrendBars days={trend} color={alpha(colors.overlay, 0.3)} from="" to="" />
+          </View>
+        )}
+
+        {rows.length > 0 && (
+          <View style={styles.section}>
+            <FirstTimeHint id="progress-views">{copy.hints.progressViews}</FirstTimeHint>
+            <WeekAdviceBanner advice={advice.week} />
+            <AdviceList
+              tab={tab}
+              onTab={setTab}
+              needsWork={advice.needsWork}
+              goingWell={advice.goingWell}
+              windowDays={ADVICE_DAYS}
+              onOpen={(habitId) =>
+                router.push({ pathname: '/new-habit', params: { id: habitId } })
+              }
+            />
+          </View>
         )}
 
         <View style={styles.footer}>
@@ -339,60 +334,59 @@ export default function ProgressScreen() {
 
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
-  windows: { flexDirection: 'row', gap: spacing.sm },
-  window: {
-    minHeight: 40,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: radii.chip,
-    borderWidth: 1,
-    borderColor: colors.border,
+
+  // Ma: the gap between two ideas is bigger than the gap inside one. An even
+  // rhythm everywhere is what made this read as a list of things.
+  section: { gap: spacing.md, paddingTop: spacing.xxl },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+
+  label: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
   },
-  windowActive: { backgroundColor: colors.text, borderColor: colors.text },
-  windowText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
-  windowTextActive: { color: colors.bg },
-  headline: { gap: 2 },
-  headlineSub: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
-  range: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
-  empty: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
-  view: { marginTop: 24 },
-  habit: {
+  labelQuiet: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+
+  headline: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  headlineUnit: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },
+
+  riskCard: {
     gap: spacing.sm,
     padding: spacing.lg,
     borderRadius: radii.bigCard,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: alpha(colors.overlay, 0.05),
+    borderStyle: 'dashed',
   },
-  habitHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  habitName: { flex: 1, ...display(22, 22), color: colors.text },
-  habitRate: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.textMuted },
-  track: { height: 8, borderRadius: 4, backgroundColor: alpha(colors.overlay, 0.08) },
-  fill: { height: 8, borderRadius: 4 },
-  habitMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
-  calendar: { paddingTop: spacing.sm },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  step: {
-    width: 40,
-    height: 40,
+  riskBody: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.textMuted },
+  riskAction: {
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radii.chip,
   },
-  stepOff: { opacity: 0.3 },
-  stepText: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
-  period: { flex: 1, textAlign: 'center', fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
-  footer: { gap: spacing.md, paddingTop: spacing.lg },
+  riskActionText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.bg },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 44 },
+  bar: { width: 6, height: 30, borderRadius: 3, flexShrink: 0 },
+  rowBody: { flex: 1, gap: 6 },
+  rowName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
+  rowNameCold: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textMuted },
+  strip: { flexDirection: 'row', gap: 3 },
+  mark: { flex: 1, height: 5, borderRadius: 2.5, maxWidth: 22 },
+
+  empty: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textMuted,
+    paddingTop: spacing.xl,
+  },
+
+  footer: { gap: spacing.md, paddingTop: spacing.xxl },
   storage: { fontFamily: fonts.body, fontSize: 12, lineHeight: 18, color: colors.textFaint },
-  confirm: {
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+  confirm: { gap: spacing.sm },
   confirmTitle: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   danger: {
     minHeight: 48,
