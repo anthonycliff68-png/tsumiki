@@ -237,78 +237,72 @@ function Nudge({ color, dock }: { color: string; dock: boolean }) {
   );
 }
 
+/**
+ * Six, not four. The real screen names every habit up to eight, and a person
+ * who has been at this a few weeks has more than four — four left the slide
+ * with a third of it empty, which reads as a thin app rather than a calm one.
+ */
 const HABITS = [
-  { n: '10 min stretch', c: habitColors[1], pct: 0.83, w: [1, 1, 1, 1, 1, 0.2, 0] },
-  { n: 'Inbox zero', c: habitColors[0], pct: 1, w: [1, 1, 1, 1, 1, 1, 0] },
-  { n: 'Yogurt bowl', c: habitColors[4], pct: 1, w: [1, 1, 1, 1, 1, 1, 0] },
-  { n: 'Walk 15 min', c: habitColors[2], pct: 0.66, w: [1, 0.2, 1, 0.2, 1, 1, 0] },
+  { n: '10 min stretch', c: habitColors[1], pct: 0.83 },
+  { n: 'Inbox zero', c: habitColors[0], pct: 1 },
+  { n: 'Yogurt bowl', c: habitColors[4], pct: 1 },
+  { n: 'Walk 15 min', c: habitColors[2], pct: 0.66 },
+  { n: 'Read 10 pages', c: habitColors[3], pct: 0.71 },
+  { n: 'Tidy one thing', c: habitColors[5], pct: 0.93 },
 ];
-const TREND = [0.4, 0.75, 0.6, 1, 0.85, 0.5, 0.9, 1, 0.7, 1, 0.95, 0.6, 1, 0.8];
 
-/** A whole month of analytics: rings, a heat wall, and a trend, on one screen. */
+/**
+ * The Progress tab as it actually is: one rate, then a bar per habit, weakest
+ * first, and the one sentence saying what to do about the worst of them.
+ *
+ * It used to draw rings, a heat wall, a trend and a pair of Needs work / Going
+ * well tabs — a screen the app no longer has, and in places never had. The
+ * first thing a new person sees was selling them a tab they would go looking
+ * for and not find, which is worse than showing them nothing.
+ */
 function Progress({ color, dock }: { color: string; dock: boolean }) {
   const s = useStyles(makeStyles);
+  // Weakest first, the way the real screen sorts it.
+  const ranked = [...HABITS].sort((a, b) => a.pct - b.pct);
   return (
     <>
-      <Head small="This week · 20–26 Sep" big="94%" />
+      <Head small="This week · 20–26 Sep" big="87%" />
       <View style={s.body}>
-        <View style={s.ringRow}>
-          {HABITS.slice(0, 4).map((h) => (
-            <View key={h.n} style={s.ringWrap}>
-              <View style={[s.ring, { borderColor: alpha(h.c, 0.25) }]}>
-                <View
-                  style={[
-                    s.ringFill,
-                    { borderColor: h.c, transform: [{ rotate: `${h.pct * 300}deg` }] },
-                  ]}
-                />
-                <Text style={[s.ringPct, { color: h.c }]}>{Math.round(h.pct * 100)}</Text>
-              </View>
-            </View>
-          ))}
+        <View style={s.periods}>
+          <View style={s.period}>
+            <Text style={s.periodLabel}>Day</Text>
+          </View>
+          <View style={[s.period, s.periodOn]}>
+            <Text style={s.periodLabelOn}>Week</Text>
+          </View>
+          <View style={s.period}>
+            <Text style={s.periodLabel}>Month</Text>
+          </View>
         </View>
 
-        {HABITS.map((h) => (
-          <View key={h.n} style={s.wallRow}>
-            <Text style={s.wallName} numberOfLines={1}>{h.n}</Text>
-            <View style={s.wallCells}>
-              {h.w.map((v, i) => (
-                <View
-                  key={i}
-                  style={[
-                    s.wallCell,
-                    v === 1 && { backgroundColor: h.c },
-                    v > 0 && v < 1 && { backgroundColor: alpha(h.c, 0.2), borderWidth: 1, borderColor: h.c },
-                    v === 0 && { borderWidth: 1, borderColor: alpha(h.c, 0.22) },
-                  ]}
-                />
-              ))}
+        <Text style={s.small}>20 of 23 due · 20–26 Sep</Text>
+
+        <View style={s.barsHead}>
+          <Text style={s.barsTitle}>Each habit</Text>
+          <Text style={s.barsSort}>Weakest first</Text>
+        </View>
+
+        {ranked.map((h) => (
+          <View key={h.n} style={s.barRow}>
+            <Text style={s.barName} numberOfLines={1}>{h.n}</Text>
+            <View style={s.barTrack}>
+              <View
+                style={[s.barFill, { width: `${Math.round(h.pct * 100)}%`, backgroundColor: h.c }]}
+              />
             </View>
+            <Text style={s.barPct}>{Math.round(h.pct * 100)}%</Text>
           </View>
         ))}
 
-        <View style={s.trend}>
-          {TREND.map((v, i) => (
-            <View key={i} style={[s.trendBar, { height: 6 + v * 56, backgroundColor: alpha(color, 0.35 + v * 0.6) }]} />
-          ))}
-        </View>
-        <Text style={s.small}>Thirty days. The shape says more than the number.</Text>
-
-        <View style={s.tabs}>
-          <View style={[s.tab2, s.tab2On]}>
-            <Text style={s.tab2LabelOn}>Needs work</Text>
-            <Text style={s.tab2CountOn}>1</Text>
-          </View>
-          <View style={s.tab2}>
-            <Text style={s.tab2Label}>Going well</Text>
-            <Text style={s.tab2Count}>3</Text>
-          </View>
-        </View>
-
-        <View style={[s.advice, { borderColor: alpha(habitColors[2], 0.5), backgroundColor: alpha(habitColors[2], 0.1) }]}>
-          <Text style={s.adviceName}>Walk 15 min · 66%</Text>
+        <View style={[s.advice, { borderColor: alpha(color, 0.5), backgroundColor: alpha(color, 0.1) }]}>
+          <Text style={s.adviceName}>Your week</Text>
           <Text style={s.adviceText}>
-            It keeps breaking on Tuesdays. Drop that day and the rest holds.
+            Walk 15 min keeps breaking on Tuesdays. Drop that day and the rest holds.
           </Text>
         </View>
       </View>
@@ -416,22 +410,6 @@ const makeStyles = (colors: Palette) => ({
   reaction: { borderWidth: 1, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
   reactionLabel: { fontFamily: fonts.bodyBold, fontSize: 11 },
 
-  tabs: { flexDirection: 'row', gap: 6, marginTop: spacing.md },
-  tab2: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 5,
-    paddingHorizontal: 11,
-  },
-  tab2On: { backgroundColor: colors.text, borderColor: 'transparent' },
-  tab2Label: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textMuted },
-  tab2LabelOn: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.bg },
-  tab2Count: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.textFaint },
-  tab2CountOn: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.bg },
   advice: {
     borderWidth: 1,
     borderRadius: radii.card,
@@ -441,30 +419,44 @@ const makeStyles = (colors: Palette) => ({
   adviceName: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.text },
   adviceText: { fontFamily: fonts.body, fontSize: 11, lineHeight: 16, color: colors.textMuted, marginTop: 2 },
 
-  ringRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  ringWrap: { alignItems: 'center' },
-  ring: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 4,
+  periods: { flexDirection: 'row', gap: 5, marginBottom: 8 },
+  period: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: alpha(colors.overlay, 0.18),
   },
-  ringFill: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 4,
-    borderLeftColor: 'transparent',
-    borderBottomColor: 'transparent',
+  periodOn: { backgroundColor: colors.text, borderColor: 'transparent' },
+  periodLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textMuted },
+  periodLabelOn: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.bg },
+  barsHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: spacing.md,
+    marginBottom: 2,
   },
-  ringPct: { fontFamily: fonts.bodyBold, fontSize: 13 },
-  wallRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 4 },
-  wallName: { width: 74, fontFamily: fonts.body, fontSize: 11, color: colors.textMuted },
-  wallCells: { flex: 1, flexDirection: 'row', gap: 2 },
-  wallCell: { flex: 1, height: 15, borderRadius: 4 },
-  trend: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 64, marginTop: 12 },
-  trendBar: { flex: 1, borderTopLeftRadius: 2, borderTopRightRadius: 2 },
+  barsTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+  },
+  barsSort: { fontFamily: fonts.body, fontSize: 10, color: colors.textFaint },
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
+  // Wide enough for the longest name here: truncated labels on a slide read
+  // as a mistake rather than as a screen that is simply full.
+  barName: { width: 88, fontFamily: fonts.body, fontSize: 11, color: colors.text },
+  barTrack: {
+    flex: 1,
+    height: 12,
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: alpha(colors.overlay, 0.1),
+  },
+  barFill: { height: '100%', borderRadius: 6 },
+  barPct: { width: 30, textAlign: 'right', fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textMuted },
 }) as const;
