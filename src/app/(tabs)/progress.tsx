@@ -7,18 +7,29 @@ import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { WeekAdviceBanner } from '@/components/AdviceList';
+import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
 import { MonthGrid, WeekCells, WeekdayHeader, CalendarLegend } from '@/components/HabitCalendar';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
 import { Display } from '@/components/Screen';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
-import { adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
+import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
 import { calendarFor, overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
 import { alpha, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 
-const WINDOWS: { key: StatsWindow; label: string }[] = [
+/**
+ * Overall is not a period, which is why it comes first.
+ *
+ * The other three answer "how did this stretch go" and you have to pick a
+ * stretch before they say anything. Overall answers "how am I doing", which is
+ * the question you open the tab with — and it is the only one that names which
+ * habits to do something about rather than leaving you to read it off a list.
+ */
+type ProgressView = 'overall' | StatsWindow;
+
+const VIEWS: { key: ProgressView; label: string }[] = [
+  { key: 'overall', label: copy.stats.overall },
   { key: 'day', label: copy.stats.day },
   { key: 'week', label: copy.stats.week },
   { key: 'month', label: copy.stats.month },
@@ -102,8 +113,11 @@ export default function ProgressScreen() {
   const { data: history = [], refetch, isRefetching } = useHabitHistory(userId);
   const resetHistory = useResetHistory(userId);
 
-  const [window, setWindow] = useState<StatsWindow>('week');
+  const [view, setView] = useState<ProgressView>('overall');
+  const [adviceTab, setAdviceTab] = useState<AdviceTab>('needs-work');
   const [offset, setOffset] = useState(0);
+  // Overall has no period of its own; the calendars below still want one.
+  const window: StatsWindow = view === 'overall' ? 'month' : view;
   const [confirming, setConfirming] = useState(false);
   const today = localDateString(new Date());
 
@@ -159,17 +173,39 @@ export default function ProgressScreen() {
   const named = crowded ? slipping : rated;
   const accent = stats[0]?.color ?? habitColors[0];
 
+  const placements = useMemo(
+    () =>
+      new Map<string, Placement>(
+        history.map((habit) => [
+          habit.habitId,
+          { mode: habit.mode, anchorLabel: habit.anchorLabel, anchorLoad: habit.anchorLoad },
+        ]),
+      ),
+    [history],
+  );
+
   const advice = useMemo(() => {
     const span = adviceRange(to);
-    const placements = new Map<string, Placement>(
-      history.map((habit) => [
-        habit.habitId,
-        { mode: habit.mode, anchorLabel: habit.anchorLabel, anchorLoad: habit.anchorLoad },
-      ]),
-    );
     const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
     return { ...splitVerdicts(over, placements), week: adviseWeek(over) };
-  }, [history, to, today]);
+  }, [history, placements, to, today]);
+
+  /**
+   * The same verdicts, but always the last thirty days ending today.
+   *
+   * The banner above follows whatever period you have stepped to, because it is
+   * commentary on that period. "How am I doing" is not a question about a
+   * stretch you navigated to, so this one ignores the stepper entirely.
+   */
+  const overallView = useMemo(() => {
+    const span = adviceRange(today);
+    const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
+    return {
+      ...splitVerdicts(over, placements),
+      week: adviseWeek(over),
+      rate: overallOf(over),
+    };
+  }, [history, placements, today]);
 
   const bar = (habit: HabitStats) => (
     <Pressable
@@ -266,15 +302,15 @@ export default function ProgressScreen() {
         <Display size={56} line={50}>{copy.stats.title}</Display>
 
         <View style={styles.windows}>
-          {WINDOWS.map((option) => {
-            const active = option.key === window;
+          {VIEWS.map((option) => {
+            const active = option.key === view;
             return (
               <Pressable
                 key={option.key}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 onPress={() => {
-                  setWindow(option.key);
+                  setView(option.key);
                   setOffset(0);
                 }}
                 style={[styles.window, active && styles.windowActive]}
@@ -287,6 +323,49 @@ export default function ProgressScreen() {
           })}
         </View>
 
+        {view === 'overall' ? (
+          <>
+            {/* No stepper: there is no stretch to step through. */}
+            <View style={styles.headline}>
+              <Display size={72} line={62}>
+                {overallView.rate.rate === null
+                  ? '—'
+                  : `${Math.round(overallView.rate.rate * 100)}%`}
+              </Display>
+              <Text style={styles.headlineSub}>
+                {overallView.rate.rate === null
+                  ? copy.stats.noneDue
+                  : `${copy.stats.doneOfDue(overallView.rate.done, overallView.rate.due)} \u00b7 ${copy.stats.lastDays(ADVICE_DAYS)}`}
+              </Text>
+            </View>
+
+            {stats.length === 0 ? (
+              <Text style={styles.empty}>{copy.stats.empty}</Text>
+            ) : (
+              <View style={styles.section}>
+                {/* Built months ago and never put on a screen: the two lists,
+                    each row carrying the one thing to do about that habit. */}
+                <AdviceList
+                  tab={adviceTab}
+                  onTab={setAdviceTab}
+                  needsWork={overallView.needsWork}
+                  goingWell={overallView.goingWell}
+                  onOpen={(habitId) =>
+                    router.push({ pathname: '/habit/[id]', params: { id: habitId, period: 'month' } })
+                  }
+                  windowDays={ADVICE_DAYS}
+                />
+              </View>
+            )}
+
+            {stats.length > 0 && (
+              <View style={styles.section}>
+                <WeekAdviceBanner advice={overallView.week} />
+              </View>
+            )}
+          </>
+        ) : (
+          <>
         <View style={styles.stepper}>
           <Pressable
             accessibilityRole="button"
@@ -386,6 +465,9 @@ export default function ProgressScreen() {
 
         {crowded && slipping.length === 0 && (
           <Text style={styles.empty}>{copy.stats.allFine}</Text>
+        )}
+
+          </>
         )}
 
         {stats.length > 0 && (

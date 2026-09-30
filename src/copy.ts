@@ -625,6 +625,8 @@ export const copy = {
     lastDays: (days: number) => `Last ${days} days`,
     nothingRunning: 'Nothing running yet. One check-in starts a run.',
 
+    /** First, and where the tab opens: how you are doing, not how a stretch went. */
+    overall: 'Overall',
     day: 'Day',
     week: 'Week',
     month: 'Month',
