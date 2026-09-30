@@ -87,7 +87,58 @@ function WeekStrip({ color, days }: { color: string; days: Props['days'] }) {
   );
 }
 
-function MonthGrid({ color, days }: { color: string; days: Props['days'] }) {
+/**
+ * The weekday letters on their own, for a list of week strips.
+ *
+ * Seven cells beside a habit's name need saying which day is which, but
+ * repeating S M T W T F S on every row is seven words of noise per habit. The
+ * columns line up, so the header only has to exist once.
+ */
+export function WeekdayHeader() {
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={styles.cells}>
+      {LETTERS.map((letter, index) => (
+        <View key={index} style={styles.cellWrap}>
+          <Text style={styles.letter}>{letter}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** One habit's week as seven cells and nothing else, for a row in a list. */
+export function WeekCells({ color, days }: { color: string; days: Props['days'] }) {
+  const colors = useTheme();
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={styles.cells}>
+      {days.map((day) => (
+        <View key={day.date} style={styles.cellWrap}>
+          <View style={[styles.cell, cellStyle(day.state, color, colors)]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** A filled day carries the colour, so its number has to sit on it, not in it. */
+function numberColor(state: DayState, colors: Palette): string {
+  if (state === 'done') return colors.bg;
+  if (state === 'missed') return colors.text;
+  return colors.textFaint;
+}
+
+export function MonthGrid({
+  color,
+  days,
+  numbers = false,
+}: {
+  color: string;
+  days: Props['days'];
+  /** Dates inside the cells. Worth it when the grid is the whole point. */
+  numbers?: boolean;
+}) {
   const colors = useTheme();
   const styles = useStyles(makeStyles);
   const first = days[0];
@@ -109,7 +160,19 @@ function MonthGrid({ color, days }: { color: string; days: Props['days'] }) {
         ))}
         {days.map((day) => (
           <View key={day.date} style={styles.monthCell}>
-            <View style={[styles.cell, cellStyle(day.state, color, colors)]} />
+            <View
+              style={[
+                styles.cell,
+                cellStyle(day.state, color, colors),
+                numbers && styles.cellNumbered,
+              ]}
+            >
+              {numbers && (
+                <Text style={[styles.dayNumber, { color: numberColor(day.state, colors) }]}>
+                  {Number(day.date.slice(8))}
+                </Text>
+              )}
+            </View>
           </View>
         ))}
       </View>
@@ -131,6 +194,10 @@ const makeStyles = (colors: Palette) => ({
   legendLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
   week: { flexDirection: 'row', gap: 5 },
   weekCol: { flex: 1, gap: 4, alignItems: 'center' },
+  cells: { flex: 1, flexDirection: 'row', gap: 4 },
+  cellWrap: { flex: 1 },
+  cellNumbered: { alignItems: 'center', justifyContent: 'center' },
+  dayNumber: { fontFamily: fonts.bodyBold, fontSize: 9 },
   cell: { width: '100%', aspectRatio: 1, borderRadius: 4, minWidth: 12 },
   letter: {
     fontFamily: fonts.bodyBold,

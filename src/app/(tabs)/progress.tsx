@@ -8,14 +8,15 @@ import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { WeekAdviceBanner } from '@/components/AdviceList';
+import { MonthGrid, WeekCells, WeekdayHeader, CalendarLegend } from '@/components/HabitCalendar';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
 import { Display } from '@/components/Screen';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
 import { adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
-import { overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
-import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { calendarFor, overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
+import { alpha, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 
 const WINDOWS: { key: StatsWindow; label: string }[] = [
   { key: 'day', label: copy.stats.day },
@@ -135,6 +136,19 @@ export default function ProgressScreen() {
     [history, from, to, today],
   );
 
+  /**
+   * The actual days behind each habit, not just its rate.
+   *
+   * A percentage over a week says how much and never which — two habits both
+   * at 71% can be five in a row then a gap, or every other day, and those are
+   * different problems. The days were already computed for the habit screen
+   * and the overview only ever drew the average of them.
+   */
+  const calendars = useMemo(
+    () => new Map(history.map((habit) => [habit.habitId, calendarFor(habit, from, to, today)])),
+    [history, from, to, today],
+  );
+
   const overall = useMemo(() => overallOf(stats), [stats]);
   const rated = stats.filter((habit) => habit.rate !== null);
   const slipping = rated.filter((habit) => (habit.rate ?? 0) < SLIPPING);
@@ -174,17 +188,60 @@ export default function ProgressScreen() {
       <Text style={styles.barName} numberOfLines={1}>
         {habit.name}
       </Text>
-      <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            { width: `${Math.round((habit.rate ?? 0) * 100)}%`, backgroundColor: habit.color },
-          ]}
-        />
-      </View>
+      {/* A week gets its seven days rather than their average: which ones you
+          missed is the question, and a bar cannot answer it. A single day has
+          nothing to lay out, so it keeps the bar. */}
+      {window === 'week' ? (
+        <WeekCells color={habit.color} days={calendars.get(habit.habitId) ?? []} />
+      ) : (
+        <View style={styles.track}>
+          <View
+            style={[
+              styles.fill,
+              { width: `${Math.round((habit.rate ?? 0) * 100)}%`, backgroundColor: habit.color },
+            ]}
+          />
+        </View>
+      )}
       <Text style={styles.barValue}>
         {habit.rate === null ? '—' : `${Math.round(habit.rate * 100)}%`}
       </Text>
+    </Pressable>
+  );
+
+  /**
+   * A month is a calendar, one per habit.
+   *
+   * Thirty days squeezed into a row beside a name is unreadable, and the same
+   * thirty days as one percentage says nothing about where the gaps fell. Laid
+   * out as a real month, weekday-aligned, the shape is the answer: a run, a bad
+   * week, or every Tuesday missing in the same column.
+   */
+  const card = (habit: HabitStats) => (
+    <Pressable
+      key={habit.habitId}
+      accessibilityRole="button"
+      accessibilityLabel={`${copy.stats.openStats(habit.name)}. ${
+        habit.rate === null ? copy.stats.noneDue : `${Math.round(habit.rate * 100)}%`
+      }`}
+      onPress={() =>
+        router.push({ pathname: '/habit/[id]', params: { id: habit.habitId, period: window } })
+      }
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
+    >
+      <View style={styles.cardHead}>
+        <View style={[styles.cardSpine, { backgroundColor: habit.color }]} />
+        <Text style={styles.cardName} numberOfLines={1}>
+          {habit.name}
+        </Text>
+      </View>
+      <MonthGrid color={habit.color} days={calendars.get(habit.habitId) ?? []} numbers />
+      <View style={styles.cardFoot}>
+        <Text style={[styles.cardRate, { color: ink(habit.color, colors) }]}>
+          {habit.rate === null ? '—' : `${Math.round(habit.rate * 100)}%`}
+        </Text>
+        <Text style={styles.cardDone}>{copy.stats.doneOfDue(habit.done, habit.due)}</Text>
+      </View>
     </Pressable>
   );
 
@@ -306,7 +363,23 @@ export default function ProgressScreen() {
               </Text>
               {!crowded && <Text style={styles.labelQuiet}>{copy.stats.weakestFirst}</Text>}
             </View>
-            {named.map(bar)}
+            {window === 'month' ? (
+              <View style={styles.cards}>{named.map(card)}</View>
+            ) : (
+              <>
+                {window === 'week' && (
+                  <View style={styles.headerRow}>
+                    <Text style={styles.barName} />
+                    <WeekdayHeader />
+                    <Text style={styles.barValue} />
+                  </View>
+                )}
+                {named.map(bar)}
+              </>
+            )}
+            {/* Four treatments nobody can guess at, so they are named — the
+                same legend the habit screen uses, for the same cells. */}
+            {window !== 'day' && <CalendarLegend color={accent} />}
             {crowded && <Text style={styles.seeAll}>{copy.stats.seeAll(rated.length)}</Text>}
           </View>
         )}
@@ -405,6 +478,26 @@ const makeStyles = (colors: Palette) => ({
   labelQuiet: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
 
   barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 44 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // Two across: any narrower and the day numbers stop being legible, any wider
+  // and a month of habits is a very long scroll.
+  cards: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  card: {
+    width: '48%',
+    flexGrow: 1,
+    gap: 8,
+    padding: spacing.md,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.05),
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  cardSpine: { width: 3, height: 15, borderRadius: 2 },
+  cardName: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
+  cardFoot: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  cardRate: { fontFamily: fonts.bodyBold, fontSize: 15 },
+  cardDone: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint },
   barName: { width: 96, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
   track: {
     flex: 1,
