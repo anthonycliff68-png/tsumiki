@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +31,13 @@ export const DOCK_HEIGHT = 80 + 58;
 const DOCK_EDGE = 12;
 /** Breathing room between the dock's top edge and the end of a list. */
 const DOCK_GAP = 16;
+
+/** The tab row's own side padding. Shared, because the pill's slots are measured from it. */
+const TAB_ROW_PADDING = 8;
+/** How far the sliding pill sits inside its tab's slot, each side. */
+const PILL_INSET = 3;
+/** Movement past which a touch is a drag across the tabs rather than a tap on one. */
+const DRAG_SLOP = 4;
 
 type TabIcon = (props: IconProps) => React.ReactElement;
 
@@ -122,6 +129,104 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
 
   const { measure } = useContext(MeasuredDock);
 
+  // --- the sliding pill ----------------------------------------------------
+  //
+  // The tab row has no indicator of its own, so this is it: a capsule that
+  // springs between tabs on a tap, and follows your thumb if you drag across
+  // them. Dragging only previews — the release decides — because navigating as
+  // the thumb passes would mount every screen it crosses and fire off their
+  // queries for nothing.
+
+  const tabRoutes = useMemo(() => state.routes.filter((route) => TABS[route.name]), [state.routes]);
+  // Through the filter rather than straight from state.index, so a route that
+  // is not a tab cannot slide the pill onto the wrong one.
+  const tabIndex = Math.max(
+    0,
+    tabRoutes.findIndex((route) => route.key === state.routes[state.index]?.key),
+  );
+
+  const [rowWidth, setRowWidth] = useState(0);
+  /** The tab the thumb is currently over mid-drag; null when not dragging. */
+  const [hover, setHover] = useState<number | null>(null);
+  const shown = hover ?? tabIndex;
+
+  const slot = tabRoutes.length > 0 && rowWidth > 0 ? (rowWidth - TAB_ROW_PADDING * 2) / tabRoutes.length : 0;
+
+  const slide = useRef(new Animated.Value(0)).current;
+  /** Where the pill sat when the finger went down. */
+  const dragFrom = useRef(0);
+  /** The tab a release would commit to. A ref as well as state: the responder
+   *  is built once per layout and would otherwise read a stale hover. */
+  const dragTo = useRef(0);
+
+  const measureRow = useCallback((event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.width;
+    setRowWidth((current) => (Math.abs(current - next) > 0.5 ? next : current));
+  }, []);
+
+  // Follow the real selection whenever it changes — by tap, by drag, or by
+  // something else navigating — and settle after a layout change.
+  useEffect(() => {
+    if (slot <= 0) return;
+    Animated.spring(slide, {
+      toValue: tabIndex * slot,
+      useNativeDriver: true,
+      speed: 18,
+      bounciness: 6,
+    }).start();
+  }, [tabIndex, slot, slide]);
+
+  const drag = useMemo(
+    () =>
+      PanResponder.create({
+        // Only claim the touch once it is clearly a sideways drag, so a plain
+        // tap still reaches the button underneath.
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          slot > 0 && Math.abs(gesture.dx) > DRAG_SLOP && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderGrant: () => {
+          dragFrom.current = tabIndex * slot;
+          dragTo.current = tabIndex;
+        },
+        onPanResponderMove: (_event, gesture) => {
+          if (slot <= 0) return;
+          const furthest = slot * (tabRoutes.length - 1);
+          const at = Math.min(Math.max(dragFrom.current + gesture.dx, 0), furthest);
+          slide.setValue(at);
+          const over = Math.round(at / slot);
+          if (over !== dragTo.current) {
+            dragTo.current = over;
+            setHover(over);
+          }
+        },
+        onPanResponderRelease: () => {
+          const landed = dragTo.current;
+          setHover(null);
+          const route = tabRoutes[landed];
+          if (route && landed !== tabIndex) {
+            navigation.navigate(route.name, route.params);
+            // The effect above springs the pill once the selection catches up.
+          } else {
+            Animated.spring(slide, {
+              toValue: tabIndex * slot,
+              useNativeDriver: true,
+              speed: 18,
+              bounciness: 6,
+            }).start();
+          }
+        },
+        onPanResponderTerminate: () => {
+          setHover(null);
+          Animated.spring(slide, {
+            toValue: tabIndex * slot,
+            useNativeDriver: true,
+            speed: 18,
+            bounciness: 6,
+          }).start();
+        },
+      }),
+    [slot, tabIndex, tabRoutes, navigation, slide],
+  );
+
   return (
     <View
       onLayout={measure}
@@ -188,13 +293,29 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
         </View>
         )}
 
-        <View style={styles.tabRow}>
-          {state.routes.map((route, index) => {
+        <View style={styles.tabRow} onLayout={measureRow} {...drag.panHandlers}>
+          {/* Behind the tabs, and deaf to touches so it never eats one. It is a
+              brighter region inside the dock's own glass rather than a second
+              pane of it: glass stacked on glass turns to mush, which the time
+              picker demonstrated. */}
+          {slot > 0 && (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.pill, { width: slot - PILL_INSET * 2, transform: [{ translateX: slide }] }]}
+            />
+          )}
+
+          {tabRoutes.map((route, index) => {
             const tab = TABS[route.name];
             if (!tab) return null;
 
-            const focused = state.index === index;
-            const color = focused ? colors.white : colors.textInactive;
+            // What the pill is under right now, which during a drag is wherever
+            // the thumb has reached rather than where the app actually is.
+            const lit = index === shown;
+            // Where the app actually is. A screen reader should hear the truth,
+            // not the preview.
+            const selected = index === tabIndex;
+            const color = lit ? colors.white : colors.textInactive;
 
             const onPress = () => {
               const event = navigation.emit({
@@ -202,7 +323,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
                 target: route.key,
                 canPreventDefault: true,
               });
-              if (!focused && !event.defaultPrevented) {
+              if (!selected && !event.defaultPrevented) {
                 navigation.navigate(route.name, route.params);
               }
             };
@@ -211,7 +332,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
               <Pressable
                 key={route.key}
                 accessibilityRole="button"
-                accessibilityState={{ selected: focused }}
+                accessibilityState={{ selected }}
                 accessibilityLabel={tab.label}
                 onPress={onPress}
                 style={styles.tab}
@@ -274,11 +395,20 @@ const makeStyles = (colors: Palette) => ({
     fontSize: 12,
     color: colors.textMuted,
   },
+  pill: {
+    position: 'absolute',
+    left: TAB_ROW_PADDING + PILL_INSET,
+    top: 4,
+    bottom: 8,
+    borderRadius: radii.chip,
+    // A brighter part of the dock's glass, not a second pane of it.
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
   tabRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingTop: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: TAB_ROW_PADDING,
     paddingBottom: 10,
     borderTopWidth: 1,
     borderTopColor: colors.hairline,
