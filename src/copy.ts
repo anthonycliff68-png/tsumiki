@@ -162,7 +162,11 @@ export const copy = {
     routine: {
       eyebrow: 'Step 2 · Your routine',
       title: 'What does your\nday look like?',
-      blurb: 'These are the moments your habits will stack onto. Rough times are fine.',
+      // The reviewer read this list as a set of tasks to complete and only
+      // worked out what it was after reaching the home screen. Saying what
+      // these are not is the part that was missing.
+      blurb:
+        'Not habits to tick off \u2014 these already happen. They are the moments in your day, and habits hang off them. Rough times are fine.',
       addOwn: 'Your own',
       ownPlaceholder: 'Name this moment',
       timeLabel: (label: string) => `Change the time for ${label}`,
@@ -177,7 +181,11 @@ export const copy = {
     habit: {
       eyebrow: 'Step 3 · First habit',
       title: 'Start with\none.',
-      blurb: 'Small beats ambitious. We matched each one to a moment in your day.',
+      blurb:
+        'This is the whole idea: a habit hangs off a moment you already have, so it has a time it actually happens. Small beats ambitious.',
+      /** The moment the habit hangs off, and the fact that it is yours to move. */
+      whenLabel: 'Hang it after',
+      whenHint: 'Tap another moment to move it.',
       after: (anchor: string) => `After ${anchor}`,
       makeOwn: 'Make my own instead',
       add: (habit: string) => `Add ${habit}`,
@@ -191,7 +199,11 @@ export const copy = {
       justYou: 'Just you, for now',
       isNew: 'New',
       pitch: 'People who start with friends are way more likely to follow through',
-      pitchBlurb: 'Invite 1\u20134 friends. Each picks their own moment. You all keep one streak.',
+      // "Miss a day and it is forgiven, miss twice and it goes" came back from
+      // a reader as "1 share each, picking their own moment". Two short
+      // sentences, one idea each, rather than one clever line.
+      pitchBlurb:
+        'Up to 4 friends, all doing the same habit \u2014 each at their own moment. You share one streak. Miss a day and it is forgiven; miss two in a row and the streak starts again.',
       invite: 'Invite friends',
       solo: 'Start solo for now',
       you: 'You',
@@ -211,7 +223,7 @@ export const copy = {
     modeAt: 'At a time',
     modeAtSub: 'Set a clock',
     modeAny: 'Anytime',
-    modeAnySub: 'No set spot',
+    modeAnySub: 'Any time of day',
     afterYou: 'After you\u2026',
     atTime: 'At',
     whichDays: 'Which days?',
@@ -365,35 +377,26 @@ export const copy = {
   },
 
   welcome: {
-    // Four screens, in the order someone needs them: the day, the people,
-    // the poke, the proof. Each slide's words are short because the screen
-    // beside them is doing most of the explaining.
+    /**
+     * One screen, not four.
+     *
+     * It used to teach the whole system — stacking, the shared streak, the
+     * nudge rules, the charts — before anyone had touched any of it, and a
+     * reader came away from it unable to say what the app did. The teaching
+     * moved into the setup steps, where each idea arrives at the moment you
+     * are using it. What is left here is the one thing you need before you
+     * decide to sign up: what this is.
+     */
     slides: [
       {
-        step: 'One',
-        title: 'Stack it onto\nyour day.',
-        body: 'Hang a habit off something you already do and it has somewhere to live.',
-      },
-      {
-        step: 'Two',
-        title: 'Share one\nstreak.',
+        step: 'Tsumiki',
+        title: 'Habits that hang\non a day you\nalready have.',
         body:
-          'Two to five friends, one streak, each picking their own moment. Miss a day and it is forgiven \u2014 miss twice and it goes.',
-      },
-      {
-        step: 'Three',
-        title: 'Nudge,\ndon\u2019t nag.',
-        body: 'One a day, only if they still owe it, and never in the middle of the night.',
-      },
-      {
-        step: 'Four',
-        title: 'See where\nit is going.',
-        body: 'Rings for a day, a wall for a week, a line for a month.',
+          'You already wake up, make coffee, break for lunch. Pick one of those moments and hang a small habit off it, so it has a time it actually happens. Do it alongside friends and you keep one streak between you.',
       },
     ],
     next: 'Next',
     start: 'Get started',
-    skip: 'Skip',
     slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
   },
 

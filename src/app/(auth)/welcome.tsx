@@ -11,10 +11,10 @@ const SEEN = 'tsumiki.welcome.seen';
 /**
  * The first run, and only the first run.
  *
- * Someone who has already been told what habit stacking is should not be
- * told again every time they sign out, so the carousel is skipped once it
- * has been through. The check happens before the first paint — a flash of
- * onboarding you then get yanked out of is worse than no onboarding.
+ * Someone who has already been told what this is should not be told again
+ * every time they sign out, so the screen is skipped once it has been seen.
+ * The check happens before the first paint — a flash of onboarding you then
+ * get yanked out of is worse than no onboarding.
  */
 export default function WelcomeRoute() {
   const colors = useTheme();
@@ -44,5 +44,5 @@ export default function WelcomeRoute() {
   };
 
   if (show !== true) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
-  return <Welcome onStart={done} onSkip={done} />;
+  return <Welcome onStart={done} />;
 }

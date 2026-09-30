@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,7 +11,7 @@ import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeGutter } from '@/data/defaults';
-import { useSaveRoutine } from '@/lib/api';
+import { useAnchors, useSaveRoutine } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
@@ -50,6 +50,21 @@ export default function RoutineScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const saveRoutine = useSaveRoutine(session?.user.id);
+  const { data: existing } = useAnchors(session?.user.id);
+
+  /**
+   * This screen builds a routine from the defaults and inserts it. Someone who
+   * already has one has nothing to do here, and saving would lay a second copy
+   * of the defaults on top of their real day — two Wake ups, two Lunches.
+   *
+   * The tabs only send people here when they have no anchors, so this is for
+   * every other way of arriving: a deep link, a stale back stack, a step order
+   * that changes later. Cheaper to make the screen refuse than to remember
+   * every route into it.
+   */
+  useEffect(() => {
+    if (existing && existing.length > 0) router.replace('/');
+  }, [existing]);
 
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [editing, setEditing] = useState<string | null>(null);

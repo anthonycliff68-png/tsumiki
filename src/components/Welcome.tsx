@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Bleed } from '@/components/Bleed';
-import { PrimaryButton, TextButton } from '@/components/Button';
+import { PrimaryButton } from '@/components/Button';
 import { WelcomeScreen, type ScreenKind } from '@/components/WelcomeScreens';
 import { copy } from '@/copy';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -36,22 +36,22 @@ const show = (i: number): ScreenKind => SHOWS[i % SHOWS.length] ?? 'day';
 
 type Props = {
   onStart: () => void;
-  onSkip: () => void;
 };
 
 /**
  * The first thing anyone sees.
  *
- * Three cards rather than one screen, because "habit stacking" is not
- * self-evident and someone who does not understand "never miss twice" before
- * they sign up is someone who leaves in a week. It is the only place in the
- * app where explaining is worth a swipe.
+ * It used to be four cards teaching the whole system before anyone had touched
+ * any of it, and a reader came away unable to say what the app did — they had
+ * been told about stacking, shared streaks, nudge rules and charts in the
+ * abstract, and none of it stuck. The teaching moved into the setup steps,
+ * where each idea arrives at the moment it is being used. This screen answers
+ * only the question you have before signing up: what is this.
  *
- * The background is not black: each idea has its own hue and the bleed
- * cross-fades as you move, so the colour is doing the work of telling you
- * where you are — the dots are only a confirmation.
+ * Still built for a list, because one screen is a decision rather than a
+ * constraint, and going back to several is a copy change.
  */
-export function Welcome({ onStart, onSkip }: Props) {
+export function Welcome({ onStart }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -122,6 +122,7 @@ export function Welcome({ onStart, onSkip }: Props) {
       </ScrollView>
 
       <View style={[styles.foot, { paddingBottom: insets.bottom + spacing.lg }]}>
+        {slides.length > 1 && (
         <View style={styles.dots}>
           {slides.map((slide, i) => {
             const width = x.interpolate({
@@ -142,9 +143,9 @@ export function Welcome({ onStart, onSkip }: Props) {
             );
           })}
         </View>
+        )}
 
         <PrimaryButton label={last ? copy.welcome.start : copy.welcome.next} onPress={advance} />
-        <TextButton label={copy.welcome.skip} onPress={onSkip} />
       </View>
     </View>
   );

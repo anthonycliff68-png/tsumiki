@@ -40,7 +40,18 @@ export default function FirstHabitScreen() {
   const createHabit = useCreateFirstHabit(userId);
 
   const [selectedId, setSelectedId] = useState<string>('walk');
+  /**
+   * A moment picked by hand, overriding the one the suggestion was matched to.
+   * Cleared whenever the habit changes, because the match is a better starting
+   * guess for the new one than the last habit's answer.
+   */
+  const [movedTo, setMovedTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const pickHabit = (id: string) => {
+    setSelectedId(id);
+    setMovedTo(null);
+  };
 
   const cards = useMemo(
     () =>
@@ -52,15 +63,17 @@ export default function FirstHabitScreen() {
   );
 
   const selected = cards.find((card) => card.suggestion.id === selectedId);
+  /** Where this habit will actually hang: your choice, or the matched guess. */
+  const anchor = anchors.find((a) => a.id === movedTo) ?? selected?.anchor;
 
   const add = async () => {
-    if (!selected?.anchor) return;
+    if (!selected || !anchor) return;
     setError(null);
     try {
       const habit = await createHabit.mutateAsync({
         name: selected.suggestion.name,
         color: selected.suggestion.color,
-        anchorId: selected.anchor.id,
+        anchorId: anchor.id,
       });
       router.push({
         pathname: '/crew',
@@ -93,15 +106,16 @@ export default function FirstHabitScreen() {
         </View>
 
         <View style={styles.grid}>
-          {cards.map(({ suggestion, anchor }) => {
+          {cards.map((card) => {
+            const { suggestion } = card;
             const isSelected = suggestion.id === selectedId;
             return (
               <Pressable
                 key={suggestion.id}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`${suggestion.name}. ${copy.onboarding.habit.after(anchor?.label ?? '')}`}
-                onPress={() => setSelectedId(suggestion.id)}
+                accessibilityLabel={`${suggestion.name}. ${copy.onboarding.habit.after(card.anchor?.label ?? '')}`}
+                onPress={() => pickHabit(suggestion.id)}
                 style={({ pressed }) => [
                   styles.card,
                   isSelected
@@ -128,7 +142,9 @@ export default function FirstHabitScreen() {
                     style={[styles.cardEyebrow, isSelected && styles.cardEyebrowSelected]}
                     numberOfLines={1}
                   >
-                    {copy.onboarding.habit.after(anchor?.label ?? '')}
+                    {copy.onboarding.habit.after(
+                      (isSelected ? anchor?.label : card.anchor?.label) ?? '',
+                    )}
                   </Text>
                 </View>
                 <Text style={[display(24, 22), isSelected && { color: colors.white }]}>
@@ -138,6 +154,39 @@ export default function FirstHabitScreen() {
             );
           })}
         </View>
+
+        {/* The moment is a choice, not a fact. Showing every moment with the
+            current one lit is the clearest way to say so — and it is the only
+            place in setup where the stack is visibly two things joined. */}
+        {anchors.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.eyebrow}>{copy.onboarding.habit.whenLabel}</Text>
+            <View style={styles.moments}>
+              {anchors.map((option) => {
+                const active = option.id === anchor?.id;
+                return (
+                  <Pressable
+                    key={option.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={copy.onboarding.habit.after(option.label)}
+                    onPress={() => setMovedTo(option.id)}
+                    style={({ pressed }) => [
+                      styles.moment,
+                      active && { backgroundColor: colors.text, borderColor: colors.text },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.momentLabel, active && { color: colors.bg }]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.hint}>{copy.onboarding.habit.whenHint}</Text>
+          </View>
+        )}
 
         <TextButton
           label={copy.onboarding.habit.makeOwn}
@@ -176,6 +225,19 @@ export default function FirstHabitScreen() {
 }
 
 const makeStyles = (colors: Palette) => ({
+  section: { gap: spacing.sm },
+  moments: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  moment: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.05),
+  },
+  momentLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
+  hint: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
   root: { flex: 1, backgroundColor: colors.bg },
   intro: { gap: spacing.sm },
   eyebrow: {
