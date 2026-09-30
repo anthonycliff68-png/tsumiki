@@ -378,26 +378,63 @@ export const copy = {
 
   welcome: {
     /**
-     * One screen, not four.
+     * Why, not how.
      *
-     * It used to teach the whole system — stacking, the shared streak, the
-     * nudge rules, the charts — before anyone had touched any of it, and a
-     * reader came away from it unable to say what the app did. The teaching
-     * moved into the setup steps, where each idea arrives at the moment you
-     * are using it. What is left here is the one thing you need before you
-     * decide to sign up: what this is.
+     * These used to explain the mechanics — stacking, the streak rule, the
+     * nudge limits, the charts — to someone who had touched none of them, and
+     * a reader came out unable to say what the app did. Mechanics are now
+     * taught inside the setup and by the walkthrough, at the moment they are
+     * used. What is left here is the argument: why hanging a habit on your day
+     * beats a list, why other people make it stick, and why one bad day is not
+     * the end. Somebody deciding whether to sign up needs the case, not the
+     * manual.
      */
     slides: [
       {
-        step: 'Tsumiki',
-        title: 'Habits that hang\non a day you\nalready have.',
+        step: 'The cue',
+        title: 'A list will not\nremind you.',
         body:
-          'You already wake up, make coffee, break for lunch. Pick one of those moments and hang a small habit off it, so it has a time it actually happens. Do it alongside friends and you keep one streak between you.',
+          'Habits fail because nothing sets them off. Hang one on something you already do every single day \u2014 coffee, lunch, getting home \u2014 and the thing you already do becomes the reminder.',
+      },
+      {
+        step: 'The people',
+        title: 'Alone, the only\none you let\ndown is you.',
+        body:
+          'Up to five of you do the same habit, each at your own moment, and the streak belongs to all of you. Turning up stops being something you owe yourself and starts being something you owe them.',
+      },
+      {
+        step: 'The rule',
+        title: 'One bad day\nis just a day.',
+        body:
+          'Missing once is normal, and most apps punish it anyway. Tsumiki forgives the first miss and only counts the second \u2014 because one missed day is a day, and two in a row is how a habit ends.',
       },
     ],
     next: 'Next',
     start: 'Get started',
     slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
+  },
+
+  walkthrough: {
+    /**
+     * How, by doing it once.
+     *
+     * The carousel makes the case before sign-up; this closes the loop after
+     * setup. A reader said the concept only made sense once they had used the
+     * app — so this is one real check-in on a real habit, about a minute in,
+     * rather than a week.
+     */
+    eyebrow: 'Last thing',
+    title: 'Do it once,\nnow.',
+    blurb:
+      'The whole app is this one move. Tap the circle to check off your first habit \u2014 you can undo it straight after if you have not actually done it.',
+    when: (moment: string) => `Yours is ${moment}`,
+    doneTitle: 'That was it.',
+    doneBlurb: (moment: string) =>
+      `Tomorrow ${moment}, Tsumiki will nudge you, and one tap is all it takes. Miss a day and you get it back \u2014 miss two and the streak starts again.`,
+    doneSolo:
+      'Add a crew whenever you like and the streak becomes something the whole group keeps.',
+    go: 'Take me in',
+    skip: 'I will do it later',
   },
 
   paywall: {

@@ -31,7 +31,7 @@ const HUES: readonly string[] = [habitColors[1], habitColors[0], habitColors[5],
 const hue = (i: number): string => HUES[i % HUES.length] ?? habitColors[0];
 
 /** Each slide shows the piece of the app it is talking about. */
-const SHOWS: readonly ScreenKind[] = ['day', 'crew', 'nudge', 'progress'];
+const SHOWS: readonly ScreenKind[] = ['day', 'crew', 'progress', 'nudge'];
 const show = (i: number): ScreenKind => SHOWS[i % SHOWS.length] ?? 'day';
 
 type Props = {
@@ -41,15 +41,13 @@ type Props = {
 /**
  * The first thing anyone sees.
  *
- * It used to be four cards teaching the whole system before anyone had touched
- * any of it, and a reader came away unable to say what the app did — they had
- * been told about stacking, shared streaks, nudge rules and charts in the
- * abstract, and none of it stuck. The teaching moved into the setup steps,
- * where each idea arrives at the moment it is being used. This screen answers
- * only the question you have before signing up: what is this.
- *
- * Still built for a list, because one screen is a decision rather than a
- * constraint, and going back to several is a copy change.
+ * It makes the case; it does not teach the app. Those are two jobs and it used
+ * to do both, badly — explaining stacking, streak rules and charts in the
+ * abstract to someone who had touched none of them, so that none of it stuck.
+ * How the app works is now taught inside the setup and by the walkthrough
+ * afterwards, at the moment each thing is used. What is left here is why any
+ * of it is worth doing, which is the only question someone has before they
+ * sign up.
  */
 export function Welcome({ onStart }: Props) {
   const styles = useStyles(makeStyles);
