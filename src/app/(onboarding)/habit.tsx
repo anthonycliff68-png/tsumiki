@@ -147,7 +147,13 @@ export default function FirstHabitScreen() {
                     )}
                   </Text>
                 </View>
-                <Text style={[display(24, 22), isSelected && { color: colors.white }]}>
+                {/* display() sets no colour of its own, so this fell back to
+                    black — five of the six suggestions were near-invisible on
+                    a dark card, and only the selected one could be read. The
+                    unselected ones need saying explicitly. */}
+                <Text
+                  style={[display(24, 22), { color: isSelected ? colors.white : colors.text }]}
+                >
                   {suggestion.name}
                 </Text>
               </Pressable>
