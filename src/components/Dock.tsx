@@ -40,7 +40,17 @@ const DOCK_GAP = 16;
  * as the path everywhere else rather than being replaced by it. Read once: it
  * is a property of the build, not something that changes while running.
  */
-const LIQUID_GLASS = isLiquidGlassAvailable();
+const LIQUID_GLASS = ((): boolean => {
+  try {
+    return isLiquidGlassAvailable();
+  } catch {
+    // Expo Go carries a fixed set of native modules, and asking it for one it
+    // does not have throws rather than returning false. Everyday development
+    // happens in Expo Go, so an unguarded call here would take the dock — and
+    // with it every tab — down on the machine it is being built on.
+    return false;
+  }
+})();
 
 /**
  * The dock's material. Real glass refracts what scrolls underneath and catches
