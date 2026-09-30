@@ -11,13 +11,14 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { LinesIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
-import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, radii, shade, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 import { GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
 
@@ -35,20 +36,27 @@ const DROP = 16;
 const LEAN = 7;
 /** The colour left showing along the bottom of a card still to do. */
 /**
- * The card's own shade, over the whole of it.
+ * The ground under the habit's name, and only under it.
  *
- * Flat rather than a gradient. It was an SVG gradient sized at 100%, which
- * react-native-svg does not resolve to the parent's real size — the shade
- * stopped short of the bottom and the right, leaving the name's second line
- * outside it with a hard edge. At the opacities this needs, the gradient was
- * doing almost nothing anyway, so the fix and the simplification are the same
- * change.
+ * A band rather than a shade over the whole card: the point of the glass is to
+ * see through it, and darkening all of it gives that back. The name is the one
+ * thing that has to read on every background, so it gets its own floor and the
+ * rest of the card stays a window.
  *
- * It also mutes the seam where the card behind shows through clear glass, which
- * is what made the card look lit from one side.
+ * An explicit height, not a percentage — react-native-svg does not resolve 100%
+ * against the parent's real size, which left the shade stopping short of the
+ * card's bottom edge.
  */
-const CARD_SHADE = 0.78;
+const NAME_SHADE = 168;
 const FLOOR = 6;
+/**
+ * How thick the lit edge of the water is.
+ *
+ * It is also how far short of the card top the edge stops, so the two are one
+ * constant — the old hard-coded 2 was the previous thickness and drifted the
+ * moment the edge got thicker than a rule.
+ */
+const MENISCUS = 10;
 /** The corner of the front card that opens it for editing. */
 const HANDLE_HIT = 56;
 /** A press that moves less than this, for less than this long, is a tap. */
@@ -463,6 +471,14 @@ function FanCard({
   // short push outwards and settles. Undoing drains, quicker and flatter —
   // taking something back should not feel like a reward.
   const rise = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
+  /**
+   * A paler wash that runs ahead of the colour and then is caught by it.
+   *
+   * One rectangle rising is a bar chart. Two, with the lighter one arriving
+   * first and the body closing over it, is water — the light reaches the top of
+   * a glass before the liquid does.
+   */
+  const wash = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
   const pop = useRef(new Animated.Value(0)).current;
   const first = useRef(true);
 
@@ -472,6 +488,7 @@ function FanCard({
     if (first.current) {
       first.current = false;
       rise.setValue(done ? 1 : 0);
+      wash.setValue(done ? 1 : 0);
       return;
     }
 
@@ -480,6 +497,15 @@ function FanCard({
       duration: done ? 460 : 240,
       // Out fast, then a long settle — the part that feels like arriving.
       easing: done ? Easing.bezier(0.16, 1, 0.3, 1) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+
+    // Ahead of the body on the way up, behind it on the way down, so the pale
+    // edge always leads and the colour always closes.
+    Animated.timing(wash, {
+      toValue: done ? 1 : 0,
+      duration: done ? 340 : 300,
+      easing: done ? Easing.out(Easing.cubic) : Easing.in(Easing.quad),
       useNativeDriver: true,
     }).start();
 
@@ -502,7 +528,7 @@ function FanCard({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [habit.checkedIn, rise, pop]);
+  }, [habit.checkedIn, rise, wash, pop]);
 
   return (
       <Animated.View
@@ -541,13 +567,19 @@ function FanCard({
           />
         )}
         {/* Glass has whatever is behind it, and what is behind it moves. The
-            card needs its own ground or it is legible on some days and not
+            name needs its own ground or it is legible on some days and not
             others. Under the check-in floor, so the floor still reads. */}
         {isFront && LIQUID_GLASS && (
-          <View
-            pointerEvents="none"
-            style={[styles.cardShade, { backgroundColor: alpha(colors.bg, CARD_SHADE) }]}
-          />
+          <Svg width="100%" height={NAME_SHADE} style={styles.nameShade} pointerEvents="none">
+            <Defs>
+              <LinearGradient id={`fanShade-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={colors.bg} stopOpacity="0" />
+                <Stop offset="0.5" stopColor={colors.bg} stopOpacity="0.66" />
+                <Stop offset="1" stopColor={colors.bg} stopOpacity="0.92" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height={NAME_SHADE} fill={`url(#fanShade-${habit.id})`} />
+          </Svg>
         )}
 
         <Animated.View
@@ -555,7 +587,28 @@ function FanCard({
           style={[
             styles.fill,
             {
-              backgroundColor: habit.color,
+              backgroundColor: tint(habit.color, 0.42),
+              opacity: wash.interpolate({
+                inputRange: [0, 0.25, 0.85, 1],
+                outputRange: [0, 0.75, 0.6, 0],
+              }),
+              transform: [
+                {
+                  scaleY: wash.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [FLOOR / CARD_H, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.fill,
+            {
               transform: [
                 {
                   scaleY: rise.interpolate({
@@ -566,22 +619,44 @@ function FanCard({
               ],
             },
           ]}
-        />
+        >
+          {/* Deeper at the bottom than at the top. One flat colour is a filled
+              rectangle; the same colour with depth in it is a volume. Explicit
+              height again — react-native-svg will not resolve a percentage
+              against a parent it cannot measure. */}
+          <Svg width="100%" height={CARD_H}>
+            <Defs>
+              <LinearGradient id={`fanWater-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={tint(habit.color, 0.2)} />
+                <Stop offset="0.55" stopColor={habit.color} />
+                <Stop offset="1" stopColor={shade(habit.color, 0.22)} />
+              </LinearGradient>
+            </Defs>
+            <Rect
+              x="0"
+              y="0"
+              width="100%"
+              height={CARD_H}
+              fill={`url(#fanWater-${habit.id})`}
+            />
+          </Svg>
+        </Animated.View>
         {/* The bright edge of the colour as it climbs, gone once it lands. */}
         <Animated.View
           pointerEvents="none"
           style={[
             styles.surface,
             {
-              opacity: rise.interpolate({
-                inputRange: [0, 0.08, 0.82, 1],
-                outputRange: [0, 0.9, 0.9, 0],
+              backgroundColor: tint(habit.color, 0.72),
+              opacity: wash.interpolate({
+                inputRange: [0, 0.08, 0.78, 1],
+                outputRange: [0, 0.85, 0.7, 0],
               }),
               transform: [
                 {
-                  translateY: rise.interpolate({
+                  translateY: wash.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [-FLOOR, -(CARD_H - 2)],
+                    outputRange: [-FLOOR, -(CARD_H - MENISCUS)],
                   }),
                 },
               ],
@@ -658,14 +733,17 @@ const makeStyles = (colors: Palette) => ({
     shadowOffset: { width: 0, height: 18 },
     elevation: 12,
   },
-  cardShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  nameShade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  // Was a two-point white rule, which is a line and not a surface. Thicker,
+  // softer and in the habit's own colour lifted towards white: light sitting on
+  // water rather than a border drawn across it.
   surface: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 2,
-    backgroundColor: colors.white,
+    height: MENISCUS,
+    borderRadius: MENISCUS / 2,
   },
   scrim: {
     position: 'absolute',
