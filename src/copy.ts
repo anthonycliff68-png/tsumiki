@@ -170,6 +170,7 @@ export const copy = {
       addOwn: 'Your own',
       ownPlaceholder: 'Name this moment',
       timeLabel: (label: string) => `Change the time for ${label}`,
+      nameLabel: (label: string) => (label ? `Rename ${label}` : 'Name this moment'),
       removeLabel: (label: string) => `Remove ${label}`,
       next: 'Looks right',
       saving: 'Saving\u2026',

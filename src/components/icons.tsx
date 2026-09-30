@@ -77,6 +77,11 @@ export function PlusIcon(props: IconProps) {
   return <StrokeIcon strokeWidth={2.6} {...props} d="M12 5v14M5 12h14" />;
 }
 
+/** A cross: take this one back off the list. */
+export function CloseIcon(props: IconProps) {
+  return <StrokeIcon strokeWidth={2.4} {...props} d="M6 6l12 12M18 6L6 18" />;
+}
+
 /** The check-in tick. */
 export function CheckIcon({ size = 24, color, strokeWidth = 2.8 }: IconProps) {
   return (

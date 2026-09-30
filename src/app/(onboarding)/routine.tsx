@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
-import { ArrowRightIcon, PlusIcon } from '@/components/icons';
+import { ArrowRightIcon, CloseIcon, PlusIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -71,7 +71,17 @@ export default function RoutineScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const used = new Set(rows.map((row) => row.id));
-  const extras = EXTRA_ANCHORS.filter((anchor) => !used.has(anchor.key));
+  /**
+   * Everything not currently on the list, defaults included.
+   *
+   * It used to offer the extras only, so a default you removed was gone for
+   * the rest of onboarding with no way back. A list you can take things off
+   * has to be a list you can put them back on.
+   */
+  const spare = [...DEFAULT_ANCHORS, ...EXTRA_ANCHORS].filter(
+    (anchor) => !used.has(anchor.key),
+  );
+  const isSeeded = (key: string) => DEFAULT_ANCHORS.some((anchor) => anchor.key === key);
 
   const setTime = (id: string, usualTime: string) =>
     setRows((current) =>
@@ -83,8 +93,16 @@ export default function RoutineScreen() {
 
   const addExtra = (key: string, label: string, usualTime: string) =>
     setRows((current) =>
-      byTime([...current, { id: key, label, usualTime, isDefault: false, isCustom: false }]),
+      byTime([
+        ...current,
+        // isDefault says where the moment came from, not whether it happens to
+        // be on the list, so putting one of the seeded ones back has to restore
+        // that rather than quietly demote it to a custom moment.
+        { id: key, label, usualTime, isDefault: isSeeded(key), isCustom: false },
+      ]),
     );
+
+  const removeRow = (id: string) => setRows((current) => current.filter((row) => row.id !== id));
 
   const addCustom = () =>
     setRows((current) =>
@@ -144,19 +162,20 @@ export default function RoutineScreen() {
         <View style={styles.rows}>
           {rows.map((row) => (
             <View key={row.id} style={styles.row}>
-              {row.isCustom ? (
-                <TextInput
-                  accessibilityLabel={copy.onboarding.routine.ownPlaceholder}
-                  placeholder={copy.onboarding.routine.ownPlaceholder}
-                  placeholderTextColor={colors.textFaint}
-                  value={row.label}
-                  onChangeText={(text) => setLabel(row.id, text)}
-                  style={styles.rowLabelInput}
-                  autoFocus
-                />
-              ) : (
-                <Text style={styles.rowLabel}>{row.label}</Text>
-              )}
+              {/* Every name is editable, not just the ones typed from scratch.
+                  These are meant to be a picture of your day, and the seeded
+                  ones were fixed text — so someone who does not drink coffee
+                  had no way to say so, and someone who wanted the 8:15 moment
+                  called something else had to delete it and start again. */}
+              <TextInput
+                accessibilityLabel={copy.onboarding.routine.nameLabel(row.label)}
+                placeholder={copy.onboarding.routine.ownPlaceholder}
+                placeholderTextColor={colors.textFaint}
+                value={row.label}
+                onChangeText={(text) => setLabel(row.id, text)}
+                style={styles.rowLabelInput}
+                autoFocus={row.isCustom}
+              />
 
               <Pressable
                 accessibilityRole="button"
@@ -166,12 +185,21 @@ export default function RoutineScreen() {
               >
                 <Text style={styles.timeLabel}>{formatTimeGutter(row.usualTime)}</Text>
               </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={copy.onboarding.routine.removeLabel(row.label)}
+                onPress={() => removeRow(row.id)}
+                style={({ pressed }) => [styles.remove, pressed && styles.pressed]}
+              >
+                <CloseIcon size={16} color={colors.textFaint} />
+              </Pressable>
             </View>
           ))}
         </View>
 
         <View style={styles.chips}>
-          {extras.map((anchor) => (
+          {spare.map((anchor) => (
             <Pressable
               key={anchor.key}
               accessibilityRole="button"
@@ -268,6 +296,15 @@ const makeStyles = (colors: Palette) => ({
     fontSize: 16,
     color: colors.text,
     paddingVertical: 8,
+  },
+  // Its own target rather than a corner of the row, so removing a moment is
+  // never something you do by reaching for its time.
+  remove: {
+    width: 40,
+    height: 44,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timeButton: {
     minHeight: 40,
