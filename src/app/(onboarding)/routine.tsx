@@ -233,7 +233,7 @@ const makeStyles = (colors: Palette) => ({
     paddingLeft: 16,
     paddingRight: 8,
     borderRadius: radii.card,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: alpha(colors.overlay, 0.07),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -280,7 +280,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: alpha(colors.overlay, 0.3),
   },
   chipLabel: {
     fontFamily: fonts.bodyBold,

@@ -396,7 +396,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.bigCard,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha(colors.overlay, 0.04),
   },
   emptyTitle: { ...display(30, 30), color: colors.text },
   emptyBody: {
@@ -415,7 +415,7 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: 14,
     borderRadius: radii.card,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   missedDot: { width: 10, height: 10, borderRadius: 5 },
   missedName: { flex: 1, ...display(20, 20), color: colors.text },
@@ -428,7 +428,7 @@ const makeStyles = (colors: Palette) => ({
     padding: 14,
     borderRadius: radii.bigCard,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   nudgeAvatar: {
     width: 40,

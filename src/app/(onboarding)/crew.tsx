@@ -138,9 +138,9 @@ const makeStyles = (colors: Palette) => ({
     gap: 2,
     paddingVertical: spacing.md,
     borderRadius: radii.bigCard,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha(colors.overlay, 0.04),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: alpha(colors.overlay, 0.1),
   },
   rail: {
     position: 'absolute',
@@ -148,7 +148,7 @@ const makeStyles = (colors: Palette) => ({
     top: 22,
     bottom: 22,
     width: 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: alpha(colors.overlay, 0.12),
   },
   anchorRow: { flexDirection: 'row', alignItems: 'center', minHeight: 28 },
   time: {
@@ -200,7 +200,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.bigCard,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: alpha(colors.overlay, 0.1),
   },
   avatars: { flexDirection: 'row', alignItems: 'center' },
   you: {
@@ -225,7 +225,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: 22,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: alpha(colors.overlay, 0.3),
     backgroundColor: colors.bg,
     marginLeft: -10,
   },

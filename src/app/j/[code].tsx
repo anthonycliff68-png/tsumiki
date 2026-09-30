@@ -20,7 +20,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { rememberInvite } from '@/lib/invite';
 import type { ScheduleMode } from '@/lib/models';
-import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
 /** An invite link, opened. Artboards: InviteJoin, then InviteJoined. */
@@ -273,7 +273,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   chipActive: { backgroundColor: colors.text, borderColor: colors.text },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },

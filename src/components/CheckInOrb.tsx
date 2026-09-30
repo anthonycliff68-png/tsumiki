@@ -63,8 +63,10 @@ export function CheckInOrb({
           size={ringSize}
           strokeWidth={RING_STROKE}
           progress={total === 0 ? 0 : done / total}
-          color={colors.white}
-          trackColor="rgba(255,255,255,0.16)"
+          // The ring sits outside the orb, on the dock rather than on the
+          // coloured fill, so it takes the ground's ink rather than white.
+          color={colors.text}
+          trackColor={alpha(colors.overlay, 0.16)}
         />
       </View>
 

@@ -2,7 +2,7 @@ import { TextInput, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 
 import { useStyles, useTheme } from '@/lib/appearance';
-import { fonts, radii, type Palette } from '@/theme';
+import { alpha, fonts, radii, type Palette } from '@/theme';
 
 type Props = TextInputProps & {
   /** Read out by screen readers in place of a visible label. */
@@ -31,7 +31,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   input: {
     minHeight: 56,

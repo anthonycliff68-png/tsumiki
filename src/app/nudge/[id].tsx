@@ -227,7 +227,7 @@ const makeStyles = (colors: Palette) => ({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   closeText: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.text },
   pill: {
@@ -239,7 +239,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   fromRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -291,7 +291,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   actionText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   savedPill: {
@@ -321,7 +321,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   reactionText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
 }) as const;

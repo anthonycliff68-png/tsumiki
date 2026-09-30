@@ -208,7 +208,7 @@ const makeStyles = (colors: Palette) => ({
   cardIdle: {
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   badge: {
     position: 'absolute',

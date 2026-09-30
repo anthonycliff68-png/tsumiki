@@ -8,7 +8,7 @@ import { copy } from '@/copy';
 import { useBlockUser, useReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Enums } from '@/lib/database.types';
-import { fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { GlassSurface } from '@/components/GlassSurface';
 import { Display } from '@/components/Screen';
 
@@ -169,7 +169,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
     fontFamily: fonts.body,
     fontSize: 15,
     color: colors.text,

@@ -11,7 +11,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCreateCrew, useCrews, useHabits } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
 /** Crews. Artboards: GroupDark, CrewWalk. */
@@ -190,7 +190,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.bigCard,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha(colors.overlay, 0.04),
   },
   emptyTitle: { ...display(30, 30), color: colors.text },
   emptyBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
@@ -212,7 +212,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
@@ -222,7 +222,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
     fontFamily: fonts.body,
     fontSize: 16,
     color: colors.text,

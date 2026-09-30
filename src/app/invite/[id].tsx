@@ -9,7 +9,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { INVITE_BASE_URL, inviteMessage } from '@/constants/brand';
 import { useCreateInvite, useCrew } from '@/lib/api';
-import { display, fonts, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
 /** Share a crew's invite link. Artboard: InviteSend. */
@@ -106,7 +106,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   label: {
@@ -119,7 +119,7 @@ const makeStyles = (colors: Palette) => ({
   bubble: {
     padding: spacing.lg,
     borderRadius: radii.bigCard,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: alpha(colors.overlay, 0.08),
   },
   bubbleText: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.text },
   linkCard: { gap: 4, padding: spacing.lg, borderRadius: radii.bigCard },

@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { fonts, radii, spacing, type Palette } from '@/theme';
+import { alpha, fonts, radii, spacing, type Palette } from '@/theme';
 
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -76,7 +76,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   dayText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
   dayTextOn: { color: colors.white },

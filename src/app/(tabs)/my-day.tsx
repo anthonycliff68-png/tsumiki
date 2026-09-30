@@ -17,7 +17,7 @@ import {
   type TodayHabit,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
 /** My Day. Artboard: MyDay, as a full hour grid you can rearrange. */
@@ -154,7 +154,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(colors.overlay, 0.06),
   },
   pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   link: { color: colors.textMuted },
@@ -171,7 +171,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.chip,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
     fontFamily: fonts.bodyBold,
     fontSize: 15,
     color: colors.text,

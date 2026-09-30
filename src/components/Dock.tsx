@@ -514,7 +514,7 @@ const makeStyles = (colors: Palette) => ({
     bottom: 8,
     borderRadius: radii.chip,
     // A brighter part of the dock's glass, not a second pane of it.
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: alpha(colors.overlay, 0.14),
   },
   tabRow: {
     flexDirection: 'row',

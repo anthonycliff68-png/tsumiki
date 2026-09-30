@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
-import { display, fonts, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, spacing, type Palette } from '@/theme';
 
 type Props = {
   /** The habit colour this screen is "about" — it drives the bleed. */
@@ -124,7 +124,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha(colors.overlay, 0.04),
   },
   stubText: {
     fontFamily: fonts.body,

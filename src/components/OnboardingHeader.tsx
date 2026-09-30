@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { ChevronLeftIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { fonts, radii, type Palette } from '@/theme';
+import { alpha, fonts, radii, type Palette } from '@/theme';
 
 /** Five steps: welcome, you, routine, first habit, crew. */
 const TOTAL_STEPS = 5;
@@ -82,7 +82,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: alpha(colors.overlay, 0.08),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -104,7 +104,7 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: colors.text,
   },
   dotTodo: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: alpha(colors.overlay, 0.2),
   },
   skip: {
     minHeight: 44,

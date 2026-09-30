@@ -9,7 +9,7 @@ import { copy } from '@/copy';
 import { useHabitHistory, useMyProfile, useUpdateProfile } from '@/lib/api';
 import { faceOf, personName } from '@/lib/models';
 import { lifetimeTotals } from '@/lib/stats';
-import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const DISC = 64;
 
@@ -171,7 +171,7 @@ const makeStyles = (colors: Palette) => ({
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   disc: {

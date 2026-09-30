@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { PROFILE_EMOJI } from '@/data/defaults';
-import { fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 type Props = {
   /** Empty means initials. */
@@ -118,11 +118,11 @@ const makeStyles = (colors: Palette) => ({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha(colors.overlay, 0.05),
   },
   faceActive: {
     borderColor: colors.text,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: alpha(colors.overlay, 0.16),
   },
   faceGlyph: { fontSize: 26 },
   faceInitials: {
