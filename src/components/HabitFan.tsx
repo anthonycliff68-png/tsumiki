@@ -57,7 +57,19 @@ const FLOOR = 6;
  * animation with it. The two numbers being one constant is what stops them
  * drifting into a card that leaves before it has filled.
  */
-export const FILL_MS = 460;
+export const FILL_MS = 600;
+/**
+ * How far the water hangs outside the card.
+ *
+ * It tips about the bottom of the card, so at the ends of the rock the
+ * corners swing out of the card's own rectangle. Overhang keeps colour under
+ * them; the card clips it, so none of it is ever seen.
+ */
+const SPILL = 30;
+/** How far it rocks. Past about four degrees it stops being water and starts being a lever. */
+const TILT_DEG = 3;
+/** The scale that leaves a FLOOR-tall sliver showing, now the fill hangs below the card. */
+const REST = (FLOOR + SPILL) / (CARD_H + SPILL);
 /**
  * How thick the lit edge of the water is.
  *
@@ -495,6 +507,14 @@ function FanCard({
    * a glass before the liquid does.
    */
   const wash = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
+  /**
+   * The rock, from -1 (tipped left) to 1 (tipped right).
+   *
+   * Water thrown into a container does not arrive level. It slaps up one side,
+   * comes back across, and takes a couple of passes to settle — which is the
+   * difference between a liquid and a rectangle that grew.
+   */
+  const tilt = useRef(new Animated.Value(0)).current;
   const pop = useRef(new Animated.Value(0)).current;
   const first = useRef(true);
 
@@ -505,16 +525,49 @@ function FanCard({
       first.current = false;
       rise.setValue(done ? 1 : 0);
       wash.setValue(done ? 1 : 0);
+      tilt.setValue(0);
       return;
     }
 
-    Animated.timing(rise, {
-      toValue: done ? 1 : 0,
-      duration: done ? FILL_MS : 240,
-      // Out fast, then a long settle — the part that feels like arriving.
-      easing: done ? Easing.bezier(0.16, 1, 0.3, 1) : Easing.in(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+    if (done) {
+      // A spring rather than a curve, for the undershoot on the way back: the
+      // level runs past the brim, drops under it for an instant so a sliver of
+      // empty card reappears at the top, and only then fills for good. That
+      // rebound is the moment the whole thing reads as liquid — an easing that
+      // merely slows into place never uncovers anything, so it cannot.
+      Animated.spring(rise, {
+        toValue: 1,
+        speed: 14,
+        bounciness: 12,
+        useNativeDriver: true,
+      }).start();
+
+      // Hard one way, most of the way back, a smaller pass, level. Each swing
+      // shorter and slower than the last, or it reads as a wobble rather than
+      // as something heavy losing its energy.
+      tilt.setValue(0);
+      Animated.sequence([
+        Animated.timing(tilt, { toValue: 1, duration: 130, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: -0.62, duration: 150, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 0.26, duration: 150, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 0, duration: 170, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    } else {
+      // Draining is flat and quick, and does not rock. Taking something back
+      // should not feel like a reward.
+      Animated.timing(rise, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(tilt, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }
 
     // Ahead of the body on the way up, behind it on the way down, so the pale
     // edge always leads and the colour always closes.
@@ -544,7 +597,7 @@ function FanCard({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [habit.checkedIn, rise, wash, pop]);
+  }, [habit.checkedIn, rise, wash, tilt, pop]);
 
   return (
       <Animated.View
@@ -586,7 +639,7 @@ function FanCard({
             name needs its own ground or it is legible on some days and not
             others. Under the check-in floor, so the floor still reads. */}
         {isFront && LIQUID_GLASS && (
-          <Svg width="100%" height={NAME_SHADE} style={styles.nameShade} pointerEvents="none">
+          <Svg width={CARD_W} height={NAME_SHADE} style={styles.nameShade} pointerEvents="none">
             <Defs>
               <LinearGradient id={`fanShade-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0" stopColor={colors.bg} stopOpacity="0" />
@@ -594,10 +647,30 @@ function FanCard({
                 <Stop offset="1" stopColor={colors.bg} stopOpacity="0.92" />
               </LinearGradient>
             </Defs>
-            <Rect x="0" y="0" width="100%" height={NAME_SHADE} fill={`url(#fanShade-${habit.id})`} />
+            <Rect x="0" y="0" width={CARD_W} height={NAME_SHADE} fill={`url(#fanShade-${habit.id})`} />
           </Svg>
         )}
 
+        {/* Everything below rocks together, pivoting on the bottom of the
+            card, so the waterline tips as one surface rather than each layer
+            tipping on its own. The rotation lives out here because a rotate
+            composed after a scaleY is a skew, not a turn. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.water,
+            {
+              transform: [
+                {
+                  rotate: tilt.interpolate({
+                    inputRange: [-1, 1],
+                    outputRange: [`-${TILT_DEG}deg`, `${TILT_DEG}deg`],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
         <Animated.View
           pointerEvents="none"
           style={[
@@ -612,7 +685,7 @@ function FanCard({
                 {
                   scaleY: wash.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [FLOOR / CARD_H, 1],
+                    outputRange: [REST, 1],
                   }),
                 },
               ],
@@ -629,7 +702,7 @@ function FanCard({
                 {
                   scaleY: rise.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [FLOOR / CARD_H, 1],
+                    outputRange: [REST, 1],
                   }),
                 },
               ],
@@ -640,7 +713,7 @@ function FanCard({
               rectangle; the same colour with depth in it is a volume. Explicit
               height again — react-native-svg will not resolve a percentage
               against a parent it cannot measure. */}
-          <Svg width="100%" height={CARD_H}>
+          <Svg width={CARD_W + SPILL * 2} height={CARD_H + SPILL}>
             <Defs>
               <LinearGradient id={`fanWater-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0" stopColor={tint(habit.color, 0.2)} />
@@ -651,8 +724,8 @@ function FanCard({
             <Rect
               x="0"
               y="0"
-              width="100%"
-              height={CARD_H}
+              width={CARD_W + SPILL * 2}
+              height={CARD_H + SPILL}
               fill={`url(#fanWater-${habit.id})`}
             />
           </Svg>
@@ -672,13 +745,14 @@ function FanCard({
                 {
                   translateY: wash.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [-FLOOR, -(CARD_H - MENISCUS)],
+                    outputRange: [-(SPILL + FLOOR), -(SPILL + CARD_H - MENISCUS)],
                   }),
                 },
               ],
             },
           ]}
         />
+        </Animated.View>
 
         <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: behind }]} />
 
@@ -724,12 +798,18 @@ function FanCard({
 const makeStyles = (colors: Palette) => ({
   stage: { height: CARD_H + WINGS * DROP + 16, marginTop: spacing.sm },
   slot: { position: 'absolute', width: CARD_W, height: CARD_H },
+  // The frame the water rocks in: the card's own bounds, pivoting on its
+  // bottom edge so the surface swings and the base stays put.
+  water: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transformOrigin: 'bottom' },
+  // Wider and deeper than the card on every side but the top. At the ends of
+  // the rock the corners swing outside the card, and without the overhang each
+  // one would show as a wedge of bare card under the water.
   fill: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: CARD_H,
+    left: -SPILL,
+    right: -SPILL,
+    bottom: -SPILL,
+    height: CARD_H + SPILL,
     transformOrigin: 'bottom',
   },
   card: {
@@ -755,9 +835,9 @@ const makeStyles = (colors: Palette) => ({
   // water rather than a border drawn across it.
   surface: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: -SPILL,
+    right: -SPILL,
+    bottom: -SPILL,
     height: MENISCUS,
     borderRadius: MENISCUS / 2,
   },
