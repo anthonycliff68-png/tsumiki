@@ -11,7 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { LinesIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -58,7 +58,7 @@ const FLOOR = 6;
  * animation with it. The two numbers being one constant is what stops them
  * drifting into a card that leaves before it has filled.
  */
-export const FILL_MS = 600;
+export const FILL_MS = 760;
 /**
  * How far the water hangs outside the card.
  *
@@ -67,18 +67,62 @@ export const FILL_MS = 600;
  * them; the card clips it, so none of it is ever seen.
  */
 const SPILL = 30;
-/** How far it rocks. Past about four degrees it stops being water and starts being a lever. */
-const TILT_DEG = 3;
-/** The scale that leaves a FLOOR-tall sliver showing, now the fill hangs below the card. */
-const REST = (FLOOR + SPILL) / (CARD_H + SPILL);
+/** How far it rocks. Past about six degrees it stops being water and starts being a lever. */
+const TILT_DEG = 4.5;
+/** How tall the swell is, peak to midline. */
+const WAVE_AMP = 7;
+/** The visible width the water has to cover, overhang included. */
+const WATER_W = CARD_W + SPILL * 2;
+/** One swell. A shade under the card's width reads as water rather than as a ripple. */
+const WAVE_LEN = WATER_W / 1.15;
 /**
- * How thick the lit edge of the water is.
+ * The path carries a spare wavelength at each end, and is hung one wavelength
+ * to the left of the card.
  *
- * It is also how far short of the card top the edge stops, so the two are one
- * constant — the old hard-coded 2 was the previous thickness and drifted the
- * moment the edge got thicker than a rule.
+ * One spare end is not enough: the two bodies drift in opposite directions, so
+ * whichever one travels right would walk its own left edge into view and leave
+ * a column of bare card behind it. With a wavelength either side, a slide of
+ * up to one wavelength in either direction still covers the card, and landing
+ * exactly on one wavelength puts the path back where it started so the travel
+ * can loop without ever showing an end.
  */
-const MENISCUS = 10;
+const WAVE_W = WATER_W + WAVE_LEN * 2;
+/** Tall enough to still reach past the bottom of the card when the water is at its lowest. */
+const WAVE_H = CARD_H + SPILL + WAVE_AMP * 2;
+/** How long one swell takes to cross. */
+const WAVE_MS = 1100;
+
+/**
+ * A block of water whose top edge is a swell rather than a straight line.
+ *
+ * This is the whole reason the body is a path and not a rectangle. Anything
+ * laid over a rectangle can only ever add to its top edge, so you get bumps
+ * and never troughs, and an edge that only bulges upward still reads as a bar
+ * with decoration. Cutting the swell into the body itself is the only way the
+ * water gets to dip.
+ *
+ * Quadratics rather than a real sine: at this size the difference is invisible
+ * and the control point is one number.
+ */
+function swell(): string {
+  const reach = WAVE_AMP * 1.34;
+  let d = `M0,${WAVE_AMP}`;
+  for (let x = 0; x < WAVE_W; x += WAVE_LEN) {
+    d += ` q${WAVE_LEN / 4},${-reach} ${WAVE_LEN / 2},0`;
+    d += ` q${WAVE_LEN / 4},${reach} ${WAVE_LEN / 2},0`;
+  }
+  return `${d} L${WAVE_W},${WAVE_H} L0,${WAVE_H} Z`;
+}
+const SWELL = swell();
+/**
+ * Where the swell's midline sits at rest and at the brim, as a translateY.
+ *
+ * The path carries its midline WAVE_AMP below its own top, so both ends are
+ * offset by that: at the brim the midline has to land on the card's top edge,
+ * not the swell's peaks.
+ */
+const DEEP = CARD_H - FLOOR - WAVE_AMP;
+const HIGH = -WAVE_AMP;
 /** The corner of the front card that opens it for editing. */
 const HANDLE_HIT = 56;
 /** A press that moves less than this, for less than this long, is a tap. */
@@ -99,7 +143,7 @@ const OVERRUN = 0.45;
  * and the card leaving are one movement — the card is already standing in its
  * new place at the moment the hand re-sorts underneath it.
  */
-const DEAL_MS = 260;
+const DEAL_MS = 300;
 
 type Props = {
   habits: TodayHabit[];
@@ -205,7 +249,10 @@ export function HabitFan({
       Animated.timing(deal, {
         toValue: 1,
         duration: DEAL_MS,
-        easing: Easing.inOut(Easing.cubic),
+        // Loads up, then throws. A symmetrical curve made the card drift back
+        // politely; this one holds still for a beat and then goes, which is
+        // what makes it read as being dealt rather than as sliding.
+        easing: Easing.bezier(0.62, -0.28, 0.2, 1),
         useNativeDriver: true,
       }).start();
     }, Math.max(0, FILL_MS - DEAL_MS));
@@ -344,8 +391,18 @@ export function HabitFan({
             Math.abs(first.y - touch.current.y) > TAP_SLOP;
           if (far) dragged.current = true;
         })
-        .onTouchesUp(() => {
-          if (dragged.current) return;
+        .onTouchesUp((event) => {
+          // Where the finger ended up, not just whether move events happened
+          // to arrive. A quick flick can deliver almost no onTouchesMove, and
+          // judging it on those alone called it a tap — so a fast swipe
+          // through the hand silently checked a habit in instead of turning
+          // the fan. The finger's own travel cannot be missed this way.
+          const up = event.allTouches[0];
+          const flicked =
+            up !== undefined &&
+            (Math.abs(up.x - touch.current.x) > TAP_SLOP ||
+              Math.abs(up.y - touch.current.y) > TAP_SLOP);
+          if (dragged.current || flicked) return;
           if (Date.now() - touch.current.at > TAP_TIME) return;
           tapped(touch.current.x, touch.current.y);
         })
@@ -450,10 +507,19 @@ export function HabitFan({
             // scale starting at nothing is a card that is not there.
             const toward = (end: number) =>
               deal.interpolate({ inputRange: [0, 1], outputRange: [1, end] });
+            // Rises off the deck before it goes back into it, rather than
+            // shrinking the whole way — the lift is what gives the throw
+            // somewhere to come from.
             const scaleTo =
               going === 0
                 ? scale
-                : Animated.multiply(scale, toward(Math.max(0.86, 1 - 0.07 * going)));
+                : Animated.multiply(
+                    scale,
+                    deal.interpolate({
+                      inputRange: [0, 0.22, 1],
+                      outputRange: [1, 1.07, Math.max(0.86, 1 - 0.07 * going)],
+                    }),
+                  );
             // Darkens and gives up its name on the way, exactly as a card that
             // was dragged to the same place would.
             const behindTo = going === 0 ? behind : Animated.add(behind, out(0.58));
@@ -612,6 +678,15 @@ function FanCard({
    * difference between a liquid and a rectangle that grew.
    */
   const tilt = useRef(new Animated.Value(0)).current;
+  /**
+   * The swell crossing the card, 0 to 1 being one wavelength.
+   *
+   * The two bodies multiply it by opposite signs, so their surfaces cross each
+   * other rather than sliding along together — two sheets moving as one is the
+   * thing that reads as a texture scrolling instead of as water.
+   */
+  const drift = useRef(new Animated.Value(0)).current;
+  const drifting = useRef<Animated.CompositeAnimation | null>(null);
   const pop = useRef(new Animated.Value(0)).current;
   const first = useRef(true);
 
@@ -623,6 +698,7 @@ function FanCard({
       rise.setValue(done ? 1 : 0);
       wash.setValue(done ? 1 : 0);
       tilt.setValue(0);
+      drift.setValue(0);
       return;
     }
 
@@ -634,20 +710,39 @@ function FanCard({
       // merely slows into place never uncovers anything, so it cannot.
       Animated.spring(rise, {
         toValue: 1,
-        speed: 14,
-        bounciness: 12,
+        // Slower and looser than it was. Weight is mostly a matter of how long
+        // something takes to stop moving, so the overshoot is bigger and the
+        // settle is longer rather than the travel being dragged out.
+        speed: 9,
+        bounciness: 15,
         useNativeDriver: true,
       }).start();
+
+      // The swell only crosses while there is a surface to see it on. Left
+      // running it would be a texture scrolling under a full card forever.
+      drifting.current?.stop();
+      drift.setValue(0);
+      drifting.current = Animated.loop(
+        Animated.timing(drift, {
+          toValue: 1,
+          duration: WAVE_MS,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+      drifting.current.start();
+      setTimeout(() => drifting.current?.stop(), FILL_MS);
 
       // Hard one way, most of the way back, a smaller pass, level. Each swing
       // shorter and slower than the last, or it reads as a wobble rather than
       // as something heavy losing its energy.
       tilt.setValue(0);
       Animated.sequence([
-        Animated.timing(tilt, { toValue: 1, duration: 130, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.timing(tilt, { toValue: -0.62, duration: 150, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(tilt, { toValue: 0.26, duration: 150, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(tilt, { toValue: 0, duration: 170, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 1, duration: 170, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: -0.7, duration: 200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 0.34, duration: 190, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: -0.12, duration: 110, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 0, duration: 90, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]).start();
     } else {
       // Draining is flat and quick, and does not rock. Taking something back
@@ -664,6 +759,7 @@ function FanCard({
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }).start();
+      drifting.current?.stop();
     }
 
     // Ahead of the body on the way up, behind it on the way down, so the pale
@@ -694,7 +790,7 @@ function FanCard({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [habit.checkedIn, rise, wash, tilt, pop]);
+  }, [habit.checkedIn, rise, wash, tilt, drift, pop]);
 
   return (
       <Animated.View
@@ -768,87 +864,69 @@ function FanCard({
             },
           ]}
         >
+        {/* The pale water, running ahead of the colour and caught by it: light
+            reaches the top of a glass before the liquid does. Its own swell,
+            crossing at its own speed, so the two surfaces never move as one
+            sheet. */}
         <Animated.View
           pointerEvents="none"
           style={[
-            styles.fill,
+            styles.body,
             {
-              backgroundColor: tint(habit.color, 0.42),
               opacity: wash.interpolate({
                 inputRange: [0, 0.25, 0.85, 1],
-                outputRange: [0, 0.75, 0.6, 0],
+                outputRange: [0, 0.7, 0.55, 0],
               }),
               transform: [
-                {
-                  scaleY: wash.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [REST, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.fill,
-            {
-              transform: [
-                {
-                  scaleY: rise.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [REST, 1],
-                  }),
-                },
+                { translateY: wash.interpolate({ inputRange: [0, 1], outputRange: [DEEP, HIGH] }) },
+                { translateX: Animated.multiply(drift, -WAVE_LEN) },
               ],
             },
           ]}
         >
-          {/* Deeper at the bottom than at the top. One flat colour is a filled
-              rectangle; the same colour with depth in it is a volume. Explicit
-              height again — react-native-svg will not resolve a percentage
-              against a parent it cannot measure. */}
-          <Svg width={CARD_W + SPILL * 2} height={CARD_H + SPILL}>
-            <Defs>
-              <LinearGradient id={`fanWater-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={tint(habit.color, 0.2)} />
-                <Stop offset="0.55" stopColor={habit.color} />
-                <Stop offset="1" stopColor={shade(habit.color, 0.22)} />
-              </LinearGradient>
-            </Defs>
-            <Rect
-              x="0"
-              y="0"
-              width={CARD_W + SPILL * 2}
-              height={CARD_H + SPILL}
-              fill={`url(#fanWater-${habit.id})`}
-            />
+          <Svg width={WAVE_W} height={WAVE_H}>
+            <Path d={SWELL} fill={tint(habit.color, 0.42)} />
           </Svg>
         </Animated.View>
-        {/* The bright edge of the colour as it climbs, gone once it lands. */}
+
+        {/* The water itself. It rides up rather than stretching, so the swell
+            keeps its shape the whole way instead of being squashed flat at the
+            bottom of the card and pulled tall at the top. */}
         <Animated.View
           pointerEvents="none"
           style={[
-            styles.surface,
+            styles.body,
             {
-              backgroundColor: tint(habit.color, 0.72),
-              opacity: wash.interpolate({
-                inputRange: [0, 0.08, 0.78, 1],
-                outputRange: [0, 0.85, 0.7, 0],
-              }),
               transform: [
-                {
-                  translateY: wash.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-(SPILL + FLOOR), -(SPILL + CARD_H - MENISCUS)],
-                  }),
-                },
+                { translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [DEEP, HIGH] }) },
+                { translateX: Animated.multiply(drift, WAVE_LEN) },
               ],
             },
           ]}
-        />
+        >
+          <Svg width={WAVE_W} height={WAVE_H}>
+            <Defs>
+              <LinearGradient id={`fanWater-${habit.id}`} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={tint(habit.color, 0.2)} />
+                <Stop offset="0.5" stopColor={habit.color} />
+                <Stop offset="1" stopColor={shade(habit.color, 0.22)} />
+              </LinearGradient>
+            </Defs>
+            {/* Deeper at the bottom than at the top: one flat colour is a
+                filled shape, the same colour with depth in it is a volume. */}
+            <Path d={SWELL} fill={`url(#fanWater-${habit.id})`} />
+            {/* The lit edge, drawn along the swell rather than across the card,
+                so it curves with the surface it belongs to. It was a straight
+                bar, which is the one thing a waterline never is. */}
+            <Path
+              d={SWELL}
+              fill="none"
+              stroke={tint(habit.color, 0.78)}
+              strokeWidth={3}
+              opacity={0.85}
+            />
+          </Svg>
+        </Animated.View>
         </Animated.View>
 
         <Animated.View pointerEvents="none" style={[styles.scrim, { opacity: behind }]} />
@@ -898,16 +976,15 @@ const makeStyles = (colors: Palette) => ({
   // The frame the water rocks in: the card's own bounds, pivoting on its
   // bottom edge so the surface swings and the base stays put.
   water: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transformOrigin: 'bottom' },
-  // Wider and deeper than the card on every side but the top. At the ends of
-  // the rock the corners swing outside the card, and without the overhang each
-  // one would show as a wedge of bare card under the water.
-  fill: {
+  // Wider than the card on both sides, and hung from the top so the rise is a
+  // translate. At the ends of the rock the corners swing outside the card, and
+  // without the overhang each one would show as a wedge of bare card.
+  body: {
     position: 'absolute',
-    left: -SPILL,
-    right: -SPILL,
-    bottom: -SPILL,
-    height: CARD_H + SPILL,
-    transformOrigin: 'bottom',
+    left: -SPILL - WAVE_LEN,
+    top: 0,
+    width: WAVE_W,
+    height: WAVE_H,
   },
   card: {
     width: '100%',
@@ -930,14 +1007,6 @@ const makeStyles = (colors: Palette) => ({
   // Was a two-point white rule, which is a line and not a surface. Thicker,
   // softer and in the habit's own colour lifted towards white: light sitting on
   // water rather than a border drawn across it.
-  surface: {
-    position: 'absolute',
-    left: -SPILL,
-    right: -SPILL,
-    bottom: -SPILL,
-    height: MENISCUS,
-    borderRadius: MENISCUS / 2,
-  },
   scrim: {
     position: 'absolute',
     top: 0,
