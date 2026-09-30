@@ -27,7 +27,7 @@ import { alpha, display, fonts, ink, radii, tint, type Palette } from '@/theme';
  * habit name, a larger text size or a day with no habits at all all change it,
  * and a guess that runs short leaves the last row of every list under the glass.
  */
-export const DOCK_HEIGHT = 26 + 26 + 64 + 58;
+export const DOCK_HEIGHT = 6 + 34 + 72 + 58;
 /** How far the dock floats off the bottom of the screen on a home-indicator phone. */
 const DOCK_EDGE = 12;
 /** Breathing room between the dock's top edge and the end of a list. */
@@ -42,8 +42,13 @@ const DRAG_SLOP = 4;
 
 /** The glass shell around the orb. Wider than the orb so there is a rim to merge with. */
 const ORB_SHELL = 78;
-/** How far the shell rises above the bar's top edge. */
-const ORB_OVERHANG = 26;
+/**
+ * Room above the bar for the orb's glow, and the distance at which the orb and
+ * the bar start reaching for each other. Not an overhang any more: the orb
+ * centres on the bar's head instead of straddling its top edge, which read as
+ * stuck on rather than part of it.
+ */
+const ORB_LIFT = 6;
 /** Room kept clear on the right of the bar so the text never runs under the orb. */
 const ORB_CLEARANCE = ORB_SHELL + 14;
 /** A pip in the day's timeline: one per habit, the current one wider. */
@@ -190,6 +195,18 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
    *  is built once per layout and would otherwise read a stale hover. */
   const dragTo = useRef(0);
 
+  /**
+   * The height of the bar's head — the pips and the name. The orb centres on
+   * that rather than on the whole bar, because the tab row underneath is a
+   * different thing and centring across both left the orb riding high, looking
+   * stuck to the dock's top edge rather than sitting in it.
+   */
+  const [headHeight, setHeadHeight] = useState(0);
+  const measureHead = useCallback((event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.height;
+    setHeadHeight((current) => (Math.abs(current - next) > 0.5 ? next : current));
+  }, []);
+
   const measureRow = useCallback((event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
     setRowWidth((current) => (Math.abs(current - next) > 0.5 ? next : current));
@@ -264,7 +281,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
           them reach for each other and fuse as the orb settles against the
           bar. Nesting the orb inside the bar's glass would stack two panes
           instead, and stacked glass is mush. */}
-      <GlassGroup spacing={ORB_OVERHANG} style={styles.group}>
+      <GlassGroup spacing={ORB_SHELL / 2} style={styles.group}>
         <GlassSurface
           blurFallback
           // A breath of the habit's colour, so the dock belongs to the same
@@ -278,6 +295,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             },
           ]}
         >
+          <View onLayout={measureHead}>
           {ordered.length > 0 && (
             <View style={styles.pipRow}>
               {ordered.map((entry) => {
@@ -331,6 +349,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
               </Text>
             </Pressable>
           )}
+          </View>
 
         <View style={styles.tabRow} onLayout={measureRow} {...drag.panHandlers}>
           {/* Behind the tabs, and deaf to touches so it never eats one. It is a
@@ -389,7 +408,13 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
         {habit && (
           <GlassSurface
             tint={alpha(habit.color, 0.22)}
-            style={[styles.orbShell, { borderColor: alpha(habit.color, 0.35) }]}
+            style={[
+              styles.orbShell,
+              {
+                borderColor: alpha(habit.color, 0.35),
+                top: ORB_LIFT + Math.max((headHeight - ORB_SHELL) / 2, 0),
+              },
+            ]}
           >
             <CheckInOrb
               color={habit.color}
@@ -422,7 +447,7 @@ const makeStyles = (colors: Palette) => ({
     position: 'absolute',
     left: DOCK_EDGE,
     right: DOCK_EDGE,
-    paddingTop: ORB_OVERHANG,
+    paddingTop: ORB_LIFT,
   },
   group: {
     position: 'relative',
@@ -437,7 +462,6 @@ const makeStyles = (colors: Palette) => ({
   orbShell: {
     position: 'absolute',
     right: 16,
-    top: 0,
     width: ORB_SHELL,
     height: ORB_SHELL,
     borderRadius: ORB_SHELL / 2,
