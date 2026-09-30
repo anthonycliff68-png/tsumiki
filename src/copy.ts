@@ -422,6 +422,26 @@ export const copy = {
     progressViews: 'Day shows what is due today. Week is every habit against every day, so gaps are obvious. Month is the shape over time.',
   },
 
+  habitStats: {
+    back: 'Progress',
+    done: 'Done',
+    run: 'Run',
+    best: 'Best',
+    /** The calendar of the period being looked at. */
+    theDays: 'The days',
+    /**
+     * Which weekdays it dies on. byWeekday has always been computed and has
+     * never been shown — for a habit at a quarter, the day it falls over on is
+     * the most useful thing the app knows about it.
+     */
+    whereItFalls: 'Where it falls over',
+    noPattern: 'No particular day is worse than the others.',
+    worstDay: (weekday: string, rate: number) => `${weekday} is the weak one \u2014 ${rate}% kept.`,
+    edit: 'Edit habit',
+    nothingDue: 'Nothing was due in this period.',
+    everyDayKept: 'Every day kept.',
+  },
+
   walkthrough: {
     /**
      * How, by doing it once.

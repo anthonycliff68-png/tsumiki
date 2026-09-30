@@ -248,3 +248,32 @@ export function lifetimeTotals(dates: readonly string[]): Lifetime {
   }
   return { checkins: dates.length, days: unique.length, bestRun, firstDay: unique[0] ?? null };
 }
+
+/** A day has to be this far below the rest before it is worth naming. */
+export const PATTERN_GAP = 0.25;
+/** And this many weekdays need something due, or there is no shape to read. */
+export const PATTERN_MIN_DAYS = 3;
+
+/**
+ * The weekday a habit reliably dies on, if there is one.
+ *
+ * Null is the common answer and the important one. Taking the lowest weekday
+ * and naming it produces "Sunday is the weak one" on a week where Sunday,
+ * Monday and Tuesday were all missed equally — the first of several ties, read
+ * as a finding. A day is only worth naming when it is alone at the bottom and
+ * clearly below the others.
+ */
+export function weakestWeekday(byWeekday: readonly WeekdayStat[]): { weekday: number; rate: number } | null {
+  const live = byWeekday
+    .filter((day) => day.due > 0)
+    .map((day) => ({ weekday: day.weekday, rate: day.done / day.due }));
+  if (live.length < PATTERN_MIN_DAYS) return null;
+
+  const lowest = Math.min(...live.map((day) => day.rate));
+  const atLowest = live.filter((day) => day.rate === lowest);
+  if (atLowest.length !== 1) return null;
+
+  const others = live.filter((day) => day.rate !== lowest);
+  const average = others.reduce((sum, day) => sum + day.rate, 0) / others.length;
+  return average - lowest >= PATTERN_GAP ? (atLowest[0] ?? null) : null;
+}

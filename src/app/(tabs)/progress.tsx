@@ -164,7 +164,11 @@ export default function ProgressScreen() {
       accessibilityLabel={`${copy.stats.openStats(habit.name)}. ${
         habit.rate === null ? copy.stats.noneDue : `${Math.round(habit.rate * 100)}%`
       }`}
-      onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.habitId } })}
+      // The period travels with you, so stepping into a habit shows the same
+      // stretch you were just reading about.
+      onPress={() =>
+        router.push({ pathname: '/habit/[id]', params: { id: habit.habitId, period: window } })
+      }
       style={({ pressed }) => [styles.barRow, pressed && { opacity: 0.7 }]}
     >
       <Text style={styles.barName} numberOfLines={1}>
