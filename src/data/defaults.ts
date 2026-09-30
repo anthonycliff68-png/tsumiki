@@ -4,6 +4,10 @@
  */
 import { habitColors } from '@/theme';
 
+// The clock helpers live in lib/times so they can be unit tested: this file
+// imports from '@/theme', and node --test cannot resolve the alias.
+export { formatTime, formatTimeGutter, fromTimeString, toTimeString } from '@/lib/times';
+
 export type AnchorSeed = {
   /** Stable key, used to match habit suggestions to anchors. */
   key: string;
@@ -67,53 +71,11 @@ export const PROFILE_EMOJI = [
 
 export const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 
-/** "22:30" or "22:30:00" → "10:30 pm", the canvas's format. */
-export function formatTime(value: string): string {
-  const parts = value.split(':');
-  const hours = Number(parts[0] ?? 0);
-  const minutes = parts[1] ?? '00';
-  const suffix = hours >= 12 ? 'pm' : 'am';
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${hour12}:${minutes} ${suffix}`;
-}
-
-/** The short form the canvas uses on anchor buttons: "7:00", "12:30". */
-export function formatTimeShort(value: string): string {
-  const parts = value.split(':');
-  const hours = Number(parts[0] ?? 0);
-  const minutes = parts[1] ?? '00';
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${hour12}:${minutes}`;
-}
-
-/** Date → "HH:MM" for storage. */
-export function toTimeString(date: Date): string {
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-/** "HH:MM" → a Date today at that time, for the picker. */
-export function fromTimeString(value: string): Date {
-  const parts = value.split(':');
-  const date = new Date();
-  date.setHours(Number(parts[0] ?? 0), Number(parts[1] ?? 0), 0, 0);
-  return date;
-}
-
 /**
  * The timeline gutter. Every time says whether it is morning or afternoon —
  * a bare "11:00" sitting under "12:30" reads as though the day ran backwards.
  * On the hour drops the minutes, since the gutter is narrow.
  */
-export function formatTimeGutter(value: string): string {
-  const parts = value.split(':');
-  const hours = Number(parts[0] ?? 0);
-  const minutes = parts[1] ?? '00';
-  const suffix = hours >= 12 ? 'pm' : 'am';
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return minutes === '00' ? `${hour12} ${suffix}` : `${hour12}:${minutes} ${suffix}`;
-}
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS = [1, 2, 3, 4, 5];

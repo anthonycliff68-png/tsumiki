@@ -10,10 +10,10 @@ import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeShort } from '@/data/defaults';
+import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeGutter } from '@/data/defaults';
 import { useSaveRoutine } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
 type Row = {
@@ -24,6 +24,15 @@ type Row = {
   /** Custom rows start empty and get a text field instead of a label. */
   isCustom: boolean;
 };
+
+/**
+ * Earliest first. The list is meant to be a picture of the day, so a moment
+ * that moves to nine o'clock has to move with it — otherwise breakfast sits
+ * below bedtime and the picture is a lie. Saving writes sort_order from this
+ * order, so it is the stored order too.
+ */
+const byTime = (rows: Row[]): Row[] =>
+  [...rows].sort((a, b) => a.usualTime.localeCompare(b.usualTime));
 
 const initialRows = (): Row[] =>
   DEFAULT_ANCHORS.map((anchor) => ({
@@ -50,29 +59,31 @@ export default function RoutineScreen() {
   const extras = EXTRA_ANCHORS.filter((anchor) => !used.has(anchor.key));
 
   const setTime = (id: string, usualTime: string) =>
-    setRows((current) => current.map((row) => (row.id === id ? { ...row, usualTime } : row)));
+    setRows((current) =>
+      byTime(current.map((row) => (row.id === id ? { ...row, usualTime } : row))),
+    );
 
   const setLabel = (id: string, label: string) =>
     setRows((current) => current.map((row) => (row.id === id ? { ...row, label } : row)));
 
   const addExtra = (key: string, label: string, usualTime: string) =>
     setRows((current) =>
-      [...current, { id: key, label, usualTime, isDefault: false, isCustom: false }].sort((a, b) =>
-        a.usualTime.localeCompare(b.usualTime),
-      ),
+      byTime([...current, { id: key, label, usualTime, isDefault: false, isCustom: false }]),
     );
 
   const addCustom = () =>
-    setRows((current) => [
-      ...current,
-      {
-        id: `custom-${Date.now()}`,
-        label: '',
-        usualTime: '12:00',
-        isDefault: false,
-        isCustom: true,
-      },
-    ]);
+    setRows((current) =>
+      byTime([
+        ...current,
+        {
+          id: `custom-${Date.now()}`,
+          label: '',
+          usualTime: '12:00',
+          isDefault: false,
+          isCustom: true,
+        },
+      ]),
+    );
 
   const save = async (then: () => void) => {
     setError(null);
@@ -107,7 +118,7 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <OnboardingHeader step={2} onBack={() => router.back()} onSkip={() => void save(() => router.replace('/'))} />
+        <OnboardingHeader step={2} onBack={() => router.back()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.routine.eyebrow}</Text>
@@ -138,7 +149,7 @@ export default function RoutineScreen() {
                 onPress={() => setEditing(row.id)}
                 style={({ pressed }) => [styles.timeButton, pressed && styles.pressed]}
               >
-                <Text style={styles.timeLabel}>{formatTimeShort(row.usualTime)}</Text>
+                <Text style={styles.timeLabel}>{formatTimeGutter(row.usualTime)}</Text>
               </Pressable>
             </View>
           ))}
@@ -228,12 +239,16 @@ const makeStyles = (colors: Palette) => ({
   },
   rowLabel: {
     flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: colors.text,
   },
   rowLabelInput: {
     flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: colors.text,
@@ -241,14 +256,19 @@ const makeStyles = (colors: Palette) => ({
   },
   timeButton: {
     minHeight: 40,
+    // Never squeezed: the label beside it shrinks instead, or a long moment
+    // name clips the time off the row.
+    flexShrink: 0,
     justifyContent: 'center',
     paddingHorizontal: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    // overlay is white on the dark ground and near-black on the light one, so
+    // the pill stays a pill either way instead of vanishing into the paper.
+    backgroundColor: alpha(colors.overlay, 0.1),
   },
   timeLabel: {
     ...display(20, 24),
-    color: colors.white,
+    color: colors.text,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {

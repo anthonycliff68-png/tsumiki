@@ -10,7 +10,7 @@ import { CheckIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { describeDays, EVERY_DAY, formatTime, formatTimeShort } from '@/data/defaults';
+import { EVERY_DAY, describeDays, formatTime, formatTimeGutter } from '@/data/defaults';
 import {
   useAnchors,
   useArchiveHabit,
@@ -181,7 +181,7 @@ export default function NewHabitScreen() {
                         {anchor.label}
                       </Text>
                       <Text style={[styles.chipTime, active && styles.chipTextActive]}>
-                        {formatTimeShort(anchor.usual_time)}
+                        {formatTimeGutter(anchor.usual_time)}
                       </Text>
                     </Pressable>
                   );
@@ -324,6 +324,11 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: 'rgba(255,255,255,0.05)',
     ...display(24, 28),
     color: colors.text,
+    // display() uppercases through a transform, and a transform on a text
+    // input is applied a character behind: you type "t", watch it sit there,
+    // then watch it turn into "T". The field shows what was typed; the card
+    // preview underneath shows how it will look.
+    textTransform: 'none',
   },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   previewDot: { width: 8, height: 8, borderRadius: 4 },

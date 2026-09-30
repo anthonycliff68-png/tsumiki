@@ -9,7 +9,7 @@ import { FlameIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { formatTime, formatTimeShort } from '@/data/defaults';
+import { formatTime, formatTimeGutter } from '@/data/defaults';
 import {
   CrewFullError,
   InviteNotFoundError,
@@ -169,7 +169,7 @@ export default function JoinScreen() {
                             {anchor.label}
                           </Text>
                           <Text style={[styles.chipTime, active && styles.chipTextActive]}>
-                            {formatTimeShort(anchor.usual_time)}
+                            {formatTimeGutter(anchor.usual_time)}
                           </Text>
                         </Pressable>
                       );

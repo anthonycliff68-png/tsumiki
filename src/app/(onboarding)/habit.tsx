@@ -84,7 +84,7 @@ export default function FirstHabitScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingHeader step={3} onBack={() => router.back()} onSkip={() => router.replace('/')} />
+        <OnboardingHeader step={3} onBack={() => router.back()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.habit.eyebrow}</Text>

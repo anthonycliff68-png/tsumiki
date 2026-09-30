@@ -8,7 +8,7 @@ import { ArrowRightIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { formatTimeShort } from '@/data/defaults';
+import { formatTimeGutter } from '@/data/defaults';
 import { useAnchors } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
@@ -45,7 +45,7 @@ export default function CrewPromptScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingHeader step={4} onBack={() => router.back()} onSkip={() => router.replace('/')} />
+        <OnboardingHeader step={4} onBack={() => router.back()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.crew.eyebrow}</Text>
@@ -114,7 +114,7 @@ function TimelineAnchor({ time, label }: { time: string; label: string }) {
   const styles = useStyles(makeStyles);
   return (
     <View style={styles.anchorRow}>
-      <Text style={styles.time}>{formatTimeShort(time)}</Text>
+      <Text style={styles.time}>{formatTimeGutter(time)}</Text>
       <View style={styles.bulletColumn}>
         <View style={styles.bullet} />
       </View>
