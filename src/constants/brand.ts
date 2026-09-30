@@ -5,12 +5,16 @@ export const APP_NAME = 'Tsumiki';
 export const APP_TAGLINE = 'Build habits with your people, one stack at a time.';
 
 /**
- * The published rules everyone agrees to, and the privacy policy. Both are
- * placeholders until the domain exists — the App Store will not take the app
- * without them reachable and accurate.
+ * The published rules everyone agrees to, and the privacy policy.
+ *
+ * On the same GitHub Pages site the invite links use, not on tsumiki.app: that
+ * domain is not owned, and pointing at it left the Terms button in the app
+ * opening nothing at all — the same way invites were 404ing before. Whatever
+ * these say has to actually load, because the App Store checks the privacy one
+ * and a reviewer will tap the other.
  */
-export const TERMS_URL = 'https://tsumiki.app/terms';
-export const PRIVACY_URL = 'https://tsumiki.app/privacy';
+export const TERMS_URL = 'https://anthonycliff68-png.github.io/tsumiki/terms.html';
+export const PRIVACY_URL = 'https://anthonycliff68-png.github.io/tsumiki/privacy.html';
 
 /**
  * Where invite links point.
