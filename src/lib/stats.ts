@@ -251,19 +251,29 @@ export function lifetimeTotals(dates: readonly string[]): Lifetime {
 
 /** A day has to be this far below the rest before it is worth naming. */
 export const PATTERN_GAP = 0.25;
-/** And this many weekdays need something due, or there is no shape to read. */
+/** This many weekdays need something due, or there is no shape to read. */
 export const PATTERN_MIN_DAYS = 3;
+/**
+ * At most this many days can share the bottom and still be a finding.
+ *
+ * One is the obvious case. Two is the common one — weekends — and refusing to
+ * name it because there are two of them loses the most actionable thing the
+ * app could say. Three or more equally bad days is not a pattern, it is just a
+ * habit going badly, and that is what the rate already says.
+ */
+export const PATTERN_MAX_TIED = 2;
 
 /**
- * The weekday a habit reliably dies on, if there is one.
+ * The weekdays a habit reliably dies on, if there are any.
  *
  * Null is the common answer and the important one. Taking the lowest weekday
  * and naming it produces "Sunday is the weak one" on a week where Sunday,
  * Monday and Tuesday were all missed equally — the first of several ties, read
- * as a finding. A day is only worth naming when it is alone at the bottom and
- * clearly below the others.
+ * as a finding.
  */
-export function weakestWeekday(byWeekday: readonly WeekdayStat[]): { weekday: number; rate: number } | null {
+export function weakestWeekdays(
+  byWeekday: readonly WeekdayStat[],
+): { weekdays: number[]; rate: number } | null {
   const live = byWeekday
     .filter((day) => day.due > 0)
     .map((day) => ({ weekday: day.weekday, rate: day.done / day.due }));
@@ -271,9 +281,13 @@ export function weakestWeekday(byWeekday: readonly WeekdayStat[]): { weekday: nu
 
   const lowest = Math.min(...live.map((day) => day.rate));
   const atLowest = live.filter((day) => day.rate === lowest);
-  if (atLowest.length !== 1) return null;
-
+  if (atLowest.length > PATTERN_MAX_TIED) return null;
+  // Every remaining day has to be above them, or there is nothing to compare to.
   const others = live.filter((day) => day.rate !== lowest);
+  if (others.length === 0) return null;
+
   const average = others.reduce((sum, day) => sum + day.rate, 0) / others.length;
-  return average - lowest >= PATTERN_GAP ? (atLowest[0] ?? null) : null;
+  return average - lowest >= PATTERN_GAP
+    ? { weekdays: atLowest.map((day) => day.weekday), rate: lowest }
+    : null;
 }

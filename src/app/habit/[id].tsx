@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
 import { TextButton } from '@/components/Button';
-import { HabitCalendar } from '@/components/HabitCalendar';
+import { CalendarLegend, HabitCalendar } from '@/components/HabitCalendar';
 import { Display } from '@/components/Screen';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
@@ -17,7 +17,7 @@ import {
   periodRange,
   shiftDate,
   statsFor,
-  weakestWeekday,
+  weakestWeekdays,
   type StatsWindow,
 } from '@/lib/stats';
 import { streakOf } from '@/lib/streaks';
@@ -31,14 +31,15 @@ const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * week strip drawn twice. A pattern needs several of each to exist at all.
  */
 const PATTERN_DAYS = 84;
+/** Plural, because the pattern is about a recurring day rather than one date. */
 const WEEKDAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
+  'Sundays',
+  'Mondays',
+  'Tuesdays',
+  'Wednesdays',
+  'Thursdays',
+  'Fridays',
+  'Saturdays',
 ];
 
 /**
@@ -104,8 +105,9 @@ export default function HabitStatsScreen() {
     );
   }
 
-  /** Null unless one weekday is genuinely, singularly worse. Tested in stats. */
-  const worst = weakestWeekday(view.pattern);
+  /** Null unless one or two weekdays are genuinely worse. Tested in stats. */
+  const worst = weakestWeekdays(view.pattern);
+  const worstNames = worst?.weekdays.map((day) => WEEKDAY_NAMES[day] ?? '') ?? [];
   const live = view.pattern.filter((day) => day.due > 0);
   const everyDayKept = live.length > 0 && live.every((day) => day.done === day.due);
 
@@ -148,25 +150,36 @@ export default function HabitStatsScreen() {
           {view.period.due === 0 ? (
             <Text style={styles.body}>{copy.habitStats.nothingDue}</Text>
           ) : (
-            <HabitCalendar window={window} days={view.calendar} color={habit.color} />
+            <>
+              <HabitCalendar window={window} days={view.calendar} color={habit.color} />
+              {/* Four treatments nobody can guess at, so they are named. */}
+              <CalendarLegend color={habit.color} />
+            </>
           )}
         </View>
 
         {/* The one thing on this screen that tells you what to change. */}
         <View style={styles.section}>
           <Text style={styles.label}>{copy.habitStats.whereItFalls}</Text>
+          <Text style={styles.sub}>{copy.habitStats.whereItFallsSub}</Text>
           <View style={styles.week}>
             {view.pattern.map((day, i) => {
               const rate = day.due === 0 ? null : day.done / day.due;
               return (
                 <View key={i} style={styles.weekCol}>
+                  {/* A day the habit never runs on reads as a dash, not as nought
+                      per cent — those are opposite facts and were drawing the
+                      same empty bar. */}
+                  <Text style={[styles.weekValue, rate === null && styles.weekValueOff]}>
+                    {rate === null ? copy.habitStats.noneOnDay : `${Math.round(rate * 100)}%`}
+                  </Text>
                   <View style={styles.weekTrack}>
                     <View
                       style={[
                         styles.weekFill,
                         {
                           height: `${Math.round((rate ?? 0) * 100)}%`,
-                          backgroundColor: rate === null ? alpha(colors.overlay, 0.1) : habit.color,
+                          backgroundColor: habit.color,
                         },
                       ]}
                     />
@@ -181,10 +194,12 @@ export default function HabitStatsScreen() {
               ? copy.habitStats.everyDayKept
               : worst === null
                 ? copy.habitStats.noPattern
-                : copy.habitStats.worstDay(
-                    WEEKDAY_NAMES[worst.weekday] ?? '',
-                    Math.round(worst.rate * 100),
-                  )}
+                : worstNames.length === 1
+                  ? copy.habitStats.worstDay(worstNames[0] ?? '', Math.round(worst.rate * 100))
+                  : copy.habitStats.worstDays(
+                      worstNames.join(' and '),
+                      Math.round(worst.rate * 100),
+                    )}
           </Text>
         </View>
 
@@ -235,8 +250,8 @@ const makeStyles = (colors: Palette) => ({
   },
   body: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.textMuted },
 
-  week: { flexDirection: 'row', gap: spacing.sm, height: 92 },
-  weekCol: { flex: 1, gap: 6 },
+  week: { flexDirection: 'row', gap: 6, height: 128 },
+  weekCol: { flex: 1, gap: 5 },
   weekTrack: {
     flex: 1,
     borderRadius: 4,
@@ -251,6 +266,14 @@ const makeStyles = (colors: Palette) => ({
     fontSize: 11,
     color: colors.textFaint,
   },
+  weekValue: {
+    textAlign: 'center',
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  weekValueOff: { color: colors.textFaint },
+  sub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
 
   edit: {
     minHeight: 48,

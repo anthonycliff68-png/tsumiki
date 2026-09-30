@@ -435,8 +435,14 @@ export const copy = {
      * the most useful thing the app knows about it.
      */
     whereItFalls: 'Where it falls over',
+    /** The chart is meaningless without saying what the bars measure. */
+    whereItFallsSub: 'How often you keep it, by day of the week, over the last twelve weeks.',
+    /** A weekday the habit never runs on is not nought per cent, it is nothing. */
+    noneOnDay: '\u2014',
     noPattern: 'No particular day is worse than the others.',
-    worstDay: (weekday: string, rate: number) => `${weekday} is the weak one \u2014 ${rate}% kept.`,
+    /** One day or two — weekends are the common pair and worth naming as one. */
+    worstDay: (days: string, rate: number) => `${days} is where it slips \u2014 ${rate}% kept.`,
+    worstDays: (days: string, rate: number) => `${days} are where it slips \u2014 ${rate}% kept.`,
     edit: 'Edit habit',
     nothingDue: 'Nothing was due in this period.',
     everyDayKept: 'Every day kept.',
@@ -572,10 +578,12 @@ export const copy = {
       restDay:
         'Something is due every day of the week, and it is beginning to show. Leave one day clear on purpose.',
     },
+    // Four treatments nobody can guess at. Said in full rather than in the
+    // shortest words that fit: a key that needs decoding is not a key.
     legend: {
-      done: 'Done',
-      missed: 'Missed',
-      future: 'To come',
+      done: 'Done that day',
+      missed: 'Due, and missed',
+      future: 'Still to come',
       notDue: 'Not scheduled',
     },
     title: 'Progress',

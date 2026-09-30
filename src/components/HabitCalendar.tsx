@@ -123,10 +123,12 @@ function weekdayOfDate(date: string): number {
 }
 
 const makeStyles = (colors: Palette) => ({
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
-  legendKey: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendCell: { width: 12, height: 12, borderRadius: 3 },
-  legendLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 12, columnGap: 12, marginTop: 14 },
+  // Two columns rather than one cramped row: the labels say what they mean
+  // now, and a wrapping row broke them across lines at random.
+  legendKey: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '47%' },
+  legendCell: { width: 18, height: 18, borderRadius: 4 },
+  legendLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
   week: { flexDirection: 'row', gap: 5 },
   weekCol: { flex: 1, gap: 4, alignItems: 'center' },
   cell: { width: '100%', aspectRatio: 1, borderRadius: 4, minWidth: 12 },

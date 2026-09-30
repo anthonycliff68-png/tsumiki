@@ -15,7 +15,7 @@ import {
   overallOf,
   periodRange,
   startOfWeek,
-  weakestWeekday,
+  weakestWeekdays,
   statsFor,
   weekdayOf,
   type HabitInput,
@@ -372,7 +372,7 @@ describe('lifetime totals', () => {
   });
 });
 
-describe('the weekday a habit dies on', () => {
+describe('the weekdays a habit dies on', () => {
   const week = (...rates: (number | null)[]) =>
     rates.map((rate, weekday) =>
       rate === null
@@ -380,33 +380,42 @@ describe('the weekday a habit dies on', () => {
         : { weekday, due: 20, done: Math.round(rate * 20) },
     );
 
-  it('names a day that is alone at the bottom and well below the rest', () => {
-    const worst = weakestWeekday(week(1, 1, 1, 0, 1, 1, 1));
-    assert.equal(worst?.weekday, 3);
+  it('names a day alone at the bottom and well below the rest', () => {
+    assert.deepEqual(weakestWeekdays(week(1, 1, 1, 0, 1, 1, 1))?.weekdays, [3]);
+  });
+
+  // Weekends are the common shape, and refusing to name them because there are
+  // two loses the most useful thing the screen could say.
+  it('names a pair sharing the bottom', () => {
+    assert.deepEqual(weakestWeekdays(week(1, 1, 1, 1, 1, 0, 0))?.weekdays, [5, 6]);
   });
 
   // The bug this exists to stop: three days tied at zero, and the first of them
   // reported as "the weak one".
-  it('names nobody when several days are equally bad', () => {
-    assert.equal(weakestWeekday(week(0, 0, 0, 1, 1, 1, 1)), null);
+  it('names nobody when three or more days are equally bad', () => {
+    assert.equal(weakestWeekdays(week(0, 0, 0, 1, 1, 1, 1)), null);
   });
 
   // A quarter behind the rest is the line. Nine days in ten against ten in ten
   // is a worse day, not a pattern worth acting on.
   it('names nobody when the spread is small', () => {
-    assert.equal(weakestWeekday(week(0.9, 1, 1, 1, 1, 1, 1)), null);
+    assert.equal(weakestWeekdays(week(0.9, 1, 1, 1, 1, 1, 1)), null);
   });
 
   it('names a day sitting exactly a quarter behind', () => {
-    assert.equal(weakestWeekday(week(0.75, 1, 1, 1, 1, 1, 1))?.weekday, 0);
+    assert.deepEqual(weakestWeekdays(week(0.75, 1, 1, 1, 1, 1, 1))?.weekdays, [0]);
+  });
+
+  it('names nobody when every day is equal, however good', () => {
+    assert.equal(weakestWeekdays(week(1, 1, 1, 1, 1, 1, 1)), null);
+    assert.equal(weakestWeekdays(week(0, 0, 0, 0, 0, 0, 0)), null);
   });
 
   it('needs a few weekdays with something due before there is a shape', () => {
-    assert.equal(weakestWeekday(week(1, 0, null, null, null, null, null)), null);
+    assert.equal(weakestWeekdays(week(1, 0, null, null, null, null, null)), null);
   });
 
   it('ignores weekdays the habit is never scheduled for', () => {
-    const worst = weakestWeekday(week(null, 1, 1, 0, 1, null, null));
-    assert.equal(worst?.weekday, 3);
+    assert.deepEqual(weakestWeekdays(week(null, 1, 1, 0, 1, null, null))?.weekdays, [3]);
   });
 });
