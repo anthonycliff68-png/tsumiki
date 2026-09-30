@@ -9,6 +9,7 @@ import { useBlockUser, useReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Enums } from '@/lib/database.types';
 import { display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { GlassSurface } from '@/components/GlassSurface';
 
 type Props = {
   visible: boolean;
@@ -58,7 +59,7 @@ export function SafetySheet({
   return (
     <Modal transparent animationType="slide" visible onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close} accessibilityLabel={copy.safety.cancel} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <GlassSurface style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.grabber} />
 
         {mode === 'choose' && (
@@ -137,7 +138,7 @@ export function SafetySheet({
             <TextButton label={copy.safety.cancel} onPress={close} />
           </>
         )}
-      </View>
+      </GlassSurface>
     </Modal>
   );
 }

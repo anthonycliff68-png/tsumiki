@@ -6,6 +6,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { fromTimeString, toTimeString } from '@/data/defaults';
 import { fonts, radii, spacing, type Palette } from '@/theme';
+import { GlassSurface } from '@/components/GlassSurface';
 
 type Props = {
   visible: boolean;
@@ -41,7 +42,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose} visible>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={copy.onboarding.routine.done} />
-      <View style={styles.sheet}>
+      <GlassSurface style={styles.sheet}>
         <Text style={styles.title}>{label}</Text>
         <DateTimePicker
           mode="time"
@@ -54,7 +55,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
           }}
         />
         <PrimaryButton label={copy.onboarding.routine.done} onPress={onClose} />
-      </View>
+      </GlassSurface>
     </Modal>
   );
 }

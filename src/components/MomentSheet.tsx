@@ -8,6 +8,7 @@ import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import { minutesOfDay } from '@/lib/dates';
 import { alpha, display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
+import { GlassSurface } from '@/components/GlassSurface';
 
 export type MomentDraft = {
   id: string | null;
@@ -72,7 +73,7 @@ export function MomentSheet({
         onPress={onClose}
       />
 
-      <View style={styles.sheet}>
+      <GlassSurface style={styles.sheet}>
         <View style={[styles.grabber, { backgroundColor: alpha(swatch, 0.9) }]} />
 
         <ScrollView
@@ -195,7 +196,7 @@ export function MomentSheet({
           }
           onClose={() => setPicking(null)}
         />
-      </View>
+      </GlassSurface>
     </Modal>
   );
 }

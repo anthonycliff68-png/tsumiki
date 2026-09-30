@@ -1,7 +1,5 @@
-import { BlurView } from 'expo-blur';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Pressable, Text, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,7 +12,8 @@ import {
   type IconProps,
 } from '@/components/icons';
 import { CheckInOrb } from '@/components/CheckInOrb';
-import { useAppearance, useStyles, useTheme } from '@/lib/appearance';
+import { GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
+import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
@@ -32,63 +31,6 @@ export const DOCK_HEIGHT = 80 + 58;
 const DOCK_EDGE = 12;
 /** Breathing room between the dock's top edge and the end of a list. */
 const DOCK_GAP = 16;
-
-/**
- * Apple's Liquid Glass, where the OS has it.
- *
- * iOS 26 and up only, and a plain View on Android — so the frosted pane stays
- * as the path everywhere else rather than being replaced by it. Read once: it
- * is a property of the build, not something that changes while running.
- */
-const LIQUID_GLASS = ((): boolean => {
-  try {
-    return isLiquidGlassAvailable();
-  } catch {
-    // Expo Go carries a fixed set of native modules, and asking it for one it
-    // does not have throws rather than returning false. Everyday development
-    // happens in Expo Go, so an unguarded call here would take the dock — and
-    // with it every tab — down on the machine it is being built on.
-    return false;
-  }
-})();
-
-/**
- * The dock's material. Real glass refracts what scrolls underneath and catches
- * light along its rim; a BlurView only frosts it. Same children either way.
- */
-function DockSurface({
-  accent,
-  scheme,
-  style,
-  children,
-}: {
-  accent: string;
-  scheme: 'light' | 'dark';
-  style: ViewStyle;
-  children: React.ReactNode;
-}) {
-  if (LIQUID_GLASS) {
-    return (
-      <GlassView
-        glassEffectStyle="regular"
-        // A breath of the up-next habit's colour, so the dock belongs to the
-        // same habit the bleed behind it is tinted for.
-        tintColor={alpha(accent, 0.1)}
-        // The app has its own light/dark choice and does not always agree with
-        // the phone, so the glass is told which one it is sitting on.
-        colorScheme={scheme}
-        style={style}
-      >
-        {children}
-      </GlassView>
-    );
-  }
-  return (
-    <BlurView intensity={24} tint="dark" style={style}>
-      {children}
-    </BlurView>
-  );
-}
 
 type TabIcon = (props: IconProps) => React.ReactElement;
 
@@ -141,7 +83,6 @@ function dockBottom(safeBottom: number): number {
 export function Dock({ state, navigation }: BottomTabBarProps) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
-  const { theme } = useAppearance();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -195,7 +136,13 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
         },
       ]}
     >
-      <DockSurface accent={habit?.color ?? colors.textMuted} scheme={theme} style={styles.glass}>
+      <GlassSurface
+        blurFallback
+        // A breath of the up-next habit's colour, so the dock belongs to the
+        // same habit the bleed behind it is tinted for.
+        tint={alpha(habit?.color ?? colors.textMuted, 0.1)}
+        style={styles.glass}
+      >
         {habit && (
         <View style={styles.upNextRow}>
           <View
@@ -275,7 +222,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             );
           })}
         </View>
-      </DockSurface>
+      </GlassSurface>
     </View>
   );
 }

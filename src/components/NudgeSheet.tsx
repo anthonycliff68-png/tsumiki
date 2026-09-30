@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { faceOf } from '@/lib/models';
+import { GlassSurface } from '@/components/GlassSurface';
 
 type Props = {
   visible: boolean;
@@ -66,7 +67,7 @@ export function NudgeSheet({ visible, crewId, member, remaining, moment, onClose
   return (
     <Modal transparent animationType="slide" visible onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={copy.nudge.cancel} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <GlassSurface style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.grabber} />
 
         <View style={styles.header}>
@@ -134,7 +135,7 @@ export function NudgeSheet({ visible, crewId, member, remaining, moment, onClose
 
         <PrimaryButton label={copy.nudge.send} busy={sendNudge.isPending} onPress={send} />
         <TextButton label={copy.nudge.cancel} onPress={onClose} />
-      </View>
+      </GlassSurface>
     </Modal>
   );
 }
