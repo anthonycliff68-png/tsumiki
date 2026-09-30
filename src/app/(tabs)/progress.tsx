@@ -7,48 +7,89 @@ import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
+import { WeekAdviceBanner } from '@/components/AdviceList';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
-import { TrendBars } from '@/components/ProgressViews';
 import { Display } from '@/components/Screen';
-import { useCheckIn, useHabitHistory, useResetHistory } from '@/lib/api';
+import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
-import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
-import { datesBetween, isDue, shiftDate, statsFor, type HabitStats } from '@/lib/stats';
-import { streakOf, type Streak } from '@/lib/streaks';
+import { adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
+import { overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
 import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
-/** How far back "over time" looks. Long enough to have a shape, short enough to be this month. */
-const TREND_DAYS = 30;
-/** Marks in a habit's row. A week reads at a glance; a month is a chart. */
-const STRIP_DAYS = 7;
-
-type Row = {
-  stats: HabitStats;
-  streak: Streak;
-  /** The last few due days, oldest first, for the strip. */
-  recent: { date: string; done: boolean }[];
-  /** True when today is due and already checked in. */
-  doneToday: boolean;
-};
+const WINDOWS: { key: StatsWindow; label: string }[] = [
+  { key: 'day', label: copy.stats.day },
+  { key: 'week', label: copy.stats.week },
+  { key: 'month', label: copy.stats.month },
+];
 
 /**
- * Progress, ordered by what is at stake.
+ * How many habits can be named before the list stops being a picture.
  *
- * It used to be a Day / Week / Month switcher over a percentage, and a reader
- * said it read as information placed on a page rather than a hierarchy. The
- * percentage was the reason: a rate has no stakes, so nothing could be more
- * important than anything else.
+ * Under this, every habit gets a row and the screen still answers "how am I
+ * doing" at a glance. Over it, the rows fill the screen and answer nothing — so
+ * the spread is drawn instead and only the ones worth acting on are named.
+ */
+const NAME_LIMIT = 8;
+/** Below this a habit is slipping. */
+const SLIPPING = 0.25;
+/** Above this it is fine. Only used to describe the spread in a sentence. */
+const FINE = 0.5;
+
+function asUtc(date: string): Date {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+}
+
+function longDate(date: string): string {
+  return asUtc(date).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+function monthLabel(date: string): string {
+  return asUtc(date).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function shortDate(date: string): string {
+  return asUtc(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+function periodLabel(window: StatsWindow, offset: number, from: string, to: string): string {
+  if (offset === 0) {
+    if (window === 'day') return copy.stats.today;
+    if (window === 'week') return copy.stats.thisWeek;
+    return copy.stats.thisMonth;
+  }
+  if (window === 'day') return longDate(from);
+  if (window === 'month') return monthLabel(from);
+  return `${shortDate(from)} – ${shortDate(to)}`;
+}
+
+/**
+ * Progress: how you are doing, and then which habit to look at.
  *
- * Streaks give it an order. What is one miss from ending comes first and is the
- * only thing here you can act on; what is running comes next; what has stopped
- * sits quietly at the bottom with a way back in.
+ * The screen answers one question — how often is this actually getting done —
+ * and the rate answers it. Everything under that is a way into a single habit
+ * rather than a second attempt at the same answer.
  *
- * The three periods are gone rather than rearranged. Today is the dock, on every
- * screen. The week is the strip under each habit — the old heat wall, handed
- * back to the habit it belongs to. The month is the trend at the bottom, which
- * is the only one that was ever really about a period.
+ * Habits are bars, sorted weakest first. That does the job the old "needs work
+ * / going well" tabs did without a control to operate: the one to look at is
+ * the one at the top, where the eye already is.
+ *
+ * Horizontal rather than vertical, because names need room. Eight vertical bars
+ * on a phone is forty points each, which fits no word anyone would use.
  */
 export default function ProgressScreen() {
   const styles = useStyles(makeStyles);
@@ -59,9 +100,9 @@ export default function ProgressScreen() {
   const userId = session?.user.id;
   const { data: history = [], refetch, isRefetching } = useHabitHistory(userId);
   const resetHistory = useResetHistory(userId);
-  const checkIn = useCheckIn(userId);
 
-  const [tab, setTab] = useState<AdviceTab>('needs-work');
+  const [window, setWindow] = useState<StatsWindow>('week');
+  const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const today = localDateString(new Date());
 
@@ -71,34 +112,41 @@ export default function ProgressScreen() {
     }, [refetch]),
   );
 
-  /**
-   * Every habit against the advice window, which is the trailing stretch rather
-   * than a calendar period — a streak does not restart because a month did.
-   */
-  const rows = useMemo<Row[]>(() => {
-    const span = adviceRange(today);
-    return history
-      .map((habit) => {
-        const stats = statsFor(habit, span.from, span.to, today);
-        return {
-          stats,
-          streak: streakOf(stats.days, today),
-          recent: stats.days.slice(-STRIP_DAYS),
-          doneToday: stats.days.some((day) => day.date === today && day.done),
-        };
-      })
-      .sort((a, b) => b.streak.days - a.streak.days);
-  }, [history, today]);
+  const earliest = useMemo(
+    () =>
+      history.reduce((oldest, habit) => {
+        const first = habit.checkedOn[0];
+        const start = first && first < habit.createdOn ? first : habit.createdOn;
+        return start < oldest ? start : oldest;
+      }, today),
+    [history, today],
+  );
 
-  const atRisk = rows.filter((row) => row.streak.state === 'at-risk');
-  const running = rows.filter((row) => row.streak.state === 'running');
-  const cold = rows.filter((row) => row.streak.state === 'cold');
-  const longest = running[0];
+  const { from, to } = useMemo(() => periodRange(window, today, offset), [window, today, offset]);
+  const canGoBack = from > earliest;
+  const canGoForward = offset > 0;
 
-  const accent = atRisk[0]?.stats.color ?? longest?.stats.color ?? habitColors[0];
+  /** Weakest first. Habits with nothing due sort last: they have no rate to rank. */
+  const stats = useMemo<HabitStats[]>(
+    () =>
+      history
+        .map((habit) => statsFor(habit, from, to, today))
+        .sort((a, b) => (a.rate ?? 2) - (b.rate ?? 2)),
+    [history, from, to, today],
+  );
+
+  const overall = useMemo(() => overallOf(stats), [stats]);
+  const rated = stats.filter((habit) => habit.rate !== null);
+  const slipping = rated.filter((habit) => (habit.rate ?? 0) < SLIPPING);
+  const fine = rated.filter((habit) => (habit.rate ?? 0) >= FINE);
+  const crowded = rated.length > NAME_LIMIT;
+
+  /** Under the limit every habit is named; over it, only the ones to act on. */
+  const named = crowded ? slipping : rated;
+  const accent = stats[0]?.color ?? habitColors[0];
 
   const advice = useMemo(() => {
-    const span = adviceRange(today);
+    const span = adviceRange(to);
     const placements = new Map<string, Placement>(
       history.map((habit) => [
         habit.habitId,
@@ -107,43 +155,33 @@ export default function ProgressScreen() {
     );
     const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
     return { ...splitVerdicts(over, placements), week: adviseWeek(over) };
-  }, [history, today]);
+  }, [history, to, today]);
 
-  /** One bar a day: how much of that day's list got done. */
-  const trend = useMemo(() => {
-    const from = shiftDate(today, -(TREND_DAYS - 1));
-    return datesBetween(from, today).map((date) => {
-      let due = 0;
-      let done = 0;
-      for (const habit of history) {
-        if (!isDue(habit, date, today)) continue;
-        due += 1;
-        if (habit.checkedOn.includes(date)) done += 1;
-      }
-      return { date, rate: due === 0 ? null : done / due };
-    });
-  }, [history, today]);
-
-  /**
-   * Always STRIP_DAYS wide. A habit made on Tuesday has three due days and
-   * would otherwise draw a stub next to a full week, which reads as a worse
-   * week rather than a shorter history. The padding is blank, not missed.
-   */
-  const strip = (row: Row) => (
-    <View style={styles.strip}>
-      {Array.from({ length: STRIP_DAYS - row.recent.length }, (_, i) => (
-        <View key={`pad-${i}`} style={styles.mark} />
-      ))}
-      {row.recent.map((day) => (
+  const bar = (habit: HabitStats) => (
+    <Pressable
+      key={habit.habitId}
+      accessibilityRole="button"
+      accessibilityLabel={`${copy.stats.openStats(habit.name)}. ${
+        habit.rate === null ? copy.stats.noneDue : `${Math.round(habit.rate * 100)}%`
+      }`}
+      onPress={() => router.push({ pathname: '/new-habit', params: { id: habit.habitId } })}
+      style={({ pressed }) => [styles.barRow, pressed && { opacity: 0.7 }]}
+    >
+      <Text style={styles.barName} numberOfLines={1}>
+        {habit.name}
+      </Text>
+      <View style={styles.track}>
         <View
-          key={day.date}
           style={[
-            styles.mark,
-            { backgroundColor: day.done ? row.stats.color : alpha(colors.overlay, 0.14) },
+            styles.fill,
+            { width: `${Math.round((habit.rate ?? 0) * 100)}%`, backgroundColor: habit.color },
           ]}
         />
-      ))}
-    </View>
+      </View>
+      <Text style={styles.barValue}>
+        {habit.rate === null ? '—' : `${Math.round(habit.rate * 100)}%`}
+      </Text>
+    </Pressable>
   );
 
   return (
@@ -166,144 +204,122 @@ export default function ProgressScreen() {
       >
         <Display size={56} line={50}>{copy.stats.title}</Display>
 
-        {rows.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
-
-        {/* The only thing on this screen you can act on, so it comes first and
-            it comes with the action. A run you can still save is a decision
-            with a deadline, not a statistic. */}
-        {atRisk.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: atRisk[0]?.stats.color }]}>
-              {copy.stats.atRisk}
-            </Text>
-            {atRisk.map((row) => (
-              <View
-                key={row.stats.habitId}
-                style={[styles.riskCard, { borderColor: row.stats.color }]}
-              >
-                <Display size={26} line={26}>{row.stats.name}</Display>
-                <Text style={styles.riskBody}>{copy.stats.atRiskBody(row.streak.days)}</Text>
-                {!row.doneToday && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={copy.dock.checkInLabel(row.stats.name)}
-                    onPress={() => checkIn.mutate({ habitId: row.stats.habitId })}
-                    style={({ pressed }) => [
-                      styles.riskAction,
-                      { backgroundColor: row.stats.color },
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <Text style={styles.riskActionText}>{copy.crews.checkIn}</Text>
-                  </Pressable>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* With nothing at risk the screen opens with the reward instead. */}
-        {atRisk.length === 0 && longest && (
-          <View style={styles.section}>
-            <Text style={styles.label}>{copy.stats.longestRun}</Text>
-            <View style={styles.headline}>
-              <Display size={68} line={60}>{String(longest.streak.days)}</Display>
-              <Text style={styles.headlineUnit}>{copy.stats.dayUnit(longest.streak.days)}</Text>
-            </View>
-            <Text style={styles.riskBody}>{copy.stats.longestRunOn(longest.stats.name)}</Text>
-          </View>
-        )}
-
-        {running.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.label}>{copy.stats.running}</Text>
-            {running.map((row) => (
+        <View style={styles.windows}>
+          {WINDOWS.map((option) => {
+            const active = option.key === window;
+            return (
               <Pressable
-                key={row.stats.habitId}
+                key={option.key}
                 accessibilityRole="button"
-                accessibilityLabel={`${row.stats.name}. ${copy.stats.runDays(row.streak.days)}`}
-                onPress={() =>
-                  router.push({ pathname: '/new-habit', params: { id: row.stats.habitId } })
-                }
-                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+                accessibilityState={{ selected: active }}
+                onPress={() => {
+                  setWindow(option.key);
+                  setOffset(0);
+                }}
+                style={[styles.window, active && styles.windowActive]}
               >
-                <View style={[styles.bar, { backgroundColor: row.stats.color }]} />
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowName} numberOfLines={1}>
-                    {row.stats.name}
-                  </Text>
-                  {strip(row)}
-                </View>
-                <Display size={24} line={24}>{String(row.streak.days)}</Display>
+                <Text style={[styles.windowText, active && styles.windowTextActive]}>
+                  {option.label}
+                </Text>
               </Pressable>
-            ))}
-          </View>
-        )}
+            );
+          })}
+        </View>
 
-        {running.length === 0 && atRisk.length === 0 && rows.length > 0 && (
-          <Text style={styles.empty}>{copy.stats.nothingRunning}</Text>
-        )}
+        <View style={styles.stepper}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.stats.earlier}
+            accessibilityState={{ disabled: !canGoBack }}
+            disabled={!canGoBack}
+            onPress={() => setOffset((current) => current + 1)}
+            style={[styles.step, !canGoBack && styles.stepOff]}
+          >
+            <Text style={styles.stepText}>‹</Text>
+          </Pressable>
+          <Text style={styles.period}>{periodLabel(window, offset, from, to)}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={copy.stats.later}
+            accessibilityState={{ disabled: !canGoForward }}
+            disabled={!canGoForward}
+            onPress={() => setOffset((current) => Math.max(0, current - 1))}
+            style={[styles.step, !canGoForward && styles.stepOff]}
+          >
+            <Text style={styles.stepText}>›</Text>
+          </Pressable>
+        </View>
 
-        {/* Quiet, and phrased as an offer. Nobody needs a list of their failures
-            at full contrast. */}
-        {cold.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.label}>{copy.stats.cold}</Text>
-            <Text style={styles.riskBody}>{copy.stats.coldBody}</Text>
-            {cold.map((row) => (
-              <Pressable
-                key={row.stats.habitId}
-                accessibilityRole="button"
-                accessibilityLabel={copy.stats.openHabit(row.stats.name)}
-                onPress={() =>
-                  router.push({ pathname: '/new-habit', params: { id: row.stats.habitId } })
-                }
-                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-              >
-                <View style={[styles.bar, { backgroundColor: alpha(row.stats.color, 0.35) }]} />
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowNameCold} numberOfLines={1}>
-                    {row.stats.name}
-                  </Text>
-                  {strip(row)}
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        <View style={styles.headline}>
+          <Display size={64} line={58}>
+            {overall.rate === null ? '—' : `${Math.round(overall.rate * 100)}%`}
+          </Display>
+          <Text style={styles.headlineSub}>
+            {overall.rate === null
+              ? copy.stats.nothingHere
+              : `${copy.stats.doneOf(overall.done, overall.due)} · ${copy.stats.covering(
+                  shortDate(from),
+                  shortDate(to),
+                )}`}
+          </Text>
+        </View>
 
-        {rows.length > 0 && (
+        {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
+
+        {/* Past the naming limit the rows would fill the screen and stop being a
+            picture, so the spread is drawn instead: one tick a habit, low to
+            high. It answers "where does everything sit" without asking anyone
+            to read thirty names. */}
+        {crowded && (
           <View style={styles.section}>
             <View style={styles.sectionHead}>
-              <Text style={styles.label}>{copy.stats.overTime}</Text>
-              <Text style={styles.labelQuiet}>{copy.stats.lastDays(TREND_DAYS)}</Text>
+              <Text style={styles.label}>{copy.stats.allOf(rated.length)}</Text>
+              <Text style={styles.labelQuiet}>{copy.stats.lowToHigh}</Text>
             </View>
-            {/* Neutral on purpose: six habit colours in one aggregate reads as a
-                fruit salad, and this view is about the shape, not whose it is. */}
-            <TrendBars days={trend} color={alpha(colors.overlay, 0.3)} from="" to="" />
+            <View style={styles.spread}>
+              {rated.map((habit) => (
+                <View
+                  key={habit.habitId}
+                  style={[
+                    styles.tick,
+                    {
+                      height: `${Math.max(Math.round((habit.rate ?? 0) * 100), 4)}%`,
+                      backgroundColor: habit.color,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={styles.labelQuiet}>{copy.stats.spread(slipping.length, fine.length)}</Text>
           </View>
         )}
 
-        {rows.length > 0 && (
+        {named.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={[styles.label, crowded && { color: slipping[0]?.color }]}>
+                {crowded ? copy.stats.slipping(slipping.length) : copy.stats.eachHabit}
+              </Text>
+              {!crowded && <Text style={styles.labelQuiet}>{copy.stats.weakestFirst}</Text>}
+            </View>
+            {named.map(bar)}
+            {crowded && <Text style={styles.seeAll}>{copy.stats.seeAll(rated.length)}</Text>}
+          </View>
+        )}
+
+        {crowded && slipping.length === 0 && (
+          <Text style={styles.empty}>{copy.stats.allFine}</Text>
+        )}
+
+        {stats.length > 0 && (
           <View style={styles.section}>
             <FirstTimeHint id="progress-views">{copy.hints.progressViews}</FirstTimeHint>
             <WeekAdviceBanner advice={advice.week} />
-            <AdviceList
-              tab={tab}
-              onTab={setTab}
-              needsWork={advice.needsWork}
-              goingWell={advice.goingWell}
-              windowDays={ADVICE_DAYS}
-              onOpen={(habitId) =>
-                router.push({ pathname: '/new-habit', params: { id: habitId } })
-              }
-            />
           </View>
         )}
 
         <View style={styles.footer}>
           <Text style={styles.storage}>{copy.stats.storage}</Text>
-
           {confirming ? (
             <View style={styles.confirm}>
               <Text style={styles.confirmTitle}>{copy.stats.resetTitle}</Text>
@@ -335,11 +351,46 @@ export default function ProgressScreen() {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
 
-  // Ma: the gap between two ideas is bigger than the gap inside one. An even
-  // rhythm everywhere is what made this read as a list of things.
+  windows: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg },
+  window: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  windowActive: { backgroundColor: colors.text, borderColor: colors.text },
+  windowText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
+  windowTextActive: { color: colors.bg },
+
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.lg,
+  },
+  step: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stepOff: { opacity: 0.3 },
+  stepText: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
+  period: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
+
+  headline: { gap: 4, paddingTop: spacing.xl },
+  headlineSub: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
+
+  // Ma: a bigger gap between sections than inside one, so the screen reads as
+  // parts rather than as a column of things.
   section: { gap: spacing.md, paddingTop: spacing.xxl },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-
   label: {
     fontFamily: fonts.bodyBold,
     fontSize: 11,
@@ -349,32 +400,32 @@ const makeStyles = (colors: Palette) => ({
   },
   labelQuiet: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
 
-  headline: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
-  headlineUnit: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },
-
-  riskCard: {
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radii.bigCard,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 44 },
+  barName: { width: 96, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
+  track: {
+    flex: 1,
+    height: 16,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: alpha(colors.overlay, 0.08),
   },
-  riskBody: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.textMuted },
-  riskAction: {
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.chip,
+  fill: { height: '100%', borderRadius: 4 },
+  barValue: {
+    width: 38,
+    textAlign: 'right',
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.textMuted,
   },
-  riskActionText: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.bg },
 
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 44 },
-  bar: { width: 6, height: 30, borderRadius: 3, flexShrink: 0 },
-  rowBody: { flex: 1, gap: 6 },
-  rowName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
-  rowNameCold: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textMuted },
-  strip: { flexDirection: 'row', gap: 3 },
-  mark: { flex: 1, height: 5, borderRadius: 2.5, maxWidth: 22 },
+  spread: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 44 },
+  tick: { flex: 1, borderRadius: 1 },
+  seeAll: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.textMuted,
+    paddingTop: spacing.xs,
+  },
 
   empty: {
     fontFamily: fonts.body,

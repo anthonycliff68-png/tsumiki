@@ -560,6 +560,20 @@ export const copy = {
     },
     title: 'Progress',
 
+    // --- the overview -------------------------------------------------------
+    eachHabit: 'Each habit',
+    weakestFirst: 'Weakest first',
+    /** Above the point where naming every habit stops fitting. */
+    allOf: (count: number) => `All ${count}`,
+    lowToHigh: 'Low \u2192 high',
+    spread: (weak: number, strong: number) =>
+      `${weak} under a quarter \u00b7 ${strong} over half`,
+    slipping: (count: number) =>
+      count === 1 ? 'The one slipping' : `The ${count} slipping`,
+    seeAll: (count: number) => `See all ${count}`,
+    allFine: 'Nothing is slipping. The rest is above.',
+    openStats: (name: string) => `${name}, see its data`,
+
     // --- the streak sections ------------------------------------------------
     // The screen is ordered by what is at stake rather than by period, because
     // a percentage has no stakes and a run you can still save does.
