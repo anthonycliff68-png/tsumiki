@@ -371,7 +371,9 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: alpha(colors.overlay, 0.05),
   },
   timeText: { ...display(28, 30), color: colors.text },
-  swatches: { flexDirection: 'row', gap: spacing.md },
+  // Wraps, now the palette is four rows rather than one. A row that cannot
+  // wrap simply ran the last eighteen colours off the edge of the screen.
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   swatch: {
     width: 44,
     height: 44,

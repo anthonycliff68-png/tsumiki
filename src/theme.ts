@@ -76,14 +76,53 @@ export const palettes = { dark: darkPalette, light: lightPalette };
  */
 export const colors = darkPalette;
 
-/** blue, orange, teal, purple, gold, magenta */
+/**
+ * The colours a habit, a crew or a face can be.
+ *
+ * The brief's six come first and keep their order, because a dozen places
+ * reach for a specific one by index — habitColors[1] is the colour an error is
+ * written in, habitColors[2] is the glow behind the schedule sheet — and
+ * habits already in the database store the value, not the position. Re-sorting
+ * the whole list by hue would have quietly restyled half the app.
+ *
+ * The eighteen after them run around the wheel, so the picker reads as a
+ * spectrum from the point where the original six end.
+ *
+ * Every one of them carries white display text on a filled card, which is the
+ * job: each was checked against the weakest of the original six (gold, at 2.19
+ * to white) and none falls below it.
+ */
 export const habitColors = [
+  // The original six: blue, orange, teal, purple, gold, magenta.
   '#3F5FA8',
   '#E8552B',
   '#1F8A8C',
   '#8A5A9E',
   '#E0A526',
   '#C2306B',
+  // Red through yellow.
+  '#C0392B',
+  '#E07A5F',
+  '#C9802F',
+  '#8A8F3C',
+  // Greens.
+  '#6E9E3F',
+  '#3F8F4F',
+  '#2F6B4F',
+  '#3FA796',
+  // Blues.
+  '#2F7FA8',
+  '#4A7FD4',
+  '#5A5AC0',
+  // Violet through pink.
+  '#7A5AC9',
+  '#A355B0',
+  '#D45D9E',
+  '#B5485F',
+  // The quiet ones, for a day that is already loud.
+  '#8C6239',
+  '#5F7384',
+  '#44707F',
 ] as const;
 
 export type HabitColor = (typeof habitColors)[number];
@@ -239,12 +278,25 @@ export function momentColor(anchor: { label: string; color?: string | null }): s
   return anchor.color ?? anchorColor(anchor.label);
 }
 
+/**
+ * The six a derived moment colour is drawn from.
+ *
+ * Deliberately not the whole palette. This hash is what gives a moment its
+ * colour when nobody has chosen one, and the comment above promises such a
+ * moment keeps the colour it has always had — so the list it indexes into
+ * cannot grow. Widening it to all twenty-four re-coloured ten of the twelve
+ * default moments, which is a silent restyle of everybody's My Day in exchange
+ * for variety nobody asked for here. The picker offers all of them; the hash
+ * stays where it started.
+ */
+const MOMENT_HUES = habitColors.slice(0, 6);
+
 export function anchorColor(seed: string): string {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) % 100000;
   }
-  const base = habitColors[hash % habitColors.length] ?? habitColors[0];
+  const base = MOMENT_HUES[hash % MOMENT_HUES.length] ?? habitColors[0];
   return tint(base, 0.22);
 }
 
