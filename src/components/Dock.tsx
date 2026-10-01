@@ -350,7 +350,25 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             </Pressable>
           )}
           </View>
+        </GlassSurface>
 
+        {/* Its own pane, with air between it and the one above.
+            The dock does two unrelated jobs: the top says what is next and
+            takes the check-in, the bottom moves you around the app. They shared
+            one card separated by a hairline, which read as one control with a
+            line through it. Two panes with a gap say plainly that the habit and
+            the navigation are different things. */}
+        <GlassSurface
+          blurFallback
+          tint={alpha(habit?.color ?? colors.textMuted, 0.08)}
+          style={[
+            styles.tabBar,
+            {
+              borderColor: alpha(accent, 0.22),
+              backgroundColor: LIQUID_GLASS ? 'transparent' : colors.glass,
+            },
+          ]}
+        >
         <View style={styles.tabRow} onLayout={measureRow} {...drag.panHandlers}>
           {/* Behind the tabs, and deaf to touches so it never eats one. It is a
               brighter region inside the dock's own glass rather than a second
@@ -359,7 +377,17 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
           {slot > 0 && (
             <Animated.View
               pointerEvents="none"
-              style={[styles.pill, { width: slot - PILL_INSET * 2, transform: [{ translateX: slide }] }]}
+              style={[
+                styles.pill,
+                {
+                  width: slot - PILL_INSET * 2,
+                  transform: [{ translateX: slide }],
+                  // The habit's own colour rather than a brighter grey, so the
+                  // lit tab belongs to the same habit the bleed is tinted for.
+                  backgroundColor: alpha(accent, 0.26),
+                  boxShadow: `0px 0px 16px ${alpha(accent, 0.45)}`,
+                },
+              ]}
             />
           )}
 
@@ -375,7 +403,14 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             const selected = index === tabIndex;
             // colors.text, not colors.white: the tab row sits on the dock, which is
             // pale on a light ground, and white on pale is not a label.
-            const color = lit ? colors.text : colors.textInactive;
+            // Lit in the habit's colour, not just in white: the pill says which
+            // tab, the colour says whose day it is.
+            //
+            // Lifted well clear of the pill it sits on, though. Both drawn from
+            // the same accent at similar weights left the icon nearly invisible
+            // inside its own highlight — a lit tab has to be the brightest
+            // thing in the row, not the same colour twice.
+            const color = lit ? tint(accent, 0.55) : colors.textInactive;
 
             const onPress = () => {
               const event = navigation.emit({
@@ -449,8 +484,11 @@ const makeStyles = (colors: Palette) => ({
     right: DOCK_EDGE,
     paddingTop: ORB_LIFT,
   },
+  // The gap between the two panes. Bigger than the group's own fusing
+  // distance, or liquid glass reaches across and heals them back into one.
   group: {
     position: 'relative',
+    gap: 8,
   },
   bar: {
     borderRadius: radii.dock,
@@ -458,6 +496,14 @@ const makeStyles = (colors: Palette) => ({
     overflow: 'hidden',
     flexDirection: 'column',
     boxShadow: '0px 16px 40px rgba(0,0,0,0.55)',
+  },
+  // The same card as the one above, a little quieter: it is the thing you
+  // navigate with, not the thing you act on.
+  tabBar: {
+    borderRadius: radii.dock,
+    borderWidth: 1,
+    overflow: 'hidden',
+    boxShadow: '0px 12px 32px rgba(0,0,0,0.5)',
   },
   orbShell: {
     position: 'absolute',
@@ -522,8 +568,8 @@ const makeStyles = (colors: Palette) => ({
     paddingTop: 4,
     paddingHorizontal: TAB_ROW_PADDING,
     paddingBottom: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.hairline,
+    // The hairline is gone with the card it divided: the gap does that job now,
+    // and a rule along the top of its own pane is a line drawn under nothing.
   },
   tab: {
     // Five across a phone: narrower than the canvas's four, but still over the
