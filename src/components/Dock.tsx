@@ -282,11 +282,16 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
           bar. Nesting the orb inside the bar's glass would stack two panes
           instead, and stacked glass is mush. */}
       <GlassGroup spacing={ORB_SHELL / 2} style={styles.group}>
+        {/* Clear, not the everyday material.
+            "regular" carries its own dimming, which is what chrome usually
+            wants — but the dock sits over the bleed, and dimming the one thing
+            the screen is coloured by turned the whole bar into a brown panel.
+            Clear lets it through, so the dock reads as a window onto the
+            screen's own colour rather than a slab laid over it. The tint goes
+            with it: the colour is already behind the glass. */}
         <GlassSurface
           blurFallback
-          // A breath of the habit's colour, so the dock belongs to the same
-          // habit the bleed behind it is tinted for.
-          tint={alpha(habit?.color ?? colors.textMuted, 0.1)}
+          variant="clear"
           style={[
             styles.bar,
             {
@@ -360,7 +365,7 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             the navigation are different things. */}
         <GlassSurface
           blurFallback
-          tint={alpha(habit?.color ?? colors.textMuted, 0.08)}
+          variant="clear"
           style={[
             styles.tabBar,
             {
