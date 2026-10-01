@@ -19,7 +19,7 @@ import { formatTime } from '@/data/defaults';
 import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
 import { orderForDay } from '@/lib/today';
 import { useAuth } from '@/lib/auth';
-import { alpha, display, fonts, ink, radii, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, ink, radii, type Palette } from '@/theme';
 
 /**
  * The orb's overhang, the pip row, the now row and the tabs. Only a starting
@@ -35,8 +35,8 @@ const DOCK_GAP = 16;
 
 /** The tab row's own side padding. Shared, because the pill's slots are measured from it. */
 const TAB_ROW_PADDING = 8;
-/** How far the sliding pill sits inside its tab's slot, each side. */
-const PILL_INSET = 3;
+/** The halo behind the lit tab's icon. */
+const GLOW_SIZE = 38;
 /** Movement past which a touch is a drag across the tabs rather than a tap on one. */
 const DRAG_SLOP = 4;
 
@@ -374,18 +374,22 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
               brighter region inside the dock's own glass rather than a second
               pane of it: glass stacked on glass turns to mush, which the time
               picker demonstrated. */}
+          {/* The halo is what travels now, not a pill.
+              A filled block behind the whole tab boxed the lit one in and put a
+              second rounded outline a few pixels inside the card's own. A glow
+              sitting behind the icon lights the tab instead of framing it, and
+              it still slides under the thumb, so the drag keeps something to
+              hold on to. */}
           {slot > 0 && (
             <Animated.View
               pointerEvents="none"
               style={[
-                styles.pill,
+                styles.glow,
                 {
-                  width: slot - PILL_INSET * 2,
+                  left: TAB_ROW_PADDING + (slot - GLOW_SIZE) / 2,
                   transform: [{ translateX: slide }],
-                  // The habit's own colour rather than a brighter grey, so the
-                  // lit tab belongs to the same habit the bleed is tinted for.
-                  backgroundColor: alpha(accent, 0.26),
-                  boxShadow: `0px 0px 16px ${alpha(accent, 0.45)}`,
+                  backgroundColor: alpha(accent, 0.18),
+                  boxShadow: `0px 0px 18px ${alpha(accent, 0.8)}`,
                 },
               ]}
             />
@@ -403,14 +407,10 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             const selected = index === tabIndex;
             // colors.text, not colors.white: the tab row sits on the dock, which is
             // pale on a light ground, and white on pale is not a label.
-            // Lit in the habit's colour, not just in white: the pill says which
-            // tab, the colour says whose day it is.
-            //
-            // Lifted well clear of the pill it sits on, though. Both drawn from
-            // the same accent at similar weights left the icon nearly invisible
-            // inside its own highlight — a lit tab has to be the brightest
-            // thing in the row, not the same colour twice.
-            const color = lit ? tint(accent, 0.55) : colors.textInactive;
+            // The habit's own colour, at full strength. With the pill gone
+            // there is nothing behind it to out-shine, so it no longer has to
+            // be lifted off its own highlight to stay legible.
+            const color = lit ? accent : colors.textInactive;
 
             const onPress = () => {
               const event = navigation.emit({
@@ -523,44 +523,46 @@ const makeStyles = (colors: Palette) => ({
     gap: 5,
     paddingLeft: 16,
     paddingRight: ORB_CLEARANCE,
-    paddingTop: 12,
+    paddingTop: 10,
   },
+  // Tighter than it looks: the pips carry hitSlop of 10, so the padding here is
+  // only spacing and the target stays well over the floor without it.
   pipTap: {
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   pip: {
     height: PIP_HEIGHT,
     borderRadius: PIP_HEIGHT / 2,
   },
   nowRow: {
-    gap: 3,
+    gap: 2,
     paddingLeft: 16,
     paddingRight: ORB_CLEARANCE,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   upNextLabel: {
     fontFamily: fonts.bodyBold,
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   upNextName: {
-    ...display(24, 24),
+    ...display(22, 22),
     color: colors.text,
   },
   upNextStatus: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
   },
-  pill: {
+  // Behind the icon, not behind the whole tab. Sized and placed to sit on the
+  // icon's own centre: the tab row's top padding, plus half the icon's height.
+  glow: {
     position: 'absolute',
-    left: TAB_ROW_PADDING + PILL_INSET,
-    top: 4,
-    bottom: 8,
-    borderRadius: radii.chip,
-    // A brighter part of the dock's glass, not a second pane of it.
-    backgroundColor: alpha(colors.overlay, 0.14),
+    top: 4 + 10 - GLOW_SIZE / 2,
+    width: GLOW_SIZE,
+    height: GLOW_SIZE,
+    borderRadius: GLOW_SIZE / 2,
   },
   tabRow: {
     flexDirection: 'row',
