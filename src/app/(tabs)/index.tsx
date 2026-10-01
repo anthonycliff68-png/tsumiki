@@ -43,15 +43,21 @@ export default function TodayScreen() {
     refetch,
     isRefetching,
   } = useToday(userId, viewedDate);
-  const { data: nudges = [] } = useNudgesForMe(userId);
+  const { data: nudges = [], refetch: refetchNudges } = useNudgesForMe(userId);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
 
   // Whatever wrote while we were away, pick it up on the way back in.
+  //
+  // Nudges too, and that is the point of the second line: they are written by
+  // somebody else, so this screen is the only thing that ever goes looking for
+  // them. Without it a nudge sat unread until the app was killed and reopened —
+  // which is the one way nobody uses an app they are already holding.
   useFocusEffect(
     useCallback(() => {
       void refetch();
-    }, [refetch]),
+      void refetchNudges();
+    }, [refetch, refetchNudges]),
   );
 
   const today = new Date();
@@ -145,7 +151,14 @@ export default function TodayScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.textMuted} />
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              void refetch();
+              void refetchNudges();
+            }}
+            tintColor={colors.textMuted}
+          />
         }
       >
         <View style={styles.days}>
