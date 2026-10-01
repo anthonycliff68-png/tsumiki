@@ -35,8 +35,11 @@ const DOCK_GAP = 16;
 
 /** The tab row's own side padding. Shared, because the pill's slots are measured from it. */
 const TAB_ROW_PADDING = 8;
-/** The halo behind the lit tab's icon. */
+/** The halo behind the lit tab. */
 const GLOW_SIZE = 38;
+/** The tab row's top padding and the tab's own height, which the halo centres on. */
+const TAB_ROW_TOP = 4;
+const TAB_MIN_HEIGHT = 44;
 /** Movement past which a touch is a drag across the tabs rather than a tap on one. */
 const DRAG_SLOP = 4;
 
@@ -452,7 +455,12 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
               styles.orbShell,
               {
                 borderColor: alpha(habit.color, 0.35),
-                top: ORB_LIFT + Math.max((headHeight - ORB_SHELL) / 2, 0),
+                // Centred on the head, and nothing else. ORB_LIFT is already
+                // the wrap's top padding, so adding it here too pushed the orb
+                // its own six points below the middle of the card it sits in —
+                // a left-over from when the orb straddled the bar's top edge
+                // instead of centring on it.
+                top: Math.max((headHeight - ORB_SHELL) / 2, 0),
               },
             ]}
           >
@@ -560,11 +568,12 @@ const makeStyles = (colors: Palette) => ({
     fontSize: 11,
     color: colors.textMuted,
   },
-  // Behind the icon, not behind the whole tab. Sized and placed to sit on the
-  // icon's own centre: the tab row's top padding, plus half the icon's height.
+  // Centred on the tab as a whole, icon and label together, rather than on the
+  // icon alone — behind the icon only, it lit the top half of the item and left
+  // the word sitting outside its own highlight.
   glow: {
     position: 'absolute',
-    top: 4 + 10 - GLOW_SIZE / 2,
+    top: TAB_ROW_TOP + TAB_MIN_HEIGHT / 2 - GLOW_SIZE / 2,
     width: GLOW_SIZE,
     height: GLOW_SIZE,
     borderRadius: GLOW_SIZE / 2,
@@ -572,7 +581,7 @@ const makeStyles = (colors: Palette) => ({
   tabRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingTop: 4,
+    paddingTop: TAB_ROW_TOP,
     paddingHorizontal: TAB_ROW_PADDING,
     paddingBottom: 10,
     // The hairline is gone with the card it divided: the gap does that job now,
@@ -582,7 +591,7 @@ const makeStyles = (colors: Palette) => ({
     // Five across a phone: narrower than the canvas's four, but still over the
     // 44pt floor once the row's own padding counts.
     minWidth: 52,
-    minHeight: 44,
+    minHeight: TAB_MIN_HEIGHT,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
