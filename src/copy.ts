@@ -237,7 +237,13 @@ export const copy = {
     color: 'Colour',
     doItWith: 'Do it with',
     solo: 'Solo',
-    crewsLater: 'Crews arrive in a later build step; every habit is solo for now.',
+    /**
+     * This used to say crews arrived in a later build step. They arrived. The
+     * screen still does not start one — that happens on the Crews tab — but
+     * "not here" and "not built" are different things to tell someone, and the
+     * second one was a lie about a finished feature.
+     */
+    crewsLater: 'A habit starts solo. Turn it into a crew from the Crews tab \u2014 same habit, up to five of you, one streak.',
     save: 'Add to my day',
     saveEdit: 'Save changes',
     archive: 'Archive this habit',
@@ -283,8 +289,6 @@ export const copy = {
     thanksForPush: 'Thanks for the push',
     sameTimeTomorrow: 'Same time tmrw',
     thanked: 'Thanks sent',
-    pushLater:
-      'Push notifications arrive in a later build step; nudges show up in the app for now.',
   },
 
   invite: {
@@ -362,7 +366,6 @@ export const copy = {
     leave: 'Leave this crew',
     back: 'Back',
     invite: 'Invite',
-    nudgesLater: 'Nudging arrives in a later build step.',
 
     emptyTitle: 'No crews yet',
     emptyBody:
@@ -714,7 +717,6 @@ export const copy = {
 
   placeholder: {
     /** Used by the screens that are still scaffolding in build step 1. */
-    comingSoon: 'Coming in a later build step.',
     today: 'The hero card, the done count and the up-next row land here.',
     myDay: 'The timeline: anchors, stacked habits, the NOW line and free-time gaps.',
     crews: 'Group streak, the last 7 days, and a tile per member.',

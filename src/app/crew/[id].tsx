@@ -176,7 +176,7 @@ export default function CrewScreen() {
 
         {me?.graceUsed && <Text style={styles.grace}>{copy.crews.graceUsed}</Text>}
 
-        <Text style={styles.hint}>{copy.nudge.pushLater}</Text>
+        <Text style={styles.hint}>{copy.nudge.rule}</Text>
 
         <TextButton
           label={copy.crews.leave}

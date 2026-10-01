@@ -3,13 +3,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tsumiki</title>
 <style>
-:root{color-scheme:dark}
+:root{color-scheme:dark;--accent:#E8552B}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
 background:#0B0B0C;color:#F4F1EC;padding:32px 24px;
 font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 main{max-width:420px;width:100%;text-align:center}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+color:#9D978D;margin:0 0 10px}
 h1{font-size:40px;line-height:1.05;letter-spacing:-1px;margin:0 0 12px}
 p{color:#BDB7AD;margin:0 0 20px}
+.habit{background:var(--accent);border-radius:20px;padding:20px;margin:0 0 20px;text-align:left}
+.habit .name{font-size:24px;font-weight:800;line-height:1.1;color:#fff;
+word-break:break-word}
+.habit .meta{font-size:14px;color:rgba(255,255,255,.85);margin-top:4px}
 .code{display:inline-block;font:700 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
 letter-spacing:4px;color:#F4F1EC;background:rgba(255,255,255,.07);
 border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:14px 20px;margin-bottom:24px}
@@ -21,8 +27,13 @@ font-weight:700;font-size:16px;margin-bottom:12px}
 small{display:block;color:#9D978D;font-size:13px;margin-top:20px;line-height:1.5}
 </style></head>
 <body><main>
+  <p class="eyebrow" id="eyebrow" hidden>You have been invited</p>
   <h1 id="head">You have been invited</h1>
   <p id="sub">Someone wants to build a habit with you.</p>
+  <div class="habit" id="habit" hidden>
+    <div class="name" id="habitName"></div>
+    <div class="meta" id="habitMeta"></div>
+  </div>
   <div class="code" id="code" hidden></div>
   <a class="btn primary" id="open" href="#">Open in Tsumiki</a>
   <a class="btn secondary" href="https://apps.apple.com/app/id6815775979">Get Tsumiki for iPhone</a>
@@ -32,17 +43,30 @@ small{display:block;color:#9D978D;font-size:13px;margin-top:20px;line-height:1.5
 // GitHub Pages serves this file for any path it does not recognise, which is
 // how /j/<code> is handled without a server. Anything else that lands here is
 // a genuine wrong turn and says so.
+//
+// The key below is the publishable one, the same value that ships inside the
+// app on the App Store. It is meant to be public: every row it can reach is
+// guarded by row-level security, and get_invite is the one function granted to
+// anon — deliberately, so this page can say what the invite is for.
 (function () {
+  var SUPABASE_URL = 'https://zteejputfuvtriahpksr.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_kcw5cHUxTRzVqmq4P3pcYA_wdz9GKyX';
+
   var parts = location.pathname.split('/').filter(Boolean);
   var i = parts.indexOf('j');
   var code = i >= 0 ? (parts[i + 1] || '') : '';
 
+  var head = document.getElementById('head');
+  var sub = document.getElementById('sub');
+  var open = document.getElementById('open');
+  var note = document.getElementById('note');
+
   if (!/^[A-Za-z0-9-]{4,24}$/.test(code)) {
-    document.getElementById('head').textContent = 'Page not found';
-    document.getElementById('sub').textContent =
+    head.textContent = 'Page not found';
+    sub.textContent =
       'That link does not lead anywhere. If it was an invite, ask for a fresh one.';
-    document.getElementById('open').hidden = true;
-    document.getElementById('note').textContent = '';
+    open.hidden = true;
+    note.textContent = '';
     return;
   }
 
@@ -51,10 +75,84 @@ small{display:block;color:#9D978D;font-size:13px;margin-top:20px;line-height:1.5
   el.hidden = false;
 
   var deep = 'tsumiki://j/' + encodeURIComponent(code);
-  document.getElementById('open').setAttribute('href', deep);
-  // Try it straight away: someone who has the app should not have to tap
-  // twice, and someone who does not will simply stay on this page.
-  setTimeout(function () { location.href = deep; }, 350);
+  open.setAttribute('href', deep);
+
+  // Try the app once, whatever the lookup says. Someone who has it should not
+  // have to tap twice, and someone who does not simply stays on this page.
+  var jumped = false;
+  function jump() {
+    if (jumped) return;
+    jumped = true;
+    setTimeout(function () { location.href = deep; }, 350);
+  }
+
+  // What the invite is actually for. A code alone asks someone to install an
+  // app without telling them what they are joining; the crew, the habit and how
+  // many are already in are the whole argument for tapping the button.
+  fetch(SUPABASE_URL + '/rest/v1/rpc/get_invite', {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ p_code: code })
+  })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (rows) {
+      // A lookup that did not happen and a code that does not exist are
+      // different answers. The call returns an empty list for a code nobody
+      // has, and null when it could not be made at all — so a dead link says
+      // so, and a network blip falls back to the code-only page rather than
+      // telling someone their good invite is bad.
+      if (rows === null) return jump();
+
+      var invite = rows[0];
+      if (!invite) {
+        head.textContent = 'That invite is not valid';
+        sub.textContent =
+          'The link may have been mistyped, or the crew may have withdrawn it. Ask for a fresh one.';
+        document.getElementById('code').hidden = true;
+        open.hidden = true;
+        note.textContent = '';
+        return;
+      }
+
+      if (invite.expired) {
+        head.textContent = 'This invite has expired';
+        sub.textContent = 'Invite links last seven days. Ask for a fresh one.';
+        open.hidden = true;
+        note.textContent = '';
+        return;
+      }
+
+      // Names come from people, so they are written as text and never as
+      // markup, and the colour is checked before it reaches a stylesheet.
+      if (/^#[0-9a-f]{6}$/i.test(invite.habit_color || '')) {
+        document.documentElement.style.setProperty('--accent', invite.habit_color);
+      }
+
+      document.getElementById('eyebrow').hidden = false;
+      head.textContent = 'Join ' + invite.crew_name;
+      document.getElementById('habitName').textContent = invite.habit_name;
+
+      var bits = [invite.member_count + ' of 5 in'];
+      if (invite.streak_current > 0) bits.push(invite.streak_current + ' day streak');
+      document.getElementById('habitMeta').textContent = bits.join(' · ');
+      document.getElementById('habit').hidden = false;
+
+      if (invite.is_full) {
+        sub.textContent = 'This crew is full. Ask them to start another one.';
+        open.hidden = true;
+        note.textContent = '';
+        return;
+      }
+
+      sub.textContent = 'Same habit, your own time. The streak belongs to all of you.';
+      el.hidden = true;
+      jump();
+    })
+    .catch(jump);
 })();
 </script>
 </body></html>
