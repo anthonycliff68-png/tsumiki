@@ -218,6 +218,14 @@ export function useCheckIn(userId: string | undefined) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['today'] });
       void queryClient.invalidateQueries({ queryKey: ['history'] });
+      // And the crew, which is where this same check-in is a tile saying
+      // whether you are in. Without these the row was written and the crew
+      // screen never re-read it, so its button sat there still saying "Check
+      // in" — a tap that worked and looked broken. Heading out and nudging
+      // already refreshed the crew; checking in, the thing a crew is for, did
+      // not.
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
     },
   });
 }
@@ -239,6 +247,8 @@ export function useUndoCheckIn(userId: string | undefined) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['today'] });
       void queryClient.invalidateQueries({ queryKey: ['history'] });
+      void queryClient.invalidateQueries({ queryKey: ['crew'] });
+      void queryClient.invalidateQueries({ queryKey: ['crews'] });
     },
   });
 }

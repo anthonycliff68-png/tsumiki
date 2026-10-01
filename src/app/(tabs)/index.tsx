@@ -14,7 +14,7 @@ import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api'
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName, localDateString } from '@/lib/dates';
 import { openFocus, orderForDay } from '@/lib/today';
-import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
 
@@ -294,12 +294,9 @@ export default function TodayScreen() {
                 the undo — everything below jumped, and if you were scrolled at
                 all the fan moved under your thumb. One line replacing another
                 says the same thing and leaves the page exactly as tall. */}
-            <Text style={styles.fanHint} numberOfLines={1}>
-              {openCount === 0 ? copy.today.allDone : copy.today.fanHint}
-            </Text>
-
-            <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
-
+            {/* Above the hint, not below it. The row was the last thing on the
+                screen and sat under the floating dock at rest, so the only way
+                to add a habit was to scroll to reach it. */}
             <View style={styles.chips}>
               {finished.length > 0 && (
                 <Pressable
@@ -318,9 +315,15 @@ export default function TodayScreen() {
                 </Pressable>
               )}
 
+              {/* A count, not a control. It was the only filled chip in the row
+                  while being the one thing in it that cannot be tapped, which
+                  taught the loudest thing here is the thing to press. It is
+                  quiet now, and the button below took the fill. */}
               {openCount > 0 && (
-                <View style={[styles.chip, { backgroundColor: bleedColor, borderColor: bleedColor }]}>
-                  <Text style={styles.chipText}>{copy.today.leftToday(openCount)}</Text>
+                <View style={[styles.chip, { borderColor: colors.border }]}>
+                  <Text style={[styles.chipText, { color: colors.textMuted }]}>
+                    {copy.today.leftToday(openCount)}
+                  </Text>
                 </View>
               )}
 
@@ -328,17 +331,27 @@ export default function TodayScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={copy.today.newHabit}
                 onPress={() => router.push('/new-habit')}
+                // Filled, and in the habit colour the screen is already tinted
+                // with: the one action in the row should look like the one
+                // action in the row.
                 style={({ pressed }) => [
                   styles.chip,
-                  { borderColor: tint(bleedColor, 0.35), backgroundColor: alpha(bleedColor, 0.28) },
+                  styles.chipAction,
+                  { backgroundColor: bleedColor, borderColor: bleedColor },
                   pressed && { opacity: 0.85 },
                 ]}
               >
-                <Text style={[styles.chipText, { color: ink(bleedColor, colors) }]}>
+                <Text style={[styles.chipText, styles.chipActionText, { color: colors.bg }]}>
                   + {copy.today.newHabit}
                 </Text>
               </Pressable>
             </View>
+
+            <Text style={styles.fanHint} numberOfLines={1}>
+              {openCount === 0 ? copy.today.allDone : copy.today.fanHint}
+            </Text>
+
+            <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
 
             {showingDone && (
               <View style={styles.listBlock}>
@@ -389,6 +402,8 @@ const makeStyles = (colors: Palette) => ({
     fontSize: 13,
     color: colors.text,
   },
+  chipAction: { paddingHorizontal: 22 },
+  chipActionText: { fontSize: 15 },
   days: {
     flexDirection: 'row',
     justifyContent: 'center',
