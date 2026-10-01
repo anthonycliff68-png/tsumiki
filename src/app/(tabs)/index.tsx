@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -12,7 +12,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { addDays, formatBigDate, formatDayName } from '@/lib/dates';
+import { addDays, formatBigDate, formatDayName, localDateString } from '@/lib/dates';
 import { openFocus, orderForDay } from '@/lib/today';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
@@ -33,7 +33,38 @@ export default function TodayScreen() {
   // The habit under your finger in the fan, so the glow behind the screen
   // tracks the card you are looking at rather than the one that was next.
   const [fanColor, setFanColor] = useState<string | null>(null);
-  const viewedDate = useMemo(() => addDays(new Date(), dayOffset), [dayOffset]);
+  /**
+   * Today, re-asked rather than remembered.
+   *
+   * This was worked out once and then kept, so an app left open across
+   * midnight went on showing yesterday with "Today" above it and yesterday's
+   * check-ins still ticked — while the dock, which asks the clock itself, said
+   * nothing had been done. One screen disagreeing with itself about what day it
+   * is, and the half that was wrong is the half telling you that you are
+   * finished.
+   *
+   * Re-asked when the app comes back and when the screen does, which is how a
+   * phone that was asleep overnight arrives at this screen. An app held awake
+   * and in the foreground through midnight is the one case left; it corrects
+   * itself the moment anything is tapped.
+   */
+  const [todayKey, setTodayKey] = useState(() => localDateString(new Date()));
+  const readClock = useCallback(() => {
+    const now = localDateString(new Date());
+    setTodayKey((current) => (current === now ? current : now));
+  }, []);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') readClock();
+    });
+    return () => sub.remove();
+  }, [readClock]);
+
+  const viewedDate = useMemo(
+    () => addDays(new Date(), dayOffset),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- todayKey is the clock
+    [dayOffset, todayKey],
+  );
   const isToday = dayOffset === 0;
 
   const {
@@ -55,9 +86,10 @@ export default function TodayScreen() {
   // which is the one way nobody uses an app they are already holding.
   useFocusEffect(
     useCallback(() => {
+      readClock();
       void refetch();
       void refetchNudges();
-    }, [refetch, refetchNudges]),
+    }, [readClock, refetch, refetchNudges]),
   );
 
   const today = new Date();
