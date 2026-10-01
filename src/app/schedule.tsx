@@ -28,6 +28,16 @@ import { Display } from '@/components/Screen';
  * The shape of your day: the moments habits stack onto, and the blocks that
  * take up real time. Reached from My Day.
  */
+/** The message out of whatever was thrown, Error or PostgREST object alike. */
+function reasonOf(e: unknown): string | null {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'object' && e !== null && 'message' in e) {
+    const message = (e as { message: unknown }).message;
+    if (typeof message === 'string' && message.length > 0) return message;
+  }
+  return null;
+}
+
 export default function ScheduleScreen() {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -147,9 +157,18 @@ export default function ScheduleScreen() {
         error={error}
         onChange={setDraft}
         onSave={save}
+        // onError matters as much as onSuccess here: without it the refusal
+        // that made this button useless was invisible, so it read as a dead
+        // control rather than a failure worth reporting.
         onDelete={() =>
           draft?.id
-            ? deleteAnchor.mutate(draft.id, { onSuccess: () => setDraft(null) })
+            ? deleteAnchor.mutate(draft.id, {
+                onSuccess: () => setDraft(null),
+                // Supabase hands back a plain object, not an Error, so the
+                // usual instanceof test fell straight through to the generic
+                // line and hid the one sentence that says what went wrong.
+                onError: (e) => setError(reasonOf(e) ?? copy.schedule.deleteFailed),
+              })
             : undefined
         }
         onClose={() => {

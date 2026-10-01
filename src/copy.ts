@@ -524,6 +524,7 @@ export const copy = {
     deleteMoves: (count: number) =>
       `${count} habit${count === 1 ? '' : 's'} stacked here. Deleting keeps ${count === 1 ? 'it' : 'them'}, moved to Anytime.`,
     deleteConfirm: 'Delete it',
+    deleteFailed: 'Could not delete that moment. Try again.',
     endBeforeStart: 'It cannot end before it starts.',
     title: 'Your day',
     blurb:

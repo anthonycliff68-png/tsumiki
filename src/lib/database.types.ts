@@ -782,6 +782,7 @@ export type Database = {
         Returns: string
       }
       create_invite: { Args: { p_crew_id: string }; Returns: string }
+      delete_anchor: { Args: { p_id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
       get_invite: {

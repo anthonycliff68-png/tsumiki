@@ -16,9 +16,18 @@ export function useAnchors(userId: string | undefined) {
     queryKey: ['anchors', userId],
     enabled: Boolean(userId),
     queryFn: async (): Promise<Anchor[]> => {
+      // Scoped to you explicitly, not left to row-level security.
+      //
+      // It used to lean on the policy, which returned only your own rows — and
+      // then the crew fix widened that policy so a crewmate's moment is
+      // readable when it is the one a shared habit hangs on. This query asked
+      // for every anchor it was allowed to see, so a crewmate's "Lunch"
+      // appeared in your own day as a second Lunch you could not edit or
+      // delete. A query that means "mine" has to say so.
       const { data, error } = await supabase
         .from('anchors')
         .select('*')
+        .eq('user_id', userId ?? '')
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return data;
@@ -1114,12 +1123,19 @@ export function useDeleteAnchor() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('anchors').delete().eq('id', id);
+      // Through a function, not a bare delete. Habits stacked on this moment
+      // have to move to Anytime in the same breath, or the schedule's shape
+      // check refuses the delete and nothing happens at all.
+      const { error } = await supabase.rpc('delete_anchor', { p_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['anchors'] });
       void queryClient.invalidateQueries({ queryKey: ['today'] });
+      // The stacked habits may have just become Anytime, which changes the
+      // timeline, the day's order and what the dock calls up next.
+      void queryClient.invalidateQueries({ queryKey: ['habits'] });
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
     },
   });
 }
