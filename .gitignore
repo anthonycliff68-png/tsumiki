@@ -42,3 +42,8 @@ yarn-error.*
 
 # local secrets
 .env
+
+# Pulled from App Store Connect by `eas metadata:pull`. Working files, not
+# source: re-pull before any push so the config matches what is live.
+store.config.json
+store/
