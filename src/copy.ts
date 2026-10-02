@@ -492,7 +492,7 @@ export const copy = {
     features: [
       {
         title: 'Unlimited habits and crews',
-        sub: 'Stack as many as your day can hold, with up to five friends on each',
+        sub: 'Stack as many as your day can hold, with up to four friends on each',
       },
       {
         title: 'Nudges and shared streaks',

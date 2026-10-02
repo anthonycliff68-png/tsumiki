@@ -27,12 +27,12 @@ don't.
 
 STACK IT ONTO YOUR DAY
 You set up your day once — wake up, coffee, lunch, home, bed. Those are your
-anchors. Every habit hangs off one of them. "After lunch, a fifteen minute
+moments. Every habit hangs off one of them. "After lunch, a fifteen minute
 walk" is a plan. "Walk more" is a wish. You can also set a habit to a time,
 or leave it as anytime today.
 
 DO IT WITH A CREW
-Add two to five friends to a habit and you share one streak. Everyone does
+Two to five of you take the same habit and share one streak. Everyone does
 the same habit, but each person picks their own moment — your walk can be
 after lunch and theirs after work. The streak belongs to all of you.
 
@@ -49,11 +49,13 @@ done it. They can check in straight from the notification, or say they're
 heading out now, which quiets everything for half an hour.
 
 SEE WHERE IT'S GOING
-A day is a set of rings. A week is a wall you can read at a glance. A month
-is a line. "Needs work" and "Going well" are separate, so the habit that's
-slipping is the first thing you see — with one suggestion for what to do
-about it, like dropping the weekday that keeps breaking it, or stacking a
-habit that's been floating loose.
+Progress opens on how you're doing rather than on a stretch you have to pick
+first: one figure for the last thirty days, then the habits that need work
+and the ones going well, each with the single thing to do about it — like
+dropping the weekday that keeps breaking one. Switch to a week and every
+habit gets seven squares, so you see which days you missed instead of an
+average. A month is a calendar per habit, where a run, a bad week, or every
+Tuesday missing reads as a shape.
 
 Tsumiki has no feed, no followers, no likes, and no way for a stranger to
 find you. It's built for a group small enough to care.
