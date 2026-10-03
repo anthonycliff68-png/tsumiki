@@ -205,8 +205,21 @@ export function HabitFan({
 
   const last = Math.max(0, habits.length - 1);
 
+  /**
+   * Whether the card in front changed because you moved, or because the hand
+   * re-sorted under you.
+   *
+   * The screen behind the fan is tinted for whatever is in front, which is
+   * right while you are swiping through the day and wrong the instant you check
+   * something in: the re-sort brings a different habit forward, and the whole
+   * screen used to recolour for a move you did not make.
+   */
+  const youMoved = useRef(true);
+
   const land = useCallback(
     (index: number) => {
+      // You moved: a tap on a wing, or a drag coming to rest.
+      youMoved.current = true;
       const target = clamp(index, 0, last);
       settled.current = target;
       if (focusRef.current !== target) {
@@ -249,6 +262,10 @@ export function HabitFan({
     // habit to the back of the hand on purpose, and following it there would
     // park you on the card you are done with. Hold the slot instead, so the
     // next thing to do comes forward under your thumb.
+    // Any move that comes out of the data is not a move you made — checking in,
+    // undoing, a habit arriving from elsewhere. Only your thumb counts, and
+    // land() below says so.
+    youMoved.current = false;
     const follow = at !== -1 && !habits[at]?.checkedIn;
     const start = follow ? at : clamp(focusRef.current, 0, Math.max(0, habits.length - 1));
     // Re-point first and always: held has to name the card actually in front,
@@ -266,9 +283,22 @@ export function HabitFan({
     if (settled.current > last) land(last);
   }, [last, land]);
 
+  // Declared after the effect above, so by the time this runs that one has
+  // already said whether the move was yours.
+  const toldAbout = useRef<string | null>(null);
   useEffect(() => {
     const habit = habits[focus];
-    if (habit !== undefined) onFocus?.(habit);
+    if (habit === undefined || habit.id === toldAbout.current) return;
+    // The first card the fan ever shows is always worth saying, whoever moved
+    // it. Opening the hand sets the slot and the held effect clears the flag in
+    // the same pass, so without this the screen behind would keep whatever
+    // colour it started with and disagree with the card in front from the
+    // first frame.
+    const opening = toldAbout.current === null;
+    toldAbout.current = habit.id;
+    const mine = youMoved.current;
+    youMoved.current = true;
+    if (opening || mine) onFocus?.(habit);
   }, [focus, habits, onFocus]);
 
   const cardLeft = (width - CARD_W) / 2;
@@ -352,6 +382,7 @@ export function HabitFan({
           // card changes — which is exactly when the caption should change too.
           const near = clamp(Math.round(raw), 0, last);
           if (near !== focusRef.current) {
+            youMoved.current = true;
             focusRef.current = near;
             held.current = aim.current.habits[near]?.id ?? held.current;
             setFocus(near);
