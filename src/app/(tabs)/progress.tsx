@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
 import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
 import { calendarFor, overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
+import { usePull } from '@/lib/pull';
 import { alpha, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 
 /**
@@ -110,7 +111,8 @@ export default function ProgressScreen() {
   const clearance = useDockClearance();
   const { session } = useAuth();
   const userId = session?.user.id;
-  const { data: history = [], refetch, isRefetching } = useHabitHistory(userId);
+  const { data: history = [], refetch } = useHabitHistory(userId);
+  const pull = usePull(refetch);
   const resetHistory = useResetHistory(userId);
 
   const [view, setView] = useState<ProgressView>('overall');
@@ -292,11 +294,7 @@ export default function ProgressScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => void refetch()}
-            tintColor={colors.textMuted}
-          />
+          <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
         <Display size={56} line={50}>{copy.stats.title}</Display>

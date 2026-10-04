@@ -14,6 +14,7 @@ import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api'
 import { useAuth } from '@/lib/auth';
 import { addDays, formatBigDate, formatDayName, localDateString } from '@/lib/dates';
 import { openFocus, orderForDay } from '@/lib/today';
+import { usePull } from '@/lib/pull';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
@@ -72,9 +73,9 @@ export default function TodayScreen() {
     isPending,
     isError,
     refetch,
-    isRefetching,
   } = useToday(userId, viewedDate);
   const { data: nudges = [], refetch: refetchNudges } = useNudgesForMe(userId);
+  const pull = usePull(refetch, refetchNudges);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
 
@@ -183,14 +184,7 @@ export default function TodayScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => {
-              void refetch();
-              void refetchNudges();
-            }}
-            tintColor={colors.textMuted}
-          />
+          <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
         <View style={styles.days}>

@@ -17,6 +17,7 @@ import {
   type TodayHabit,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { usePull } from '@/lib/pull';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
@@ -30,7 +31,8 @@ export default function MyDayScreen() {
   const userId = session?.user.id;
 
   const { data: anchors = [] } = useAnchors(userId);
-  const { data: habits = [], refetch, isRefetching } = useToday(userId);
+  const { data: habits = [], refetch } = useToday(userId);
+  const pull = usePull(refetch);
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
   const moveHabit = useMoveHabit(userId);
@@ -82,11 +84,7 @@ export default function MyDayScreen() {
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => void refetch()}
-            tintColor={colors.textMuted}
-          />
+          <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
         <View style={styles.topRow}>
