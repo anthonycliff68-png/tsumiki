@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -165,10 +165,43 @@ export default function TodayScreen() {
     [],
   );
 
-  const toggle = (habit: { id: string; checkedIn: boolean }) =>
-    habit.checkedIn
+  /**
+   * Where the page is scrolled to, and holding it still across a check-in.
+   *
+   * Checking a habit in scrolled the page by about sixty points — measured, and
+   * with the content height identical before and after, so nothing resized and
+   * nothing was clamped. Something inside the scroll view moves the offset when
+   * the thing you pressed re-renders underneath you. Rather than keep hunting
+   * it, the rule is stated directly: a check-in does not move the page.
+   *
+   * Restored a few times over the length of the check-in animation, because the
+   * nudge does not always arrive in the same frame as the tap. Dragging cancels
+   * it immediately — if you have taken hold of the page, it is yours.
+   */
+  const scroller = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const holding = useRef(false);
+
+  const holdScroll = useCallback(() => {
+    const y = scrollY.current;
+    holding.current = true;
+    const restore = () => {
+      if (!holding.current) return;
+      scroller.current?.scrollTo({ y, animated: false });
+    };
+    const timers = [0, 60, 180, 400, 700, 900].map((ms) => setTimeout(restore, ms));
+    setTimeout(() => {
+      holding.current = false;
+      timers.forEach(clearTimeout);
+    }, 1000);
+  }, []);
+
+  const toggle = (habit: { id: string; checkedIn: boolean }) => {
+    holdScroll();
+    return habit.checkedIn
       ? undo.mutate({ habitId: habit.id, date: viewedDate })
       : checkIn.mutate({ habitId: habit.id, date: viewedDate });
+  };
 
   const bleedColor = fanColor ?? hero?.color ?? habitColors[0];
 
@@ -176,6 +209,15 @@ export default function TodayScreen() {
     <View style={styles.root}>
       <Bleed color={bleedColor} />
       <ScrollView
+        ref={scroller}
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          scrollY.current = event.nativeEvent.contentOffset.y;
+        }}
+        // Your own drag always wins, and ends the hold.
+        onScrollBeginDrag={() => {
+          holding.current = false;
+        }}
         contentContainerStyle={{
           paddingTop: insets.top + spacing.xl,
           paddingBottom: clearance,
