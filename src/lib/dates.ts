@@ -18,8 +18,21 @@ export function localWeekday(date: Date = new Date()): number {
 }
 
 /** "21 Sep", the canvas's big date. */
-export function formatBigDate(date: Date = new Date()): string {
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+export function formatWeekday(date: Date = new Date()): string {
+  return date.toLocaleDateString('en-GB', { weekday: 'long' });
+}
+
+/** "5th", "1st", "22nd" — and 11th/12th/13th, which break the obvious rule. */
+function ordinal(day: number): string {
+  if (day >= 11 && day <= 13) return `${day}th`;
+  const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] ?? 'th';
+  return `${day}${suffix}`;
+}
+
+/** "October 5th, 2026" — the quiet line under the weekday on Today. */
+export function formatFullDate(date: Date = new Date()): string {
+  const month = date.toLocaleDateString('en-GB', { month: 'long' });
+  return `${month} ${ordinal(date.getDate())}, ${date.getFullYear()}`;
 }
 
 /** "Sun", "Mon" … for the day pills. */

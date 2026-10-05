@@ -12,7 +12,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { addDays, formatBigDate, formatDayName, localDateString } from '@/lib/dates';
+import { addDays, formatDayName, formatFullDate, formatWeekday, localDateString } from '@/lib/dates';
 import { openFocus, orderForDay } from '@/lib/today';
 import { usePull } from '@/lib/pull';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
@@ -223,7 +223,10 @@ export default function TodayScreen() {
         </View>
 
         <View style={styles.header}>
-          <Display size={76} line={62}>{formatBigDate(viewedDate)}</Display>
+          <View style={styles.dateBlock}>
+            <Display size={56} line={48}>{formatWeekday(viewedDate)}</Display>
+            <Text style={styles.dateFull}>{formatFullDate(viewedDate)}</Text>
+          </View>
           <View style={styles.count}>
             <Text style={[display(30, 30), { color: ink(bleedColor, colors) }]}>
               {done}/{habits.length}
@@ -432,6 +435,13 @@ const makeStyles = (colors: Palette) => ({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
+  },
+  dateBlock: { flexShrink: 1 },
+  dateFull: {
+    fontFamily: fonts.body,
+    fontSize: 17,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   count: { alignItems: 'flex-end', gap: 2, paddingBottom: 4 },
   countLabel: {
