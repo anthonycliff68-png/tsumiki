@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Dimensions, Pressable, Text, View } from 'react-native';
+import { Dimensions, Linking, Pressable, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 import { CardCollage } from '@/components/CardCollage';
 import { TextButton } from '@/components/Button';
-import { APP_NAME } from '@/constants/brand';
+import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import { useStyles } from '@/lib/appearance';
 import type { Access } from '@/lib/entitlement';
@@ -128,6 +128,17 @@ export function Paywall({
 
         <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
         <Text style={styles.terms}>{copy.paywall.terms}</Text>
+        <View style={styles.legal}>
+          <TextButton
+            label={copy.paywall.termsLink}
+            onPress={() => void Linking.openURL(TERMS_URL)}
+          />
+          <Text style={styles.terms}>·</Text>
+          <TextButton
+            label={copy.paywall.privacyLink}
+            onPress={() => void Linking.openURL(PRIVACY_URL)}
+          />
+        </View>
         {/* Apple requires this to stay reachable, paywall or not. */}
         <TextButton label={copy.paywall.deleteAccount} onPress={onDeleteAccount} disabled={busy} />
       </View>
@@ -167,6 +178,7 @@ const makeStyles = (colors: Palette) => ({
     justifyContent: 'center',
   },
   secondaryLabel: { fontFamily: fonts.bodyBold, fontSize: 15, letterSpacing: 1.2, color: colors.text },
+  legal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   terms: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, color: colors.textFaint, textAlign: 'center' },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1], textAlign: 'center' },
 }) as const;

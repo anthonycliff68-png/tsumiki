@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { decideAccess, type Access } from '@/lib/entitlement';
-import { configurePurchases, currentOffering, isSubscribed } from '@/lib/purchases';
+import { configurePurchases, currentOffering, isSubscribed, subscriptionExpiry } from '@/lib/purchases';
+import { supabase } from '@/lib/supabase';
 
 /**
  * What this person may do, decided once and read everywhere.
@@ -30,6 +31,16 @@ export function useAccess(): { access: Access; loading: boolean } {
     // A purchase on another device should turn up without a restart.
     staleTime: 60_000,
   });
+
+  // Mirror the expiry onto the profile so the nightly streak job can tell who
+  // is locked out. It cannot ask RevenueCat, and a locked member must stop
+  // counting as due or one lapsed trial resets four other people's streak.
+  useEffect(() => {
+    if (!userId || sub.data === undefined) return;
+    void subscriptionExpiry().then((until) =>
+      supabase.from('profiles').update({ subscribed_until: until }).eq('id', userId),
+    );
+  }, [userId, sub.data]);
 
   const loading = profile.isPending || sub.isPending;
 

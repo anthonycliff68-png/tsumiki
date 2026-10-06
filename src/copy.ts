@@ -510,6 +510,10 @@ export const copy = {
     unavailable: 'The store is not reachable right now. Try again in a moment.',
 
     terms: 'Auto-renews. Cancel any time in Settings. Payment is taken by Apple.',
+    // App Review guideline 3.1.2 wants both of these reachable from the paywall
+    // itself, not only from a settings screen three taps away.
+    termsLink: 'Terms of Use',
+    privacyLink: 'Privacy Policy',
     deleteAccount: 'Delete my account',
   },
 

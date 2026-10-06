@@ -35,8 +35,13 @@ export const TRIAL_DAYS = 7;
  *
  * Move it forward if 1.1 slips. Never move it backwards: someone already on
  * the free side of this line was promised something.
+ *
+ * Set to 20 October 2026 to cover review plus a few days. **Confirm this is on
+ * or after the day 1.1 actually goes live before submitting** — and if you
+ * hold the release, hold this with it. The mirror of this constant lives in
+ * supabase/functions/_shared/access.ts and must move at the same time.
  */
-export const GRANDFATHERED_BEFORE = '2026-11-01T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-10-20T00:00:00.000Z';
 
 export type Access =
   | { state: 'subscribed' }

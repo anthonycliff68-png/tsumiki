@@ -568,6 +568,7 @@ export type Database = {
           push_token: string | null
           quiet_end: string
           quiet_start: string
+          subscribed_until: string | null
           timezone: string
         }
         Insert: {
@@ -579,6 +580,7 @@ export type Database = {
           push_token?: string | null
           quiet_end?: string
           quiet_start?: string
+          subscribed_until?: string | null
           timezone?: string
         }
         Update: {
@@ -590,6 +592,7 @@ export type Database = {
           push_token?: string | null
           quiet_end?: string
           quiet_start?: string
+          subscribed_until?: string | null
           timezone?: string
         }
         Relationships: []

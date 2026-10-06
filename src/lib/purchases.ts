@@ -85,6 +85,26 @@ export async function isSubscribed(): Promise<boolean> {
   }
 }
 
+/**
+ * When the entitlement runs out, ISO, or null if it is not active.
+ *
+ * The nightly streak job runs in Postgres and cannot ask RevenueCat anything,
+ * so this gets mirrored onto the profile. An expiry rather than a flag,
+ * because it stays true as it passes: somebody who lapses becomes locked on
+ * the server without having to open the app first.
+ */
+export async function subscriptionExpiry(): Promise<string | null> {
+  const p = load();
+  if (!p) return null;
+  try {
+    const info = await p.getCustomerInfo();
+    const active = info.entitlements.active[ENTITLEMENT];
+    return active?.expirationDate ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** The offering configured as "default", with its annual and monthly packages. */
 export async function currentOffering(): Promise<PurchasesOffering | null> {
   const p = load();
