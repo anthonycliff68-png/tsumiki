@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ProfileCard } from '@/components/ProfileCard';
@@ -96,6 +97,10 @@ export default function YouScreen() {
         })}
       </View>
       <Text style={styles.meta}>{copy.you.themeHint}</Text>
+
+      <Text style={styles.label}>{copy.you.subscription}</Text>
+      <Text style={styles.meta}>{copy.you.seePlansHint}</Text>
+      <TextButton label={copy.you.seePlans} onPress={() => router.push('/plans')} />
 
       <Text style={styles.label}>{copy.you.notifications}</Text>
       {pushLine && <Body>{pushLine}</Body>}

@@ -15,7 +15,7 @@
 export const TRIAL_DAYS = 7;
 
 /** Accounts made before this keep the app for nothing. Mirrors GRANDFATHERED_BEFORE. */
-export const GRANDFATHERED_BEFORE = '2026-10-20T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-10-06T00:00:00.000Z';
 
 const DAY = 86_400_000;
 

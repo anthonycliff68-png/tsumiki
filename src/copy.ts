@@ -705,6 +705,11 @@ export const copy = {
     themeDark: 'Dark',
     themeSystem: 'System',
     themeHint: 'System follows your phone\u2019s setting.',
+    subscription: 'Subscription',
+    seePlans: 'See plans',
+    // Said plainly rather than hidden, because somebody grandfathered is being
+    // asked to pay for something they already have for nothing.
+    seePlansHint: 'Everything you have now stays yours. This is for when you want to back it.',
     notifications: 'Notifications',
     on: 'Reminders and nudges are on for this phone.',
     simulator: 'Push needs a real phone; the simulator cannot receive it.',

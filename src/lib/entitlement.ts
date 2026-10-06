@@ -36,12 +36,20 @@ export const TRIAL_DAYS = 7;
  * Move it forward if 1.1 slips. Never move it backwards: someone already on
  * the free side of this line was promised something.
  *
- * Set to 20 October 2026 to cover review plus a few days. **Confirm this is on
- * or after the day 1.1 actually goes live before submitting** — and if you
- * hold the release, hold this with it. The mirror of this constant lives in
- * supabase/functions/_shared/access.ts and must move at the same time.
+ * Set to 6 October 2026, the day 1.0 was held back rather than released. With
+ * nothing on the App Store, the only accounts that exist are the TestFlight
+ * testers', and those are the people this is for.
+ *
+ * It was 1 November, then 20 October, and both were wrong for a reason worth
+ * writing down: while this date is in the future, no account can ever reach
+ * 'locked', so the paywall cannot be shown to anybody — including App Review,
+ * who cannot approve a subscription they are unable to open. /plans exists so
+ * that is no longer load-bearing, but the trap is easy to walk back into.
+ *
+ * The mirror of this constant lives in supabase/functions/_shared/access.ts
+ * and must move at the same time.
  */
-export const GRANDFATHERED_BEFORE = '2026-10-20T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-10-06T00:00:00.000Z';
 
 export type Access =
   | { state: 'subscribed' }
