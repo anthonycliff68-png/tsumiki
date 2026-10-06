@@ -37,10 +37,14 @@ The jobs now `raise exception` instead of returning quietly, so a missing
 secret shows up as a failed run:
 
 ```sql
-select jobname, status, return_message, start_time
-from cron.job_run_details
-order by start_time desc limit 20;
+select j.jobname, d.status, d.return_message, d.start_time
+from cron.job_run_details d
+join cron.job j on j.jobid = d.jobid
+order by d.start_time desc limit 20;
 ```
+
+`job_run_details` has no `jobname` of its own — it carries `jobid`, so the
+join is what gives you a readable name.
 
 ## When a push still does not arrive
 
@@ -48,9 +52,18 @@ Work down this list — each step rules out one layer.
 
 1. **Did cron run?** `cron.job_run_details` above. A `failed` status with the
    "not configured" message means the secrets are still missing.
-2. **Did the HTTP call go out?** `select status_code, created from net._http_response order by created desc limit 10;`
-   A 401 means the service role key is wrong; nothing at all means `pg_net`
-   is not doing its work.
+2. **Did the HTTP call go out, and what came back?**
+
+   ```sql
+   select status_code, left(content::text, 90) as body, created
+   from net._http_response order by created desc limit 10;
+   ```
+
+   This is the step that matters most, because a cron run says `succeeded`
+   as soon as the SQL function returns — `net.http_post` only queues the
+   request, so the call can fail long after the job is recorded as fine.
+   `401 UNAUTHORIZED_INVALID_JWT_FORMAT` means the `service_role_key` secret
+   is not a real key; nothing at all means `pg_net` never sent it.
 3. **Did the function decide to send?** Edge Function logs in the dashboard.
    The rules it applies are in `supabase/functions/_shared/delivery.ts` and are
    under test — a habit is skipped if it is checked in, already sent today, not
