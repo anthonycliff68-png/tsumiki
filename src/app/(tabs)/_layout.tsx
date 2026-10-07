@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { Dock, DockClearanceProvider } from '@/components/Dock';
+import { FirstRunPlans } from '@/components/FirstRunPlans';
 import { PaywallGate } from '@/components/PaywallGate';
 import { WALKTHROUGH_SEEN } from '@/app/(onboarding)/first-check-in';
 import { useAnchors, useHabits, useMyProfile } from '@/lib/api';
@@ -65,6 +66,7 @@ export default function TabsLayout() {
 
   return (
     <PaywallGate>
+      <FirstRunPlans />
       <DockClearanceProvider>
         <Tabs
           tabBar={(props) => <Dock {...props} />}

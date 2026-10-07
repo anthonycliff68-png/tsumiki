@@ -26,6 +26,7 @@ export default function PlansScreen() {
       onSubscribe={(pkg) => void subscribe(pkg)}
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
+      onDismiss={() => router.back()}
     />
   );
 }
