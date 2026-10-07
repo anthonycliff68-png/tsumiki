@@ -93,7 +93,18 @@ export function evaluateDay(
     return member;
   });
 
-  const streakCurrent = crew.streakCurrent + 1;
+  // A day only counts if somebody actually did the thing.
+  //
+  // Grace exists so that one person's slip does not cost four other people
+  // their streak. It is not meant to manufacture days out of nothing — and it
+  // was: a crew where every single member missed, none of whom had spent
+  // their grace yet, came out of here a day stronger. The Weekender crew read
+  // "1 day strong" having not checked in for three days.
+  //
+  // So a forgiven day holds the number where it is. It does not reset — that
+  // is still the second miss in a row — but it does not climb either.
+  const turnedUp = due.some((member) => checkedIn.has(member.userId));
+  const streakCurrent = turnedUp ? crew.streakCurrent + 1 : crew.streakCurrent;
   return {
     outcome: missed.length > 0 ? 'forgiven' : 'clean',
     streakCurrent,

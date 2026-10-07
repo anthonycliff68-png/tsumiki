@@ -78,6 +78,51 @@ describe('missing once', () => {
   });
 });
 
+/**
+ * The case that was missing, and that shipped a wrong number because of it.
+ *
+ * Grace is there so one person's slip does not cost the others their streak.
+ * It is not there to make days out of nothing — and with nobody tested on the
+ * day nobody turned up, it did: a real crew read "1 day strong" having not
+ * checked in for three days.
+ */
+describe('a day nobody turned up', () => {
+  it('holds the streak where it is, rather than growing it', () => {
+    const before = crew().streakCurrent;
+    const result = evaluateDay(crew(), MONDAY, new Set());
+    assert.equal(result.outcome, 'forgiven');
+    assert.equal(result.streakCurrent, before);
+  });
+
+  it('does not move the best streak either', () => {
+    const result = evaluateDay(crew(), MONDAY, new Set());
+    assert.equal(result.streakBest, crew().streakBest);
+  });
+
+  it('still spends everybody\'s grace, so tomorrow is the one that counts', () => {
+    const result = evaluateDay(crew(), MONDAY, new Set());
+    assert.deepEqual(result.missed.sort(), ['ana', 'ben']);
+    assert.equal(result.members.every((m) => m.graceUsed), true);
+  });
+
+  it('resets on the second such day in a row', () => {
+    const first = evaluateDay(crew(), MONDAY, new Set());
+    const second = evaluateDay(
+      { ...crew(), members: first.members, streakCurrent: first.streakCurrent },
+      MONDAY,
+      new Set(),
+    );
+    assert.equal(second.outcome, 'reset');
+    assert.equal(second.streakCurrent, 0);
+  });
+
+  it('still grows when even one of them turns up', () => {
+    const before = crew().streakCurrent;
+    const result = evaluateDay(crew(), MONDAY, new Set(['ana']));
+    assert.equal(result.streakCurrent, before + 1);
+  });
+});
+
 describe('missing twice', () => {
   it('resets the streak when a member misses with their grace already spent', () => {
     const spent = crew({
