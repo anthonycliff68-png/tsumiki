@@ -51,7 +51,7 @@ Deno.serve(async (request: Request) => {
   for (const crew of (crews ?? []) as CrewRow[]) {
     const { data: memberRows, error: memberError } = await supabase
       .from('crew_members')
-      .select('user_id, grace_used, profiles!inner(timezone, created_at, subscribed_until)')
+      .select('user_id, grace_used, profiles!inner(timezone, created_at, trial_started_at, subscribed_until)')
       .eq('crew_id', crew.id);
     if (memberError) {
       summary.push({ crew: crew.id, error: memberError.message });
@@ -61,7 +61,12 @@ Deno.serve(async (request: Request) => {
     const members = (memberRows ?? []) as unknown as {
       user_id: string;
       grace_used: boolean;
-      profiles: { timezone: string; created_at: string; subscribed_until: string | null };
+      profiles: {
+        timezone: string;
+        created_at: string;
+        trial_started_at: string | null;
+        subscribed_until: string | null;
+      };
     }[];
     if (members.length === 0) continue;
 
@@ -104,6 +109,7 @@ Deno.serve(async (request: Request) => {
         // and the four people still turning up keep their streak.
         daysOfWeek: isLocked({
           createdAt: member.profiles.created_at,
+          trialStartedAt: member.profiles.trial_started_at,
           subscribedUntil: member.profiles.subscribed_until,
           now,
         })

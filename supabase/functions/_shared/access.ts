@@ -22,6 +22,8 @@ const DAY = 86_400_000;
 export type LockInput = {
   /** profiles.created_at, ISO. */
   createdAt: string;
+  /** profiles.trial_started_at, ISO. Null falls back to createdAt. */
+  trialStartedAt: string | null;
   /** profiles.subscribed_until, ISO. Null when they have never subscribed. */
   subscribedUntil: string | null;
   now: Date;
@@ -35,7 +37,7 @@ export type LockInput = {
  * A crew whose streak holds for the wrong reason is worse than one that does
  * not: the streak is the only thing the app asks anyone to believe.
  */
-export function isLocked({ createdAt, subscribedUntil, now }: LockInput): boolean {
+export function isLocked({ createdAt, trialStartedAt, subscribedUntil, now }: LockInput): boolean {
   if (subscribedUntil !== null) {
     const until = Date.parse(subscribedUntil);
     if (!Number.isNaN(until) && until > now.getTime()) return false;
@@ -45,6 +47,13 @@ export function isLocked({ createdAt, subscribedUntil, now }: LockInput): boolea
   if (Number.isNaN(created)) return false; // our bug, not theirs
   if (created < Date.parse(GRANDFATHERED_BEFORE)) return false;
 
-  const used = Math.max(0, Math.floor((now.getTime() - created) / DAY));
+  // The clock starts when the app said it did. Null means it has not been
+  // stamped yet — they have not opened the paid version — so nothing has run
+  // down and they cannot be locked.
+  if (trialStartedAt === null) return false;
+  const started = Date.parse(trialStartedAt);
+  if (Number.isNaN(started)) return false;
+
+  const used = Math.max(0, Math.floor((now.getTime() - started) / DAY));
   return TRIAL_DAYS - used <= 0;
 }

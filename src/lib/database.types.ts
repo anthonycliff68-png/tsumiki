@@ -570,6 +570,7 @@ export type Database = {
           quiet_start: string
           subscribed_until: string | null
           timezone: string
+          trial_started_at: string | null
         }
         Insert: {
           avatar_color?: string
@@ -582,6 +583,7 @@ export type Database = {
           quiet_start?: string
           subscribed_until?: string | null
           timezone?: string
+          trial_started_at?: string | null
         }
         Update: {
           avatar_color?: string
@@ -594,6 +596,7 @@ export type Database = {
           quiet_start?: string
           subscribed_until?: string | null
           timezone?: string
+          trial_started_at?: string | null
         }
         Relationships: []
       }
