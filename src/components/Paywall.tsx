@@ -8,7 +8,7 @@ import { TextButton } from '@/components/Button';
 import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import { useStyles } from '@/lib/appearance';
-import type { Access } from '@/lib/entitlement';
+import { TRIAL_DAYS, type Access } from '@/lib/entitlement';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const { width: W } = Dimensions.get('window');
@@ -24,6 +24,12 @@ type Props = {
   onSubscribe: (pkg: PurchasesPackage | null, plan: Plan) => void;
   onRestore: () => void;
   onDeleteAccount: () => void;
+  /**
+   * Shown when the paywall is an offer rather than a wall: after sign-up, and
+   * on a reinstall. Absent when somebody's week is actually up, because then
+   * there is nothing to dismiss to.
+   */
+  onDismiss?: () => void;
 };
 
 /**
@@ -47,6 +53,7 @@ export function Paywall({
   onSubscribe,
   onRestore,
   onDeleteAccount,
+  onDismiss,
 }: Props) {
   const styles = useStyles(makeStyles);
   const [plan, setPlan] = useState<Plan>('annual');
@@ -126,6 +133,9 @@ export function Paywall({
           </Text>
         </Pressable>
 
+        {onDismiss && (
+          <TextButton label={copy.paywall.notNow(TRIAL_DAYS)} onPress={onDismiss} disabled={busy} />
+        )}
         <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
         <Text style={styles.terms}>{copy.paywall.terms}</Text>
         <View style={styles.legal}>

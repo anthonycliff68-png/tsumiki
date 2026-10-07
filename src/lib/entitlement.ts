@@ -20,7 +20,7 @@
  */
 
 /** Days of full access before the paywall appears. */
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 3;
 
 /**
  * Accounts created before this keep the app for nothing, for good.
@@ -30,8 +30,8 @@ export const TRIAL_DAYS = 7;
  * too early and someone who installed a free app is told, without warning,
  * that it now costs money; that is the version people write reviews about.
  * Set it too late and a handful of early users keep the app for nothing,
- * which is a rounding error and arguably money well spent on the people who
- * showed up first.
+ * which is the smaller mistake by a long way. They turned up before there was
+ * any reason to, and keeping faith with them is the point.
  *
  * Move it forward if 1.1 slips. Never move it backwards: someone already on
  * the free side of this line was promised something.

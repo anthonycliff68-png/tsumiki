@@ -22,6 +22,16 @@ import {
 const AFTER = '2026-11-15T09:00:00.000Z';
 const at = (iso: string) => new Date(iso);
 
+/**
+ * Days and minutes measured from the moment the account was made, rather than
+ * written out as dates. TRIAL_DAYS is meant to be tuned — it went from 7 to 3
+ * the first time anyone thought about pricing — and a test that hardcodes
+ * "2026-11-21" fails for that change without saying anything true about the
+ * rule it is supposed to be guarding.
+ */
+const after = (days: number, minutes = 0) =>
+  new Date(Date.parse(AFTER) + days * 86_400_000 + minutes * 60_000);
+
 describe('paying', () => {
   it('beats everything else, so a new subscriber is never called a trialist', () => {
     assert.deepEqual(
@@ -72,28 +82,30 @@ describe('the trial clock', () => {
   });
 
   it('counts down a day at a time', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-21T09:00:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS - 1) });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
   it('still has a day left with minutes to spare on the last day', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-22T08:59:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS, -1) });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
-  it('locks the moment the seventh day is up, not a day later', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-22T09:00:00.000Z') });
+  it('locks the moment the last day is up, not a day later', () => {
+    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS) });
     assert.deepEqual(a, { state: 'locked' });
   });
 
   it('starts from an explicit trial start when one is given', () => {
+    // Started two days after the account was made, so two days of the clock
+    // are still untouched when the account's own would have been nearly spent.
     const a = decideAccess({
       accountCreatedAt: AFTER,
-      trialStartedAt: '2026-11-20T09:00:00.000Z',
+      trialStartedAt: after(2).toISOString(),
       subscribed: false,
-      now: at('2026-11-22T09:00:00.000Z'),
+      now: after(TRIAL_DAYS),
     });
-    assert.deepEqual(a, { state: 'trial', daysLeft: 5 });
+    assert.deepEqual(a, { state: 'trial', daysLeft: 2 });
   });
 });
 

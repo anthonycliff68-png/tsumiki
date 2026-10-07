@@ -12,7 +12,7 @@
  */
 
 /** Days of full access before the paywall appears. Mirrors TRIAL_DAYS. */
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 3;
 
 /** Accounts made before this keep the app for nothing. Mirrors GRANDFATHERED_BEFORE. */
 export const GRANDFATHERED_BEFORE = '2026-10-06T00:00:00.000Z';

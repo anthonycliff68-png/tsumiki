@@ -486,7 +486,7 @@ export const copy = {
     perYear: '/ year',
     perMonth: '/ month',
 
-    overTitle: 'Your free week is up. Keep going.',
+    overTitle: 'Your free days are up. Keep going.',
     browsingTitle: 'Everything, for everyone you do it with.',
 
     features: [
@@ -504,6 +504,10 @@ export const copy = {
     subscribing: 'One moment\u2026',
     seeMonthly: 'See monthly',
     seeAnnual: 'See annual',
+    // Says what happens next rather than "Not now", which reads like a refusal
+    // and hides the fact that the free days start either way. The number comes
+    // from TRIAL_DAYS so it cannot drift from the rule that enforces it.
+    notNow: (days: number) => `Start my free ${days} days`,
     restore: 'Restore purchases',
     restoredNone: 'No earlier purchase found on this Apple ID.',
     failed: 'That did not go through. Nothing has been charged.',
