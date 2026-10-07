@@ -58,8 +58,16 @@ export async function registerForPush(userId: string): Promise<PushRegistration>
   // testable with `xcrun simctl push`.
   await registerCategories();
 
-  if (!Device.isDevice) return { ok: false, reason: 'simulator' };
-
+  // Permission is asked for before the device check, not after it.
+  //
+  // A simulator can display a notification perfectly well — `xcrun simctl
+  // push` puts one on the screen — but only if the app has been granted
+  // permission, and the only request lived past this return. So the two quick
+  // actions could not be seen anywhere without a real phone and a habit that
+  // happened to be due in the next ten minutes, which is why they reached the
+  // App Store named in the description and never once looked at.
+  //
+  // On a real device nothing changes: the check below passes either way.
   const existing = await Notifications.getPermissionsAsync();
   let status = existing.status;
   if (status !== 'granted') {
@@ -67,6 +75,8 @@ export async function registerForPush(userId: string): Promise<PushRegistration>
     status = asked.status;
   }
   if (status !== 'granted') return { ok: false, reason: 'denied' };
+
+  if (!Device.isDevice) return { ok: false, reason: 'simulator' };
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
