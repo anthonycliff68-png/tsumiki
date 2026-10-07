@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dimensions, Linking, Pressable, Text, View } from 'react-native';
+import { Dimensions, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
@@ -56,6 +57,7 @@ export function Paywall({
   onDismiss,
 }: Props) {
   const styles = useStyles(makeStyles);
+  const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('annual');
 
   const annual = offering?.annual ?? null;
@@ -69,9 +71,21 @@ export function Paywall({
 
   return (
     <View style={styles.root}>
-      <CardCollage height={400} fadeFrom={60} />
+      {/* The collage is absolutely placed at the top of its parent, so it is
+          nudged down here rather than by padding the root: left at zero its
+          sheets of habit cards run under the clock and the battery. */}
+      <View style={[styles.collageHolder, { top: insets.top }]} pointerEvents="none">
+        <CardCollage height={400} fadeFrom={60} />
+      </View>
 
-      <View style={styles.body}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.body,
+          { paddingTop: 300 + insets.top, paddingBottom: insets.bottom + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={[display(72, 62), styles.word]}>{APP_NAME.toUpperCase()}</Text>
         <Text style={styles.sub}>
           {access.state === 'locked' ? copy.paywall.overTitle : copy.paywall.browsingTitle}
@@ -151,14 +165,21 @@ export function Paywall({
         </View>
         {/* Apple requires this to stay reachable, paywall or not. */}
         <TextButton label={copy.paywall.deleteAccount} onPress={onDeleteAccount} disabled={busy} />
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
-  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: 300, gap: spacing.md },
+  // Out of the flow entirely, so the scroll view below starts at the top of
+  // the screen and the collage can be nudged clear of the clock on its own.
+  collageHolder: { position: 'absolute', left: 0, right: 0 },
+  // Scrolls because it has to. Terms of Use and Privacy Policy sit at the
+  // bottom and Apple requires both to be reachable; on a short screen they
+  // were simply cut off, which is a rejection waiting to happen.
+  scroll: { flex: 1 },
+  body: { paddingHorizontal: spacing.xl, gap: spacing.md },
   word: { color: colors.text, textAlign: 'center' },
   sub: {
     fontFamily: fonts.body,
