@@ -48,6 +48,16 @@ function projectId(): string | undefined {
  * Safe to call on every launch: the token is stable and the write is an update.
  */
 export async function registerForPush(userId: string): Promise<PushRegistration> {
+  // First, and outside everything that can fail.
+  //
+  // This used to sit after the token fetch, inside its try, so a thrown fetch
+  // meant the two buttons were never registered and every notification landed
+  // bare — the one part of this the App Store description promises by name.
+  // It is only telling the OS what the buttons are, it needs no permission and
+  // no network, and doing it on a simulator too is what makes the buttons
+  // testable with `xcrun simctl push`.
+  await registerCategories();
+
   if (!Device.isDevice) return { ok: false, reason: 'simulator' };
 
   const existing = await Notifications.getPermissionsAsync();
@@ -70,8 +80,15 @@ export async function registerForPush(userId: string): Promise<PushRegistration>
 
   try {
     const token = await Notifications.getExpoPushTokenAsync({ projectId: id });
-    await registerCategories();
-    await supabase.from('profiles').update({ push_token: token.data }).eq('id', userId);
+    // The write is checked, because "Reminders and nudges are on for this
+    // phone" was shown on the strength of the token alone. A token nothing can
+    // read is not reminders being on, and saying so hides the failure on the
+    // one screen somebody would look at to find it.
+    const { error } = await supabase
+      .from('profiles')
+      .update({ push_token: token.data })
+      .eq('id', userId);
+    if (error) return { ok: false, reason: 'failed' };
     return { ok: true, token: token.data };
   } catch {
     return { ok: false, reason: 'failed' };
