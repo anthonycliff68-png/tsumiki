@@ -16,7 +16,7 @@ Status is `todo`, `ready`, or `posted`.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-crew-before.mp4`, `2026-10-08-crew-after.mp4` (5s each).
+**Assets** — `2026-10-08-crew-compare.mp4` (5s, both sides in one video).
 
 **X / Twitter**
 
@@ -77,13 +77,12 @@ before/after on its own.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-check-in-before.mp4` (4s, the old build) and
-`2026-10-08-my-day-check-in.mp4` (6s). Post as a pair, before first — the
-comparison is the post.
+**Assets** — `2026-10-08-check-in-compare.mp4` (3s, both sides in one video).
+Post that one on its own.
 
 **X / Twitter**
 
-> Before and after of checking a habit off.
+> Before and after of checking a habit off. Same habit, same place, same day.
 >
 > The old one: tap an outlined card, it is solid in the next frame. Nothing
 > moves, nothing lands, and the thing you just did is already over.

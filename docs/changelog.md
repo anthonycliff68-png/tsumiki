@@ -19,10 +19,17 @@ is being backfilled.
 To capture more:
 
 ```sh
-scripts/record.sh check-in /my-day            # record, then Enter to stop
-swift scripts/clip.swift raw.mov out.mp4 3 9  # trim to the seconds that matter
-scripts/stage.sh                              # lay it out in Downloads, by date
+scripts/record.sh check-in /my-day                      # record, Enter to stop
+swift scripts/clip.swift raw.mov out.mp4 3 9            # trim to what matters
+swift scripts/sidebyside.swift b.mp4 a.mp4 c.mp4 "Title"  # both in one video
+scripts/stage.sh                                        # lay it out in Downloads
 ```
+
+A before and an after posted as two clips arrive as two thumbnails, play
+separately, and leave the reader holding the first one in their head while they
+watch the second. Side by side they are one thing. Record both takes on the
+**same habit, in the same place**, or the comparison is of two different screens
+and proves nothing.
 
 Recordings, not stills. A screenshot cannot show an animation, and a pair of
 them arrives on X as two thumbnails the reader has to work out the order of. One
@@ -58,7 +65,8 @@ gone wrong in the layout rather than as a control. It moves to the end of the
 tile and stays quiet. Nobody reaches for it in the normal course of a day; it
 only has to be findable when they do.
 
-**[Before](demos/2026-10-08-crew-before.mp4)** · **[After](demos/2026-10-08-crew-after.mp4)** — 5s each.
+**[Side by side](demos/2026-10-08-crew-compare.mp4)** — 5s. Also on their own:
+[before](demos/2026-10-08-crew-before.mp4) · [after](demos/2026-10-08-crew-after.mp4).
 
 **Content:** drafted — [content.md](content.md#8-october-2026--the-crew-screen-said-the-same-thing-three-ways).
 
@@ -112,10 +120,14 @@ nine droplets off the top, and folds to its line with the strike drawing across.
 About two thirds of a second. Undo gets none of it — taking something back is a
 correction, not an achievement.
 
-**[Before](demos/2026-10-08-check-in-before.mp4)** · **[After](demos/2026-10-08-my-day-check-in.mp4)**
-— 4s and 6s. The before is the old build, checked out of git and run again: tap
-an outlined card and it is solid in the next frame. Nothing moves, nothing
-lands, and the thing you just did is simply over.
+**[Side by side](demos/2026-10-08-check-in-compare.mp4)** — 3s. The same habit,
+in the same place on the same day, tapped on both builds. The before is the old
+component checked out of git and run again: tap an outlined card and it is solid
+in the next frame, nothing moves, nothing lands, and the thing you just did is
+already over.
+
+Also on their own: [before](demos/2026-10-08-check-in-before.mp4) ·
+[after](demos/2026-10-08-check-in-after.mp4).
 
 The droplets took three attempts and were invisible in all of them. They were
 painted under the card, they faded out a twelfth of the way into the flight
