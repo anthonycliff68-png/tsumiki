@@ -7,14 +7,16 @@ export const APP_TAGLINE = 'Build habits with your people, one stack at a time.'
 /**
  * The published rules everyone agrees to, and the privacy policy.
  *
- * On the same GitHub Pages site the invite links use, not on tsumiki.app: that
- * domain is not owned, and pointing at it left the Terms button in the app
- * opening nothing at all — the same way invites were 404ing before. Whatever
- * these say has to actually load, because the App Store checks the privacy one
- * and a reviewer will tap the other.
+ * On conjureapps.com, the studio site, since 8 October. They were on GitHub
+ * Pages before, which was only ever a stopgap for having no domain.
+ *
+ * Whatever these say has to actually load: the App Store checks the privacy
+ * one and a reviewer taps the other. All three were confirmed returning 200
+ * before this changed.
  */
-export const TERMS_URL = 'https://anthonycliff68-png.github.io/tsumiki/terms.html';
-export const PRIVACY_URL = 'https://anthonycliff68-png.github.io/tsumiki/privacy.html';
+export const TERMS_URL = 'https://conjureapps.com/apps/tsumiki/terms/';
+export const PRIVACY_URL = 'https://conjureapps.com/apps/tsumiki/privacy/';
+export const SUPPORT_URL = 'https://conjureapps.com/apps/tsumiki/support/';
 
 /**
  * Where invite links point.
@@ -24,10 +26,12 @@ export const PRIVACY_URL = 'https://anthonycliff68-png.github.io/tsumiki/privacy
  * serves 404.html for any path it does not recognise — that page reads the
  * code out of the URL and hands off to the app.
  *
- * It is still a stopgap. On a domain you own you can host an
- * apple-app-site-association file and the link opens the app directly,
- * without the page appearing at all. Change this when the domain is
- * registered and set up Universal Links and App Links at the same time.
+ * Deliberately NOT moved to conjureapps.com with the others: there is no
+ * /j/<code> route there, and pointing invites at a 404 would be worse than
+ * the stopgap. Moving it means building that page on the studio site and
+ * hosting an apple-app-site-association file beside it, which is also what
+ * finally makes an invite open the app directly instead of showing a web
+ * page first.
  */
 export const INVITE_BASE_URL = 'https://anthonycliff68-png.github.io/tsumiki/j';
 

@@ -113,6 +113,14 @@ export default function HabitStatsScreen() {
                 <Text style={styles.waiting}>
                   {isError ? copy.today.loadFailed : copy.habitStats.missingBody}
                 </Text>
+                {/* TEMPORARY. Three theories about this were wrong, so this
+                    prints what the screen actually has instead of what it
+                    ought to. Remove once the cause is known. */}
+                <Text style={[styles.waiting, { fontSize: 11 }]}>
+                  {`looking for: ${JSON.stringify(id)}\nhistory has ${history.length}: ${history
+                    .map((h) => h.habitId.slice(0, 8))
+                    .join(', ')}`}
+                </Text>
               </>
             )}
           </View>
