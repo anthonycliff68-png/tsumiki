@@ -5,7 +5,7 @@ Nothing here is published until you say so.
 
 Every entry carries the same two lines, so an unfinished one is obvious:
 
-- **Assets** — what exists in [demos/](demos/), and what still needs capturing
+- **Assets** — the clip in [demos/](demos/), and anything still to record
 - **X / Twitter** — the post, ready to paste
 
 Status is `todo`, `ready`, or `posted`.
@@ -16,8 +16,8 @@ Status is `todo`, `ready`, or `posted`.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-paywall-before.png`, `2026-10-08-paywall-after.png`.
-Post as a pair, before first.
+**Assets** — `2026-10-08-paywall.mp4` (5s). Post the clip; the copy carries the
+before/after on its own.
 
 **X / Twitter**
 
@@ -36,8 +36,8 @@ Post as a pair, before first.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-my-day-before.png`, `2026-10-08-my-day-after.png`.
-Both full device resolution, post as a two-image pair in that order.
+**Assets** — `2026-10-08-my-day-check-in.mp4` (6s). The clip shows the after;
+the words carry the before.
 
 **X / Twitter**
 
@@ -55,8 +55,7 @@ Both full device resolution, post as a two-image pair in that order.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-check-in-water.mp4` (the real thing),
-`2026-10-08-splash-frame.png` (a still of the droplets mid-air). The clip leads.
+**Assets** — `2026-10-08-my-day-check-in.mp4` (6s, two habits checked off).
 
 **X / Twitter**
 
@@ -91,7 +90,7 @@ Copy this for the next change.
 
 **Status:** todo
 
-**Assets** — what's in demos/, what still needs capturing.
+**Assets** — the clip in demos/, and anything still to record.
 
 **X / Twitter**
 

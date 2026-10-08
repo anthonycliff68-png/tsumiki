@@ -3,14 +3,12 @@
 # Lay the demo assets out in Downloads, a folder per day, ready to post.
 #
 # docs/demos/ is the repo's copy: flat, date-prefixed, and what changelog.md
-# points its <img> tags at. Good for the record, awkward for actually making a
-# post — you end up hunting through one folder for the two files that belong
-# together.
+# links to. Good for the record, awkward for actually making a post — you end up
+# hunting through one folder for the clip you want.
 #
 # This mirrors them into ~/Downloads/Tsumiki Posts/<date>/, drops the date
 # prefix once the folder carries it, and puts the drafts in beside them. Copies
-# rather than moves: deleting the repo's copies would break every image in the
-# changelog.
+# rather than moves: the changelog links to the repo's copies.
 #
 # Usage:  scripts/stage.sh
 set -euo pipefail

@@ -7,7 +7,7 @@ cannot tell you whether an animation works, and three rounds of a splash got
 built here without anyone noticing it was invisible. The other one: this is the
 record of how the thing got made, and the good bits of it are worth posting.
 
-Stills and clips live in [demos/](demos/). The whole-app board, regenerated in
+Clips live in [demos/](demos/). The whole-app board, regenerated in
 one command, is [screenshots/](screenshots/). Posts are drafted in
 [content.md](content.md) — every change gets a **Content** line here pointing at
 its draft, so one that was never written is easy to spot.
@@ -19,15 +19,18 @@ is being backfilled.
 To capture more:
 
 ```sh
-scripts/record.sh check-in /my-day    # a clip you can post
-scripts/shots.sh                      # every screen, as a board
-scripts/stage.sh                      # lay it all out in Downloads, by date
+scripts/record.sh check-in /my-day            # record, then Enter to stop
+swift scripts/clip.swift raw.mov out.mp4 3 9  # trim to the seconds that matter
+scripts/stage.sh                              # lay it out in Downloads, by date
 ```
 
-`docs/demos/` is the repo's flat, date-prefixed copy — it is what the images on
-this page point at, so nothing here gets moved out of it. `scripts/stage.sh`
-copies them into `~/Downloads/Tsumiki Posts/<date>/`, drops the date prefix once
-the folder carries it, and puts the drafts in beside them.
+Recordings, not stills. A screenshot cannot show an animation, and a pair of
+them arrives on X as two thumbnails the reader has to work out the order of. One
+clip says it in the first second, which is the only one you are reliably given.
+
+`scripts/record.sh` captures, `scripts/clip.swift` trims off the dead air at
+each end and writes an mp4, and `scripts/stage.sh` lays it all out in
+`~/Downloads/Tsumiki Posts/<date>/`.
 
 ---
 
@@ -45,10 +48,7 @@ that already drew a 3.1.2 rejection. And a crew really does stop at five,
 enforced by a trigger on `crew_members` rather than only by the UI, so the word
 sat directly above its own exception.
 
-| Before | After |
-|---|---|
-| <img src="demos/2026-10-08-paywall-before.png" width="260"> | <img src="demos/2026-10-08-paywall-after.png" width="260"> |
-| "Unlimited habits and crews" | What the app actually does |
+**[The paywall, as it reads now](demos/2026-10-08-paywall.mp4)** — 5s.
 
 Copy only. No behaviour, no pricing, no entitlement logic changed.
 
@@ -64,10 +64,8 @@ reading all twelve. This timeline is for what is still coming.
 A done habit now shrinks to a struck-through line with a stub of its colour and
 gives its room back.
 
-| Before | After |
-|---|---|
-| <img src="demos/2026-10-08-my-day-before.png" width="260"> | <img src="demos/2026-10-08-my-day-after.png" width="260"> |
-| Twelve done, twelve loud cards | Twelve done, and you can tell at a glance |
+**[Two habits checked off](demos/2026-10-08-my-day-check-in.mp4)** — 6s. Each one
+floods, brims, splashes and folds down to its line.
 
 Costs the edit handle on a done habit. Editing is still a tap away on Today and
 on Progress, and comes back if you undo.
@@ -87,9 +85,7 @@ nine droplets off the top, and folds to its line with the strike drawing across.
 About two thirds of a second. Undo gets none of it — taking something back is a
 correction, not an achievement.
 
-<img src="demos/2026-10-08-splash-frame.png" width="300">
-
-Clip: [2026-10-08-check-in-water.mp4](demos/2026-10-08-check-in-water.mp4)
+**[The check-in](demos/2026-10-08-my-day-check-in.mp4)** — 6s.
 
 The droplets took three attempts and were invisible in all of them. They were
 painted under the card, they faded out a twelfth of the way into the flight
