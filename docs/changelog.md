@@ -48,6 +48,30 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
+### The water never actually reached the brim — `3b5dd80`
+
+Two things on the same screen, both of them the gap between what the code
+intended and what it drew.
+
+**The level overshot off the bottom of its own card.** The rise is sprung so it
+arrives with weight and sloshes, but the sheet of water was exactly the height
+of the card — so overshooting lifted its bottom edge clear and left a dark band
+there. The single moment that was meant to read as *full* was the one moment
+with a gap in it. The sheet now carries spare water underneath, which is never
+seen and is the entire point. The droplets were leaving on a fraction of a
+nominal rise rather than on arrival, so they fired while the level was still
+halfway up; they now go when it lands.
+
+**A moment's colour sat in the middle of its habits.** The tick beside Coffee
+and Lunch was centred in its row — and a moment's row is as tall as everything
+stacked underneath it, so the colour came out level with the habits rather than
+with the word it names. Top-aligned now, beside its label, which is the only
+place it has to line up.
+
+**[Side by side](demos/2026-10-08-check-in-compare.mp4)** — 7s.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--the-water-never-actually-reached-the-brim).
+
 ### The crew screen said the same thing three ways — `9647d74`
 
 Three small things, all on one screen, all the same kind of wrong: the screen

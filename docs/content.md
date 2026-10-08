@@ -12,6 +12,26 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 8 October 2026 · The water never actually reached the brim
+
+**Status:** ready
+
+**Assets** — `2026-10-08-check-in-compare.mp4` (7s, updated).
+
+**X / Twitter**
+
+> Shipped a check-in animation yesterday and it was wrong in a way I could only
+> see one frame at a time.
+>
+> The water is sprung so it overshoots and sloshes. But the sheet was exactly
+> the height of the card — so overshooting lifted its bottom edge clear and left
+> a dark band there. The one moment meant to read as full was the one moment
+> with a gap in it.
+>
+> Fix: spare water underneath, which nobody ever sees. That's the point.
+
+---
+
 ## 8 October 2026 · The crew screen said the same thing three ways
 
 **Status:** ready

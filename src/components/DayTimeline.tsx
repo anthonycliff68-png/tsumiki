@@ -29,10 +29,23 @@ const STACK_CAP = 3;
  * welcome.
  */
 const RISE_MS = 220;
+/**
+ * How far the water extends below the card.
+ *
+ * The level is sprung so it overshoots and settles, which is what gives it
+ * weight. But the sheet used to be exactly the height of the card, so
+ * overshooting lifted its bottom edge clear of the bottom of the card and left
+ * a dark band there — the one moment it was supposed to look full was the one
+ * moment it had a gap in it. The sheet now carries this much spare underneath,
+ * which is never seen and is the whole point.
+ */
+const WATER_RESERVE = 56;
 const BRIM_MS = 150;
 const FOLD_MS = 180;
 const STRIKE_MS = 160;
 const SPLASH_MS = 260;
+/** When the level reaches the brim, measured off the recording. */
+const SPLASH_AT_MS = 300;
 /** How tall the crest riding the top of the water is. */
 const WAVE_H = 11;
 /**
@@ -412,11 +425,14 @@ function HabitCard({
         // overshoots the brim and sloshes back instead of stopping dead at it.
         // Slower and looser than a UI spring would be: this is a bodily amount
         // of liquid, not a toggle.
-        Animated.spring(rise, { toValue: 1, useNativeDriver: true, speed: 11, bounciness: 15 }),
+        Animated.spring(rise, { toValue: 1, useNativeDriver: true, speed: 13, bounciness: 12 }),
         Animated.sequence([
           // The droplets leave just before the level lands: they are thrown by
           // the water hitting the top, so they cannot wait for it to settle.
-          Animated.delay(RISE_MS * 0.72),
+          // Tied to when the water actually arrives, not to a fraction of a
+          // nominal rise: a spring takes its own time, and these were leaving
+          // while the level was still halfway up the card.
+          Animated.delay(SPLASH_AT_MS),
           Animated.timing(splash, { toValue: 1, duration: SPLASH_MS, useNativeDriver: true }),
         ]),
         Animated.sequence([
@@ -529,6 +545,9 @@ function HabitCard({
                   style={[
                     StyleSheet.absoluteFill,
                     {
+                      // Spare water below, so the overshoot has something to
+                      // overshoot out of.
+                      bottom: -WATER_RESERVE,
                       transform: [
                         {
                           translateY: rise.interpolate({
@@ -862,7 +881,11 @@ const makeStyles = (colors: Palette) => ({
   line: { flexDirection: 'row', minHeight: 30, paddingVertical: 2 },
   // Left-aligned with the same gap the block rail uses, so a moment's tick and
   // a block's rail land in one column rather than two.
-  railCell: { alignItems: 'flex-start', justifyContent: 'center', paddingLeft: RAIL_GAP },
+  // Top, not centre. A moment's row is as tall as everything stacked under it,
+  // so centring put Coffee's teal and Lunch's blue level with the habits rather
+  // than with the word they belong to — the one place the colour has to line up
+  // is the label it names.
+  railCell: { alignItems: 'flex-start', justifyContent: 'flex-start', paddingLeft: RAIL_GAP },
   tick: { width: 4, height: 22, borderRadius: 2 },
   gutter: {
     width: GUTTER,
