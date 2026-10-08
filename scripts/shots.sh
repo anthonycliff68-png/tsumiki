@@ -17,6 +17,12 @@
 # is not committed. To find a crew's:
 #
 #   select id, name from crews;
+#   select h.id, h.name, count(c.id) as checkins from habits h
+#     left join checkins c on c.habit_id = h.id where h.archived_at is null
+#     group by h.id, h.name order by checkins desc;
+#
+# For the habit, pick one with history — the screen is a weekday breakdown and
+# an empty one shows nothing worth looking at.
 #
 # Usage:  scripts/shots.sh [device-name-or-udid]
 set -euo pipefail
@@ -46,6 +52,13 @@ if [ -n "${CREW_ID:-}" ]; then
   SCREENS+=("/crew/${CREW_ID}|09-crew|A crew — shared streak, the week behind it, who is in today")
 else
   echo "  (no CREW_ID in scripts/shots.env — skipping the crew screen)"
+fi
+
+# Needs a habit with some history behind it.
+if [ -n "${HABIT_ID:-}" ]; then
+  SCREENS+=("/habit/${HABIT_ID}|10-habit|One habit — its history, and which weekday keeps breaking it")
+else
+  echo "  (no HABIT_ID in scripts/shots.env — skipping the habit screen)"
 fi
 
 mkdir -p "$OUT"
@@ -84,9 +97,13 @@ done
   echo "Taken: $(date '+%-d %B %Y, %H:%M %Z')"
   echo "Commit: \`${SHA}\`${DIRTY}"
   echo
-  if [ -z "${CREW_ID:-}" ]; then
-    echo "The crew screen is missing from this run: no CREW_ID in"
-    echo "\`scripts/shots.env\`. See the header of \`scripts/shots.sh\`."
+  MISSING=""
+  [ -z "${CREW_ID:-}" ]  && MISSING="${MISSING}CREW_ID "
+  [ -z "${HABIT_ID:-}" ] && MISSING="${MISSING}HABIT_ID "
+  if [ -n "$MISSING" ]; then
+    echo "Screens missing from this run for want of an id: \`${MISSING% }\`."
+    echo "Set them in \`scripts/shots.env\`; the header of"
+    echo "\`scripts/shots.sh\` has the queries."
     echo
   fi
   echo "Screens needing state this script cannot create — an expired trial, a"

@@ -79,13 +79,25 @@ brand side is now starting.
 
 Candidates, roughly in the order I would argue for them:
 
-1. **Universal links**, so an invite opens the app. The crew is the
+1. **The habit screen cannot be reached by a deep link.** `tsumiki:///habit/<id>`
+   lands on its empty state and stays there — cold or warm, with an id that is
+   definitely the signed-in user's and definitely has history. The same screen
+   renders correctly when tapped from Progress, and `crew/<id>` deep links
+   fine, so it is not the URL or the param. Root cause not found; my first two
+   theories (timing, wrong account) were both wrong on inspection.
+
+   Two things make it worth fixing. A deep link to a habit is where a
+   notification would reasonably point. And the screen's *loading* state and
+   its *not found* state are the same bare Back button, so whatever goes wrong
+   there is invisible to whoever it happens to.
+
+2. **Universal links**, so an invite opens the app. The crew is the
    differentiator and the invite is how a crew grows; it is the one gap that
    costs new users.
-2. **Verify a quick action writes a check-in** end to end. The buttons render;
+3. **Verify a quick action writes a check-in** end to end. The buttons render;
    that the tap reaches the database without opening the app is still untested.
-3. **Automated screenshots** (Maestro), so the design board regenerates against
+4. **Automated screenshots beyond deep links** (Maestro), so the design board regenerates against
    every build instead of being captured by hand.
-4. **Change a crew's habit**, or decide it can only be replaced — an open
+5. **Change a crew's habit**, or decide it can only be replaced — an open
    question from the original brief, never resolved.
-5. **What happens to a crew when someone leaves mid-streak** — same.
+6. **What happens to a crew when someone leaves mid-streak** — same.
