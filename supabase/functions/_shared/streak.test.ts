@@ -267,12 +267,8 @@ describe('which days to evaluate', () => {
     assert.deepEqual(datesToEvaluate('2026-09-21', '2026-09-21'), []);
   });
 
-  it('judges nothing for a crew that has never been evaluated', () => {
-    // It used to judge that one day. But a streak counts days the crew got
-    // through while the app was watching, and before the first run nobody was
-    // watching — counting them invents a number out of history that was never
-    // judged at the time. The caller records the cursor and starts tomorrow.
-    assert.deepEqual(datesToEvaluate(null, '2026-09-21'), []);
+  it('judges a single day for a crew that has never run', () => {
+    assert.deepEqual(datesToEvaluate(null, '2026-09-21'), ['2026-09-21']);
   });
 
   it('caps a long catch-up rather than walking back for ever', () => {

@@ -195,15 +195,8 @@ export function datesToEvaluate(
   through: string,
   limit = 30,
 ): string[] {
-  // A crew that has never been evaluated gets nothing counted for it. The
-  // streak measures days the crew got through *while the app was watching*;
-  // reconstructing the days before that from check-in history invents a number
-  // nobody earned, and makes it change retroactively whenever this code does.
-  // The caller records the cursor and starts counting tomorrow.
-  if (lastEvaluated === null) return [];
-
   const dates: string[] = [];
-  let cursor = nextDate(lastEvaluated);
+  let cursor = lastEvaluated ? nextDate(lastEvaluated) : through;
   while (cursor <= through && dates.length < limit) {
     dates.push(cursor);
     cursor = nextDate(cursor);
