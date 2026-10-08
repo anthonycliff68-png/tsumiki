@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Svg, { Path } from 'react-native-svg';
 
 import { LinesIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -21,16 +22,41 @@ const STACK_CAP = 3;
 /**
  * Checking a habit off, in milliseconds.
  *
- * The card fills and springs out, settles, holds long enough to be seen, then
- * folds down to its line and the strike draws across. The hold is the whole
- * point: without it the fold starts before the eye has registered the fill, and
- * the thing you did disappears instead of landing.
+ * The habit's colour floods up from the bottom of the card, crests, brims over,
+ * throws a few droplets off the edges, and the card folds down to its line with
+ * the strike drawing across. About two thirds of a second end to end — long
+ * enough to register, short enough that the twelfth one of the day is still
+ * welcome.
  */
-const HOLD_MS = 380;
-const FOLD_MS = 240;
-const STRIKE_MS = 200;
+const RISE_MS = 220;
+const BRIM_MS = 110;
+const FOLD_MS = 180;
+const STRIKE_MS = 160;
+const SPLASH_MS = 340;
+/** How tall the crest riding the top of the water is. */
+const WAVE_H = 7;
 /** What a finished habit stands down to, and the smallest thing worth tapping. */
 const DONE_ROW_H = 44;
+
+/**
+ * Where each droplet is thrown, as a fraction of the card it came off.
+ *
+ * Fixed rather than random: a habit that splashes differently every time reads
+ * as a glitch rather than as water, and nobody checks a habit off often enough
+ * to notice the pattern. Mostly up and out, because that is where water goes
+ * when a surface stops it.
+ */
+const DROPS = [
+  { x: -0.54, y: -0.62, r: 3 },
+  { x: -0.34, y: -0.92, r: 2 },
+  { x: -0.12, y: -0.74, r: 2.5 },
+  { x: 0.1, y: -0.98, r: 2 },
+  { x: 0.3, y: -0.7, r: 3 },
+  { x: 0.52, y: -0.86, r: 2 },
+  { x: -0.62, y: -0.18, r: 2 },
+  { x: 0.63, y: -0.26, r: 2.5 },
+  { x: 0.42, y: -0.42, r: 1.5 },
+] as const;
 
 export type DropTarget =
   | { kind: 'anchor'; anchorId: string; label: string }
@@ -308,6 +334,9 @@ function HabitCard({
   // other.
   const fold = useRef(new Animated.Value(1)).current;
   const strike = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
+  /** 0 is an empty card, 1 is full to the brim. */
+  const rise = useRef(new Animated.Value(0)).current;
+  const splash = useRef(new Animated.Value(0)).current;
   const wasChecked = useRef(habit.checkedIn);
   const [celebrating, setCelebrating] = useState(false);
   const [cardH, setCardH] = useState(0);
@@ -323,18 +352,36 @@ function HabitCard({
       setCelebrating(false);
       fold.setValue(1);
       strike.setValue(0);
+      rise.setValue(0);
+      splash.setValue(0);
       return;
     }
 
     setCelebrating(true);
     fold.setValue(1);
     strike.setValue(0);
+    rise.setValue(0);
+    splash.setValue(0);
     Animated.sequence([
-      Animated.spring(scale, { toValue: 1.06, useNativeDriver: true, speed: 50, bounciness: 14 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
-      Animated.delay(HOLD_MS),
+      Animated.parallel([
+        // Springs rather than times, so the water arrives with weight and
+        // overshoots the brim instead of stopping dead at it.
+        Animated.spring(rise, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 10 }),
+        Animated.sequence([
+          // The droplets leave just before the level lands: they are thrown by
+          // the water hitting the top, so they cannot wait for it to settle.
+          Animated.delay(RISE_MS * 0.72),
+          Animated.timing(splash, { toValue: 1, duration: SPLASH_MS, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.delay(RISE_MS * 0.7),
+          Animated.spring(scale, { toValue: 1.04, useNativeDriver: true, speed: 60, bounciness: 16 }),
+          Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 24, bounciness: 6 }),
+        ]),
+      ]),
+      Animated.delay(BRIM_MS),
       // Height cannot be driven natively, so this one runs on the JS thread.
-      // It is one card for a quarter of a second; the fill and the spring,
+      // It is one card for a fifth of a second; the water and the droplets,
       // which are the parts you actually watch, stay on the UI thread.
       Animated.timing(fold, { toValue: 0, duration: FOLD_MS, useNativeDriver: false }),
     ]).start(({ finished }) => {
@@ -346,7 +393,7 @@ function HabitCard({
         useNativeDriver: false,
       }).start();
     });
-  }, [habit.checkedIn, fold, scale, strike]);
+  }, [habit.checkedIn, fold, rise, scale, splash, strike]);
 
   const measureAim = (fingerY: number) => {
     cardRef.current?.measureInWindow((_x, y, _width, height) => {
@@ -400,8 +447,54 @@ function HabitCard({
           zIndex: carried ? 10 : 0,
         }}
       >
+        {/* Outside the clipped wrapper, because the whole point of a droplet is
+            that it leaves. */}
+        {celebrating && cardH > 0 && (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            {DROPS.map((drop, index) => (
+              <Animated.View
+                key={index}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: cardH / 2 - drop.r,
+                  width: drop.r * 2,
+                  height: drop.r * 2,
+                  borderRadius: drop.r,
+                  backgroundColor: habit.color,
+                  opacity: splash.interpolate({
+                    inputRange: [0, 0.12, 1],
+                    outputRange: [0, 0.95, 0],
+                  }),
+                  transform: [
+                    {
+                      translateX: splash.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, drop.x * 220],
+                      }),
+                    },
+                    {
+                      // Out, then back down: a droplet is thrown, not fired.
+                      translateY: splash.interpolate({
+                        inputRange: [0, 0.55, 1],
+                        outputRange: [0, drop.y * cardH, drop.y * cardH * 0.4],
+                      }),
+                    },
+                    {
+                      scale: splash.interpolate({
+                        inputRange: [0, 0.25, 1],
+                        outputRange: [0.4, 1, 0.55],
+                      }),
+                    },
+                  ],
+                }}
+              />
+            ))}
+          </View>
+        )}
+
         {celebrating ? (
-          /* The moment itself: filled, sprung, held, then folding away. */
+          /* The moment itself: flooded, brimmed, splashed, then folding away. */
           <Animated.View
             style={{
               height: fold.interpolate({
@@ -422,9 +515,46 @@ function HabitCard({
               <View
                 style={[
                   styles.card,
-                  { borderColor: habit.color, backgroundColor: habit.color },
+                  // Clipped, so the water stops at the card instead of running
+                  // down the timeline. The droplets live outside this and are
+                  // the only thing allowed past the edge.
+                  { borderColor: habit.color, overflow: 'hidden' },
                 ]}
               >
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      transform: [
+                        {
+                          translateY: rise.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [cardH || DONE_ROW_H, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  {/* The crest rides the top of the level. Without it the water
+                      is a rectangle sliding up, which is a progress bar. */}
+                  <View style={styles.wave}>
+                    <Svg
+                      width="100%"
+                      height={WAVE_H}
+                      viewBox={`0 0 100 ${WAVE_H}`}
+                      preserveAspectRatio="none"
+                    >
+                      <Path
+                        d={`M0 ${WAVE_H} C 10 0, 20 0, 32 ${WAVE_H * 0.55} S 58 ${WAVE_H}, 70 ${WAVE_H * 0.35} S 90 0, 100 ${WAVE_H} Z`}
+                        fill={habit.color}
+                      />
+                    </Svg>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: habit.color }} />
+                </Animated.View>
+
                 <View style={styles.cardText}>
                   <Text style={styles.cardName} numberOfLines={1}>
                     {habit.name}
@@ -690,6 +820,7 @@ const makeStyles = (colors: Palette) => ({
     color: colors.textFaint,
   },
   strike: { position: 'absolute', left: 0, top: 10, height: 1 },
+  wave: { position: 'absolute', left: 0, right: 0, top: -WAVE_H + 1, height: WAVE_H },
   cardSubDone: { color: 'rgba(255,255,255,0.75)' },
   cardEdit: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
