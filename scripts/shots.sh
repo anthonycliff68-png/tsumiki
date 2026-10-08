@@ -12,8 +12,17 @@
 # has run out, needs that to be true in the database first. docs/screens.md
 # records what each screen needs under "Needs".
 #
+# Screens that live at an id — a crew, one habit — need that id, and an id
+# belongs to whoever's data this is. So they come from scripts/shots.env, which
+# is not committed. To find a crew's:
+#
+#   select id, name from crews;
+#
 # Usage:  scripts/shots.sh [device-name-or-udid]
 set -euo pipefail
+
+# Not committed: holds the ids that are specific to one person's data.
+[ -f scripts/shots.env ] && . scripts/shots.env
 
 DEVICE="${1:-iPhone 17 Pro Max}"
 BUNDLE="com.tsumiki.app"
@@ -31,6 +40,13 @@ SCREENS=(
   "/new-habit|07-new-habit|New habit — name, when, days, colour, solo or crew"
   "/schedule|08-schedule|Schedule — the moments of your day"
 )
+
+# Needs a real crew, so it is only captured when one is named.
+if [ -n "${CREW_ID:-}" ]; then
+  SCREENS+=("/crew/${CREW_ID}|09-crew|A crew — shared streak, the week behind it, who is in today")
+else
+  echo "  (no CREW_ID in scripts/shots.env — skipping the crew screen)"
+fi
 
 mkdir -p "$OUT"
 SHA="$(git rev-parse --short HEAD)"
@@ -68,8 +84,13 @@ done
   echo "Taken: $(date '+%-d %B %Y, %H:%M %Z')"
   echo "Commit: \`${SHA}\`${DIRTY}"
   echo
-  echo "Screens needing state that this script cannot create — a crew, an"
-  echo "expired trial, a nudge — are listed in [screens.md](../screens.md)"
+  if [ -z "${CREW_ID:-}" ]; then
+    echo "The crew screen is missing from this run: no CREW_ID in"
+    echo "\`scripts/shots.env\`. See the header of \`scripts/shots.sh\`."
+    echo
+  fi
+  echo "Screens needing state this script cannot create — an expired trial, a"
+  echo "nudge, the paywall as a wall — are listed in [screens.md](../screens.md)"
   echo "under **Needs**, and are still captured by hand."
 } > "$OUT/README.md"
 

@@ -47,3 +47,6 @@ yarn-error.*
 # source: re-pull before any push so the config matches what is live.
 store.config.json
 store/
+
+# Ids specific to whoever is capturing the board
+scripts/shots.env
