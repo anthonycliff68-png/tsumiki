@@ -322,33 +322,38 @@ function MemberTile({
             pressed && { opacity: 0.85 },
           ]}
         >
-          <Text
-            style={[
-              styles.memberButtonText,
-              member.checkedIn ? { color: colors.success } : { color: colors.bg },
-            ]}
-          >
-            {member.checkedIn ? copy.crews.checkedIn : copy.crews.checkIn}
-          </Text>
+          {member.checkedIn ? (
+            <View style={styles.memberInRow}>
+              <CheckIcon size={13} color={colors.success} strokeWidth={3} />
+              <Text style={[styles.memberButtonText, { color: colors.success }]}>
+                {copy.crews.checkedIn}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.memberButtonText, { color: colors.bg }]}>
+              {copy.crews.checkIn}
+            </Text>
+          )}
         </Pressable>
       ) : null}
 
-      {!isMe && (
-        <Text
-          accessibilityRole="button"
-          onPress={onReport}
-          style={styles.reportLink}
-        >
-          {copy.safety.report}
-        </Text>
-      )}
-
       {isMe ? null : member.checkedIn ? (
-        <View style={styles.memberIn}>
-          <CheckIcon size={14} color={colors.success} strokeWidth={3} />
-          <Text style={[styles.memberButtonText, { color: colors.success }]}>
-            {copy.crews.memberIn}
-          </Text>
+        /**
+         * The same chip you get, in the same words.
+         *
+         * Mine said "Checked in" in a green pill and everyone else's said
+         * "✓ In" in plain text on no background. One state, two drawings, side
+         * by side on the same row of tiles — so the crew looked like it was in
+         * two different conditions when it was in one. A View rather than a
+         * Pressable, because undoing is only ever your own to do.
+         */
+        <View style={[styles.memberButton, { backgroundColor: alpha(colors.success, 0.2) }]}>
+          <View style={styles.memberInRow}>
+            <CheckIcon size={13} color={colors.success} strokeWidth={3} />
+            <Text style={[styles.memberButtonText, { color: colors.success }]}>
+              {copy.crews.checkedIn}
+            </Text>
+          </View>
         </View>
       ) : alreadyNudged ? (
         <Text style={[styles.memberButtonText, { color: colors.textFaint }]}>
@@ -367,6 +372,17 @@ function MemberTile({
         >
           <Text style={[styles.memberButtonText, { color: colors.white }]}>{copy.nudge.nudge}</Text>
         </Pressable>
+      )}
+
+      {/* Last, and quiet. It used to sit between the person's moment and their
+          status, where an unlabelled word with no icon and no box reads as
+          something gone wrong in the layout rather than as a control. Nobody
+          reaches for it in the normal course of a day; it only has to be
+          findable when they do. */}
+      {!isMe && (
+        <Text accessibilityRole="button" onPress={onReport} style={styles.reportLink}>
+          {copy.safety.report}
+        </Text>
       )}
     </View>
   );
@@ -459,9 +475,9 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: 12,
   },
   memberButtonText: { fontFamily: fonts.bodyBold, fontSize: 13 },
-  memberIn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36 },
+  memberInRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   grace: { fontFamily: fonts.bodyMedium, fontSize: 13, color: habitColors[4] },
-  reportLink: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.textFaint },
+  reportLink: { fontFamily: fonts.body, fontSize: 11, color: colors.textFaint, paddingTop: 2 },
   headingOut: {
     minHeight: 52,
     alignItems: 'center',

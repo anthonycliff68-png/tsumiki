@@ -12,6 +12,28 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 8 October 2026 · The crew screen said the same thing three ways
+
+**Status:** ready
+
+**Assets** — `2026-10-08-crew-before.mp4`, `2026-10-08-crew-after.mp4` (5s each).
+
+**X / Twitter**
+
+> Three things on one screen, all the same kind of wrong — it knew what it meant
+> and didn't say it.
+>
+> My tile said "Checked in" in a green pill. Everyone else's said "✓ In" in
+> plain text. One state, two drawings, side by side.
+>
+> The header said "2/5 crew" next to "2 of 2 in". Both read as two-of-something.
+> They were counting different things.
+>
+> And Report sat between a person's time and their status, unlabelled — which
+> reads as a layout bug, not a control.
+
+---
+
 ## 8 October 2026 · The paywall said "unlimited" above its own exception
 
 **Status:** ready
@@ -36,8 +58,8 @@ before/after on its own.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-my-day-check-in.mp4` (6s). The clip shows the after;
-the words carry the before.
+**Assets** — `2026-10-08-my-day-before.mp4` (5s) and
+`2026-10-08-my-day-check-in.mp4` (6s). Post as a pair, before first.
 
 **X / Twitter**
 

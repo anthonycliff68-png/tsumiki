@@ -355,8 +355,15 @@ export const copy = {
     daysStrong: (days: number) => (days === 1 ? 'Day strong' : 'Days strong'),
     startToday: 'Start it today',
     sameHabit: (habit: string) => `${habit}. Same habit, everyone\u2019s own anchor.`,
-    crewLine: (inCount: number, total: number) => `Crew \u00b7 ${inCount} of ${total} in`,
-    spots: (count: number) => `${count}/5 crew`,
+    crewLine: (inCount: number, total: number) =>
+      `${inCount} of ${total} checked in today`,
+    /**
+     * "2/5 crew" sat a thumb's width from "Crew \u00b7 2 of 2 in". Both read as
+     * two-of-something and they counted different things \u2014 one the people in
+     * the crew, the other the people who had turned up today. Each now says
+     * which it means.
+     */
+    spots: (count: number) => `${count} of 5 members`,
     // Someone who has not told us their name yet. Reached more often than it
     // looks: a name is only asked for once, and Apple withholds it entirely
     // when someone declines to share it.

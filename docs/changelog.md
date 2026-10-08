@@ -36,6 +36,32 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
+### The crew screen said the same thing three ways — `9647d74`
+
+Three small things, all on one screen, all the same kind of wrong: the screen
+knew what it meant and didn't say it.
+
+**One state, two drawings.** Your own tile said "Checked in" in a green pill.
+Everyone else's said "✓ In" in plain text on no background. Side by side on the
+same row, a crew in one condition looked like a crew in two. Both tiles now
+carry the same chip, with the same tick and the same words; yours is still the
+only one you can press, because undoing is only ever your own to do.
+
+**Two counts, both reading "2 of something".** The header pill said "2/5 crew"
+a thumb's width from "Crew · 2 of 2 in". One counted the people in the crew, the
+other the people who had turned up today. They now say which they mean: **2 of 5
+members**, and **2 of 2 checked in today**.
+
+**Report, wedged in the middle.** It sat between a person's moment and their
+status — an unlabelled word with no icon and no box, which reads as something
+gone wrong in the layout rather than as a control. It moves to the end of the
+tile and stays quiet. Nobody reaches for it in the normal course of a day; it
+only has to be findable when they do.
+
+**[Before](demos/2026-10-08-crew-before.mp4)** · **[After](demos/2026-10-08-crew-after.mp4)** — 5s each.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--the-crew-screen-said-the-same-thing-three-ways).
+
 ### The paywall said "unlimited" above its own exception — `2d2dac1`
 
 The first feature line read *"Unlimited habits and crews — stack as many as your
@@ -64,8 +90,9 @@ reading all twelve. This timeline is for what is still coming.
 A done habit now shrinks to a struck-through line with a stub of its colour and
 gives its room back.
 
-**[Two habits checked off](demos/2026-10-08-my-day-check-in.mp4)** — 6s. Each one
-floods, brims, splashes and folds down to its line.
+**[Before](demos/2026-10-08-my-day-before.mp4)** · **[After](demos/2026-10-08-my-day-check-in.mp4)**
+— 5s and 6s. The before was recorded afterwards, by checking the old component
+out of git and running it; the screen itself was gone by then.
 
 Costs the edit handle on a done habit. Editing is still a tap away on Today and
 on Progress, and comes back if you undo.
