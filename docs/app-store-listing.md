@@ -157,3 +157,41 @@ Not collected.
 ## Tracking
 Answer NO to "Do you or your third-party partners use data for tracking?"
 There is no advertising, no analytics SDK and no data broker.
+
+---
+
+## Added after the 1.1 rejection (8 October 2026)
+
+App Review rejected 1.1 under **guideline 3.1.2 — Business: Payments,
+Subscriptions**:
+
+> The submission offers auto-renewable subscriptions … but does not include a
+> functional link to the Terms of Use (EULA) in the app metadata that appears
+> on the app's App Store product page.
+
+The paywall inside the app already linked Terms and Privacy — that was added
+before submission and is not what was asked for. The requirement is on the
+**product page**, which means the description.
+
+This app uses **Apple's Standard License Agreement** (App Information →
+License Agreement), so the fix is Apple's first route: link the standard EULA
+from the description. A custom EULA would instead be pasted into App Store
+Connect, which does not apply here.
+
+Appended to the description, verbatim:
+
+```
+SUBSCRIPTION
+Tsumiki is free for three days. After that it is $29.99 a year or $3.99 a
+month. Payment is taken by your Apple Account at confirmation of purchase.
+The subscription renews automatically unless you turn off auto-renew at least
+24 hours before the current period ends, and you can manage or cancel it at
+any time in your Apple Account settings.
+
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://anthonycliff68-png.github.io/tsumiki/privacy.html
+```
+
+The pricing and renewal sentences are not strictly what the rejection asked
+for; they are there because 3.1.2 also wants length, price and renewal terms
+disclosed, and a reviewer reading the page should not have to hunt for them.
