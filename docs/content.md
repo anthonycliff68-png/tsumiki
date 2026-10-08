@@ -74,6 +74,70 @@ before/after on its own.
 
 ---
 
+## 8 October 2026 · Always a way back
+
+**Status:** todo — needs a clip of a deep-linked screen and its back button.
+
+**Assets** — none recorded. The fix is a control that now does something, which
+is hard to show; a clip opening the app on a habit from a link and tapping back
+would do it.
+
+**X / Twitter**
+
+> Every back button in my app had a dead twin.
+>
+> A screen opened by a link or a notification is the first thing in the stack,
+> so back() had no history to pop and silently did nothing. The control was
+> there. It looked pressable. It wasn't.
+>
+> Nineteen of them now fall through to Today when there's nothing behind them.
+
+---
+
+## 8 October 2026 · The time zone was never being saved
+
+**Status:** ready — no clip; this one is a screenshot of a database column.
+
+**Assets** — none needed. Post as text, or a screenshot of the profiles table
+with every row reading UTC.
+
+**X / Twitter**
+
+> Every profile in my database said UTC. Including people who have never been
+> near it.
+>
+> The line that keeps it in step with the device built a request and threw it
+> away — a Supabase query builder sends nothing until something awaits it, and
+> `void supabase.from(...)` awaits nothing. It had been doing that since the
+> schema was written.
+>
+> Not cosmetic. Quiet hours are read in that zone, so 10pm meant 6pm on New York
+> time: bedtime reminder suppressed, 3am treated as fair game. And the nightly
+> streak job decides a day has ended in that zone while the app files check-ins
+> in the device's — so an evening check-in landed on tomorrow and the day it
+> belonged to was judged empty.
+
+---
+
+## 8 October 2026 · Seeing your own code
+
+**Status:** ready — no clip needed.
+
+**Assets** — none. This one is a story, not a picture.
+
+**X / Twitter**
+
+> Spent an afternoon fixing a bug that was already fixed.
+>
+> The build on my simulator was a release build. It carries its JavaScript
+> inside it and never asks the dev server for anything — so every change I made
+> was invisible there, and the screen went on showing a bug I'd already killed.
+>
+> I kept re-explaining the fix. The simulator kept showing the old one. Neither
+> of us was wrong.
+
+---
+
 ## 8 October 2026 · A done habit gets out of the way
 
 **Status:** ready

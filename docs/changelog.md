@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
-### The water never actually reached the brim — `3b5dd80`
+### The water never actually reached the brim — `9fb0e92`, `6208321`
 
 Two things on the same screen, both of them the gap between what the code
 intended and what it drew.
@@ -83,7 +83,7 @@ which is also the period the crest tiles at, so the loop has no seam either.
 
 **Content:** drafted — [content.md](content.md#8-october-2026--the-water-never-actually-reached-the-brim).
 
-### The crew screen said the same thing three ways — `9647d74`
+### The crew screen said the same thing three ways — `8401e1d`
 
 Three small things, all on one screen, all the same kind of wrong: the screen
 knew what it meant and didn't say it.
@@ -110,7 +110,7 @@ only has to be findable when they do.
 
 **Content:** drafted — [content.md](content.md#8-october-2026--the-crew-screen-said-the-same-thing-three-ways).
 
-### The paywall said "unlimited" above its own exception — `2d2dac1`
+### The paywall said "unlimited" above its own exception — `529851a`
 
 The first feature line read *"Unlimited habits and crews — stack as many as your
 day can hold, with up to four friends on each"*. Wrong twice.
@@ -187,6 +187,8 @@ go through one helper that falls through to Today when there is no history.
 Same commit: the habit screen accepts the front of an id, because ids reach it
 through a human and a human copying a uuid copies the first eight characters.
 
+**Content:** drafted — [content.md](content.md#8-october-2026--always-a-way-back).
+
 ### The time zone was never being saved — `d4a89be`
 
 Every profile in the database said `UTC`, including people who have never been
@@ -201,6 +203,8 @@ morning allowed. And the nightly streak job decides a day has ended in that zone
 while the app files check-ins in the device's, so an evening check-in landed on
 tomorrow and the day it belonged to was judged empty.
 
+**Content:** drafted — [content.md](content.md#8-october-2026--the-time-zone-was-never-being-saved).
+
 ### Seeing your own code — `73cc26c`
 
 The build installed on the simulator is a release build. It carries its
@@ -208,3 +212,5 @@ JavaScript inside it and never asks the dev server for anything, so every change
 made that afternoon was invisible there and a bug that had already been fixed
 went on being reported. `scripts/reload.sh` builds the JavaScript and drops it
 into the installed app in about a minute, until a development build is set up.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--seeing-your-own-code).
