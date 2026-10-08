@@ -27,9 +27,14 @@ scripts/stage.sh                                        # lay it out in Download
 
 A before and an after posted as two clips arrive as two thumbnails, play
 separately, and leave the reader holding the first one in their head while they
-watch the second. Side by side they are one thing. Record both takes on the
-**same habit, in the same place**, or the comparison is of two different screens
-and proves nothing.
+watch the second. Side by side they are one thing.
+
+They do not play at once. The whole difference is a few tenths of a second long,
+and playing both together makes the viewer pick a side and miss the other. The
+before runs, it holds on its last frame, and then the after runs — both phones
+on screen throughout, with only one of them moving at any moment. Record both
+takes on the **same habit, in the same place**, or the comparison is of two
+different screens and proves nothing.
 
 Recordings, not stills. A screenshot cannot show an animation, and a pair of
 them arrives on X as two thumbnails the reader has to work out the order of. One

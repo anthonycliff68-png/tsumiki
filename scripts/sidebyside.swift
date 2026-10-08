@@ -59,32 +59,33 @@ func even(_ v: CGFloat) -> CGFloat { let r = v.rounded(); return r.truncatingRem
 let W = even(side * 2 + bW + gap + aW)
 let H = even(labelBand + phoneH + bottom)
 
-// The longer clip sets the length; the shorter one repeats into it.
-let target = max(beforeAsset.duration.seconds, afterAsset.duration.seconds)
-let targetTime = CMTime(seconds: target, preferredTimescale: 600)
+// --- the timeline ----------------------------------------------------------
+// They do not play at once. Playing together makes the viewer choose a side and
+// miss whichever one they did not pick; the whole difference here is a few
+// tenths of a second long. So the before runs, it holds, and then the after
+// runs. Both phones stay on screen throughout, so the resting states can still
+// be compared, and the only thing moving at any moment is the thing to watch.
+let bDur = beforeAsset.duration.seconds
+let aDur = afterAsset.duration.seconds
+let beat: Double = 0.4
+let total = bDur + beat + aDur
+let totalTime = CMTime(seconds: total, preferredTimescale: 600)
+let afterStart = CMTime(seconds: bDur + beat, preferredTimescale: 600)
 
 let composition = AVMutableComposition()
 
-/// Lay a clip into its own track, looping until the comparison is full.
-func lay(_ asset: AVURLAsset, _ track: AVAssetTrack) -> AVMutableCompositionTrack? {
+func lay(_ asset: AVURLAsset, _ track: AVAssetTrack, at: CMTime) -> AVMutableCompositionTrack? {
     guard let dest = composition.addMutableTrack(
         withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid
     ) else { return nil }
-    var at = CMTime.zero
-    let whole = CMTimeRange(start: .zero, duration: asset.duration)
-    while at < targetTime {
-        let left = targetTime - at
-        let piece = left < asset.duration
-            ? CMTimeRange(start: .zero, duration: left)
-            : whole
-        try? dest.insertTimeRange(piece, of: track, at: at)
-        at = at + piece.duration
-        if piece.duration.seconds <= 0 { break }
-    }
+    try? dest.insertTimeRange(
+        CMTimeRange(start: .zero, duration: asset.duration), of: track, at: at
+    )
     return dest
 }
 
-guard let bDest = lay(beforeAsset, bTrack), let aDest = lay(afterAsset, aTrack) else {
+guard let bDest = lay(beforeAsset, bTrack, at: .zero),
+      let aDest = lay(afterAsset, aTrack, at: afterStart) else {
     FileHandle.standardError.write("could not build the composition\n".data(using: .utf8)!)
     exit(1)
 }
@@ -102,7 +103,7 @@ func place(_ track: AVAssetTrack, into dest: AVMutableCompositionTrack, x: CGFlo
 }
 
 let instruction = AVMutableVideoCompositionInstruction()
-instruction.timeRange = CMTimeRange(start: .zero, duration: targetTime)
+instruction.timeRange = CMTimeRange(start: .zero, duration: totalTime)
 instruction.layerInstructions = [
     place(aTrack, into: aDest, x: side + bW + gap, scale: aScale),
     place(bTrack, into: bDest, x: side, scale: bScale),
@@ -114,6 +115,22 @@ videoComposition.renderSize = CGSize(width: W, height: H)
 videoComposition.frameDuration = CMTime(value: 1, timescale: 60)
 videoComposition.instructions = [instruction]
 
+/// A still from a clip, as a layer that can be held over the empty half.
+///
+/// A track that is not playing yet renders as background, which would leave one
+/// side of the comparison as a black rectangle for half the video. These stand
+/// in: the after's first frame while the before runs, and the before's last
+/// frame once it has finished.
+func still(_ asset: AVURLAsset, at seconds: Double) -> CGImage? {
+    let gen = AVAssetImageGenerator(asset: asset)
+    gen.appliesPreferredTrackTransform = true
+    gen.requestedTimeToleranceBefore = .zero
+    gen.requestedTimeToleranceAfter = .zero
+    return try? gen.copyCGImage(
+        at: CMTime(seconds: seconds, preferredTimescale: 600), actualTime: nil
+    )
+}
+
 // --- the labels, burned in --------------------------------------------------
 // Core Animation's origin is the bottom left, unlike the render space above.
 let parent = CALayer()
@@ -123,6 +140,48 @@ parent.backgroundColor = bg.cgColor
 let videoLayer = CALayer()
 videoLayer.frame = parent.frame
 parent.addSublayer(videoLayer)
+
+/// Core Animation measures from the bottom; the render space measures from the
+/// top. One conversion, here, so the rest of the file can stay in one system.
+func phoneFrame(x: CGFloat, width: CGFloat) -> CGRect {
+    CGRect(x: x, y: H - labelBand - phoneH, width: width, height: phoneH)
+}
+
+func hold(_ image: CGImage?, frame: CGRect, visibleUntil: Double?, visibleFrom: Double?) {
+    guard let image else { return }
+    let layer = CALayer()
+    layer.frame = frame
+    layer.contents = image
+    layer.contentsGravity = .resizeAspect
+    layer.masksToBounds = true
+
+    let fade = CABasicAnimation(keyPath: "opacity")
+    fade.duration = 0.001
+    fade.isRemovedOnCompletion = false
+    fade.fillMode = .both
+    if let until = visibleUntil {
+        layer.opacity = 1
+        fade.fromValue = 1
+        fade.toValue = 0
+        fade.beginTime = AVCoreAnimationBeginTimeAtZero + until
+    } else if let from = visibleFrom {
+        layer.opacity = 0
+        fade.fromValue = 0
+        fade.toValue = 1
+        fade.beginTime = AVCoreAnimationBeginTimeAtZero + from
+    }
+    layer.add(fade, forKey: "hold")
+    parent.addSublayer(layer)
+}
+
+// The after's opening frame, held while the before plays.
+hold(still(afterAsset, at: 0),
+     frame: phoneFrame(x: side + bW + gap, width: aW),
+     visibleUntil: bDur + beat, visibleFrom: nil)
+// The before's closing frame, held once it has finished.
+hold(still(beforeAsset, at: max(0, bDur - 0.05)),
+     frame: phoneFrame(x: side, width: bW),
+     visibleUntil: nil, visibleFrom: bDur)
 
 // Drawn into one image rather than built from CATextLayers: the animation tool
 // renders a CATextLayer's attributed string inconsistently, and a label that
@@ -184,7 +243,7 @@ done.wait()
 if export.status == .completed {
     let size = (try? FileManager.default.attributesOfItem(atPath: outURL.path)[.size] as? Int) ?? 0
     print(String(format: "✓ %@  %.0f×%.0f  %.1fs  %.1f MB",
-                 outURL.lastPathComponent, W, H, target, Double(size ?? 0) / 1_048_576))
+                 outURL.lastPathComponent, W, H, total, Double(size ?? 0) / 1_048_576))
 } else {
     FileHandle.standardError.write("export failed: \(export.error?.localizedDescription ?? "unknown")\n".data(using: .utf8)!)
     exit(1)
