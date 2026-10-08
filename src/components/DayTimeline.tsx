@@ -42,7 +42,7 @@ const RISE_MS = 220;
 const WATER_RESERVE = 56;
 const BRIM_MS = 150;
 const FOLD_MS = 180;
-const STRIKE_MS = 160;
+const STRIKE_MS = 130;
 const SPLASH_MS = 260;
 /** When the level reaches the brim, measured off the recording. */
 const SPLASH_AT_MS = 300;
@@ -87,8 +87,12 @@ const DROPS = [
  * without a seam.
  */
 function WaterLayer({ color, width, crest }: { color: string; width: number; crest: string }) {
+  // Starts a full card to the left and runs two cards wide, so that drifting by
+  // exactly one card never uncovers either edge. It used to start flush and
+  // drift right, which walked its own left edge into view about a third of the
+  // way across — a step in the middle of what is meant to be one surface.
   return (
-    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: width * 2 }}>
+    <View style={{ position: 'absolute', left: -width, top: 0, bottom: 0, width: width * 2 }}>
       <View style={{ position: 'absolute', left: 0, right: 0, top: -WAVE_H + 1, height: WAVE_H }}>
         <Svg width="100%" height={WAVE_H} viewBox={`0 0 200 ${WAVE_H}`} preserveAspectRatio="none">
           <Path d={crest} fill={color} />
@@ -572,7 +576,9 @@ function HabitCard({
                           {
                             translateX: drift.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [0, -cardW],
+                              // Exactly one card: the crest tiles at that
+                              // period, so the loop has no seam.
+                              outputRange: [cardW, 0],
                             }),
                           },
                         ],
@@ -591,7 +597,7 @@ function HabitCard({
                             // surfaces never line up twice.
                             translateX: drift.interpolate({
                               inputRange: [0, 1],
-                              outputRange: [-cardW * 0.6, cardW * 0.4],
+                              outputRange: [0, cardW],
                             }),
                           },
                         ],
@@ -637,16 +643,18 @@ function HabitCard({
             style={[styles.doneRow, carried && styles.carried]}
           >
             <View style={[styles.doneStub, { backgroundColor: habit.color }]} />
-            <View style={styles.doneNameWrap}>
-              <Text
-                style={styles.doneName}
-                numberOfLines={1}
-                onLayout={(event) => setNameW(event.nativeEvent.layout.width)}
-              >
+            <View
+              style={styles.doneNameWrap}
+              onLayout={(event) => setNameW(event.nativeEvent.layout.width)}
+            >
+              <Text style={styles.doneName} numberOfLines={1}>
                 {habit.name}
               </Text>
               {/* Drawn rather than declared, so the line arrives with the fold
-                  instead of being there before it finishes. */}
+                  instead of being there before it finishes — and drawn across
+                  the whole row rather than just the name. Struck text alone
+                  stopped a third of the way along and read as an unfinished
+                  animation rather than as a line through a finished thing. */}
               <Animated.View
                 style={[
                   styles.strike,

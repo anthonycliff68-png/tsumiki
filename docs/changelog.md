@@ -68,6 +68,17 @@ stacked underneath it, so the colour came out level with the habits rather than
 with the word it names. Top-aligned now, beside its label, which is the only
 place it has to line up.
 
+**The strike stopped a third of the way along.** It was drawn to the width of
+the habit's name, which on a full-width row reads as an animation that gave up
+rather than as a line through a finished thing. It now runs the width of the
+row, in 130ms rather than 160.
+
+**The sheets ran out of water sideways.** Each one started flush with the card
+and drifted right, which walked its own left edge into view about a third of
+the way across — a visible step in the middle of what is meant to be one
+surface. They now begin a full card to the left and drift by exactly one card,
+which is also the period the crest tiles at, so the loop has no seam either.
+
 **[Side by side](demos/2026-10-08-check-in-compare.mp4)** — 7s.
 
 **Content:** drafted — [content.md](content.md#8-october-2026--the-water-never-actually-reached-the-brim).
