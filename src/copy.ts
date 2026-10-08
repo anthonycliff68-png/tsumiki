@@ -345,6 +345,10 @@ export const copy = {
   },
 
   crews: {
+    rename: 'Rename',
+    renameTitle: 'Name this crew',
+    renameSave: 'Save',
+    renameCancel: 'Cancel',
     title: 'Crews',
     groupStreak: 'Group streak',
     best: (days: number) => `Best: ${days}`,
@@ -516,6 +520,10 @@ export const copy = {
     // and hides the fact that the free days start either way. The number comes
     // from TRIAL_DAYS so it cannot drift from the rule that enforces it.
     notNow: (days: number) => `Start my free ${days} days`,
+    // Opened on purpose from You, the way out is just the way out. Offering to
+    // start a free week to somebody who is grandfathered, already paying, or
+    // three days into their days is nonsense dressed as a button.
+    back: 'Back',
     restore: 'Restore purchases',
     restoredNone: 'No earlier purchase found on this Apple ID.',
     failed: 'That did not go through. Nothing has been charged.',

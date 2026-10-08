@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View , TextInput} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
@@ -15,6 +15,7 @@ import {
   useCrewStatuses,
   useHeadingOut,
   useLeaveCrew,
+  useRenameCrew,
   useNudgesSentToday,
   useUndoCheckIn,
   type CrewMemberState,
@@ -44,6 +45,9 @@ export default function CrewScreen() {
   const undo = useUndoCheckIn(userId);
   const headingOut = useHeadingOut(userId);
   const leaveCrew = useLeaveCrew();
+  const renameCrew = useRenameCrew();
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState('');
   const [nudging, setNudging] = useState<CrewMemberState | null>(null);
   const [reporting, setReporting] = useState<CrewMemberState | null>(null);
 
@@ -52,6 +56,19 @@ export default function CrewScreen() {
       void refetch();
     }, [refetch]),
   );
+
+  const isOwner = crew?.createdBy === userId;
+
+  /** Trimmed, never empty, and closed either way so it cannot get stuck open. */
+  const saveName = () => {
+    const name = draftName.trim();
+    if (name.length === 0 || !crew) {
+      setRenaming(false);
+      return;
+    }
+    renameCrew.mutate({ crewId: crew.id, name });
+    setRenaming(false);
+  };
 
   if (isPending || !crew) {
     return (
@@ -127,7 +144,40 @@ export default function CrewScreen() {
         </View>
 
         <View style={styles.headerBlock}>
-          <Display size={48} line={44}>{crew.name}</Display>
+          {renaming ? (
+            <View style={styles.renameRow}>
+              <TextInput
+                value={draftName}
+                onChangeText={setDraftName}
+                autoFocus
+                maxLength={40}
+                selectTextOnFocus
+                style={styles.renameField}
+                placeholderTextColor={colors.textFaint}
+                accessibilityLabel={copy.crews.renameTitle}
+                onSubmitEditing={saveName}
+                returnKeyType="done"
+              />
+              <TextButton label={copy.crews.renameSave} onPress={saveName} />
+              <TextButton
+                label={copy.crews.renameCancel}
+                onPress={() => setRenaming(false)}
+              />
+            </View>
+          ) : (
+            <>
+              <Display size={48} line={44}>{crew.name}</Display>
+              {isOwner && (
+                <TextButton
+                  label={copy.crews.rename}
+                  onPress={() => {
+                    setDraftName(crew.name);
+                    setRenaming(true);
+                  }}
+                />
+              )}
+            </>
+          )}
           <Text style={styles.subtitle}>{copy.crews.sameHabit(crew.habitName)}</Text>
         </View>
 
@@ -321,6 +371,17 @@ function MemberTile({
 }
 
 const makeStyles = (colors: Palette) => ({
+  renameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  renameField: {
+    flexGrow: 1,
+    minWidth: 180,
+    fontFamily: fonts.display,
+    fontSize: 30,
+    color: colors.text,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: 4,
+  },
   root: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

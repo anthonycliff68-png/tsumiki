@@ -1,6 +1,8 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Paywall } from '@/components/Paywall';
+import { copy } from '@/copy';
+import { TRIAL_DAYS } from '@/lib/entitlement';
 import { useAccess, useOffering } from '@/lib/access';
 import { usePaywallActions } from '@/lib/paywallActions';
 
@@ -13,6 +15,9 @@ import { usePaywallActions } from '@/lib/paywallActions';
  * who cannot approve a subscription they are unable to open.
  */
 export default function PlansScreen() {
+  // The offer shown once after onboarding says what dismissing it does. Opened
+  // from You it is just a screen you came to look at, so the way out says so.
+  const { first } = useLocalSearchParams<{ first?: string }>();
   const { access } = useAccess();
   const offering = useOffering();
   const { busy, error, subscribe, bringBack } = usePaywallActions();
@@ -26,6 +31,7 @@ export default function PlansScreen() {
       onSubscribe={(pkg) => void subscribe(pkg)}
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
+      dismissLabel={first === '1' ? copy.paywall.notNow(TRIAL_DAYS) : copy.paywall.back}
       onDismiss={() => router.back()}
     />
   );

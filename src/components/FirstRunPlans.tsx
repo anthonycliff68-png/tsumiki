@@ -40,7 +40,7 @@ export function FirstRunPlans() {
       .then((seen) => {
         if (seen === 'yes') return;
         void AsyncStorage.setItem(KEY, 'yes');
-        router.push('/plans');
+        router.push({ pathname: '/plans', params: { first: '1' } });
       })
       // Storage that cannot be read must not mean the paywall on every launch.
       .catch(() => undefined);

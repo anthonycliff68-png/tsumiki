@@ -31,6 +31,8 @@ type Props = {
    * there is nothing to dismiss to.
    */
   onDismiss?: () => void;
+  /** What the way out says. The offer and the screen you opened differ. */
+  dismissLabel?: string;
 };
 
 /**
@@ -55,6 +57,7 @@ export function Paywall({
   onRestore,
   onDeleteAccount,
   onDismiss,
+  dismissLabel,
 }: Props) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -148,7 +151,11 @@ export function Paywall({
         </Pressable>
 
         {onDismiss && (
-          <TextButton label={copy.paywall.notNow(TRIAL_DAYS)} onPress={onDismiss} disabled={busy} />
+          <TextButton
+            label={dismissLabel ?? copy.paywall.notNow(TRIAL_DAYS)}
+            onPress={onDismiss}
+            disabled={busy}
+          />
         )}
         <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
         <Text style={styles.terms}>{copy.paywall.terms}</Text>
