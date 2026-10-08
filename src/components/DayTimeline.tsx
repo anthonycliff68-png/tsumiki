@@ -341,51 +341,69 @@ function HabitCard({
           zIndex: carried ? 10 : 0,
         }}
       >
-        <View
-          ref={cardRef}
-          accessible
-          accessibilityRole="button"
-          accessibilityState={{ checked: habit.checkedIn }}
-          accessibilityLabel={
-            habit.checkedIn ? copy.today.undoCheckIn : copy.today.checkInLabel(habit.name)
-          }
-          style={[
-            styles.card,
-            {
-              borderColor: habit.color,
-              // Empty until it is done, then the whole card fills.
-              backgroundColor: habit.checkedIn ? habit.color : 'transparent',
-            },
-            carried && styles.carried,
-          ]}
-        >
-          <View style={styles.cardText}>
-            <Text style={styles.cardName} numberOfLines={1}>
+        {habit.checkedIn ? (
+          /**
+           * Done gets out of the way.
+           *
+           * It used to fill with its colour, which made a finished day the
+           * loudest thing on the screen — twelve solid cards, nothing left to
+           * do, and no way to see that at a glance. The point of this timeline
+           * is what is still coming, so a habit that is dealt with shrinks to a
+           * line and gives its room back. The strike says done; the stub of
+           * colour keeps it findable when you want to undo it.
+           *
+           * The row stays 44 high even though it only draws about twenty: the
+           * thing is still a button, and a button you have to aim at is a worse
+           * one. Padding is cheaper than a missed tap.
+           */
+          <View
+            ref={cardRef}
+            accessible
+            accessibilityRole="button"
+            accessibilityState={{ checked: true }}
+            accessibilityLabel={copy.today.undoCheckIn}
+            style={[styles.doneRow, carried && styles.carried]}
+          >
+            <View style={[styles.doneStub, { backgroundColor: habit.color }]} />
+            <Text style={styles.doneName} numberOfLines={1}>
               {habit.name}
             </Text>
-            <Text
-              style={[styles.cardSub, habit.checkedIn && styles.cardSubDone]}
-              numberOfLines={1}
-            >
-              {copy.myDay.solo} · {describeDays(habit.daysOfWeek).toLowerCase()}
-            </Text>
           </View>
-
-          {/* The card checks in; editing keeps its own small target. */}
-          <GestureDetector gesture={tapEdit}>
-            <View
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={copy.today.editLabel(habit.name)}
-              style={styles.cardEdit}
-            >
-              <LinesIcon
-                size={18}
-                color={habit.checkedIn ? 'rgba(0,0,0,0.5)' : colors.textFaint}
-              />
+        ) : (
+          <View
+            ref={cardRef}
+            accessible
+            accessibilityRole="button"
+            accessibilityState={{ checked: false }}
+            accessibilityLabel={copy.today.checkInLabel(habit.name)}
+            style={[
+              styles.card,
+              { borderColor: habit.color, backgroundColor: 'transparent' },
+              carried && styles.carried,
+            ]}
+          >
+            <View style={styles.cardText}>
+              <Text style={styles.cardName} numberOfLines={1}>
+                {habit.name}
+              </Text>
+              <Text style={styles.cardSub} numberOfLines={1}>
+                {copy.myDay.solo} · {describeDays(habit.daysOfWeek).toLowerCase()}
+              </Text>
             </View>
-          </GestureDetector>
-        </View>
+
+            {/* The card checks in; editing keeps its own small target. */}
+            <GestureDetector gesture={tapEdit}>
+              <View
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel={copy.today.editLabel(habit.name)}
+                style={styles.cardEdit}
+              >
+                <LinesIcon size={18} color={colors.textFaint} />
+              </View>
+            </GestureDetector>
+          </View>
+        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -541,7 +559,22 @@ const makeStyles = (colors: Palette) => ({
   cardText: { flex: 1, gap: 2 },
   cardName: { ...display(20, 20), color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
-  cardSubDone: { color: 'rgba(255,255,255,0.8)' },
+
+  doneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  doneStub: { width: 14, height: 3, borderRadius: 2, opacity: 0.7 },
+  doneName: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.textFaint,
+    textDecorationLine: 'line-through',
+  },
   cardEdit: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
