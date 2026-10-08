@@ -4,7 +4,7 @@ Tsumiki builds habits with your people, one stack at a time.
 
 ## Get help
 
-Email **anthonycliff68@gmail.com**. Include your device, your iOS version,
+Email **tsumikihabittracker@gmail.com**. Include your device, your iOS version,
 and what you expected to happen. Most replies come within a couple of days.
 
 ## Common questions

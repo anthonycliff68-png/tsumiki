@@ -11,6 +11,10 @@ version is in review or live, and that can be checked rather than typed:
 
 Last read from App Store Connect: **8 October 2026**.
 
+**Contact:** the project's address is `tsumikihabittracker@gmail.com`. It
+replaced a personal one on 8 October across the published pages, the identity
+sheet and App Store Connect. Anything new should use it.
+
 ---
 
 ## 1.1.0 — build 10 — **Waiting for Review**

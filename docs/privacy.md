@@ -11,7 +11,7 @@ written plainly on purpose.
 
 Tsumiki is made by Anthony Clifford, an individual developer. For anything
 in this policy, including a request to delete your data, write to
-**anthonycliff68@gmail.com**.
+**tsumikihabittracker@gmail.com**.
 
 ## What Tsumiki stores
 
