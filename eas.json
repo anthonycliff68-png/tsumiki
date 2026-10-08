@@ -22,11 +22,13 @@
     },
     "preview": {
       "distribution": "internal",
-      "env": {}
+      "env": {},
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "env": {}
+      "env": {},
+      "channel": "production"
     },
     "shots": {
       "distribution": "internal",
