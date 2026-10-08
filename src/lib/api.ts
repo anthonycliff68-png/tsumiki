@@ -404,7 +404,8 @@ export function useCrews(userId: string | undefined) {
         .select(
           'crews!inner(id, name, habit_id, streak_current, streak_best, habits!crews_habit_id_fkey(name, color))',
         )
-        .eq('user_id', userId ?? '');
+        .eq('user_id', userId ?? '')
+        .is('left_on', null);
       if (error) throw error;
 
       const rows = data as unknown as {
@@ -424,7 +425,8 @@ export function useCrews(userId: string | undefined) {
       const { data: members, error: memberError } = await supabase
         .from('crew_members')
         .select('crew_id')
-        .in('crew_id', crews.map((crew) => crew.id));
+        .in('crew_id', crews.map((crew) => crew.id))
+        .is('left_on', null);
       if (memberError) throw memberError;
 
       return crews.map((crew) => ({
@@ -499,7 +501,11 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
       const habit = (crew as unknown as { habits: { name: string; color: string } | null }).habits;
 
       const [memberRows, profileRows, scheduleRows, checkinRows, everCheckedIn] = await Promise.all([
-        supabase.from('crew_members').select('user_id, role, grace_used').eq('crew_id', crewId ?? ''),
+        supabase
+          .from('crew_members')
+          .select('user_id, role, grace_used')
+          .eq('crew_id', crewId ?? '')
+          .is('left_on', null),
         supabase.from('crew_profiles').select('id, display_name, avatar_color, avatar_emoji'),
         supabase.from('habit_schedules').select('user_id, mode, at_time, anchors(label)').eq('habit_id', crew.habit_id),
         supabase
@@ -641,11 +647,13 @@ export function useRemoveCrewMember() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ crewId, userId }: { crewId: string; userId: string }) => {
-      const { error } = await supabase
-        .from('crew_members')
-        .delete()
-        .eq('crew_id', crewId)
-        .eq('user_id', userId);
+      // Dated, not deleted. The row has to survive so the nightly job can still
+      // answer who was due on a day that has already been judged, and so that
+      // removing somebody cannot rescue a streak they had just broken.
+      const { error } = await supabase.rpc('remove_crew_member', {
+        p_crew_id: crewId,
+        p_user_id: userId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

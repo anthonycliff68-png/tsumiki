@@ -188,6 +188,7 @@ export type Database = {
           crew_id: string
           grace_used: boolean
           joined_at: string
+          left_on: string | null
           role: Database["public"]["Enums"]["crew_role"]
           user_id: string
         }
@@ -195,6 +196,7 @@ export type Database = {
           crew_id: string
           grace_used?: boolean
           joined_at?: string
+          left_on?: string | null
           role?: Database["public"]["Enums"]["crew_role"]
           user_id: string
         }
@@ -202,6 +204,7 @@ export type Database = {
           crew_id?: string
           grace_used?: boolean
           joined_at?: string
+          left_on?: string | null
           role?: Database["public"]["Enums"]["crew_role"]
           user_id?: string
         }
@@ -788,6 +791,10 @@ export type Database = {
         Returns: string
       }
       create_invite: { Args: { p_crew_id: string }; Returns: string }
+      crew_member_due_on: {
+        Args: { p_date: string; p_joined_at: string; p_left_on: string }
+        Returns: boolean
+      }
       delete_anchor: { Args: { p_id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
       generate_invite_code: { Args: never; Returns: string }
@@ -823,6 +830,10 @@ export type Database = {
         Returns: string
       }
       leave_crew: { Args: { p_crew_id: string }; Returns: undefined }
+      remove_crew_member: {
+        Args: { p_crew_id: string; p_user_id: string }
+        Returns: undefined
+      }
       run_notify_job: { Args: never; Returns: undefined }
       run_streak_job: { Args: never; Returns: undefined }
       shares_crew_with: { Args: { p_user: string }; Returns: boolean }

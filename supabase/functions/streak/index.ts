@@ -51,7 +51,7 @@ Deno.serve(async (request: Request) => {
   for (const crew of (crews ?? []) as CrewRow[]) {
     const { data: memberRows, error: memberError } = await supabase
       .from('crew_members')
-      .select('user_id, grace_used, profiles!inner(timezone, created_at, trial_started_at, subscribed_until)')
+      .select('user_id, grace_used, joined_at, left_on, profiles!inner(timezone, created_at, trial_started_at, subscribed_until)')
       .eq('crew_id', crew.id);
     if (memberError) {
       summary.push({ crew: crew.id, error: memberError.message });
@@ -61,6 +61,8 @@ Deno.serve(async (request: Request) => {
     const members = (memberRows ?? []) as unknown as {
       user_id: string;
       grace_used: boolean;
+      joined_at: string;
+      left_on: string | null;
       profiles: {
         timezone: string;
         created_at: string;
@@ -91,6 +93,19 @@ Deno.serve(async (request: Request) => {
       .gte('local_date', dates[0])
       .lte('local_date', dates[dates.length - 1]);
 
+    // The first day each member ever checked this habit in. Somebody who joins
+    // a crew mid-run is not due until they have turned up once — they opt in by
+    // doing it — so this has to look at the whole history, not the window.
+    const { data: firstRows } = await supabase
+      .from('checkins')
+      .select('user_id, local_date')
+      .eq('habit_id', crew.habit_id)
+      .order('local_date', { ascending: true });
+    const startedBy = new Map<string, string>();
+    for (const row of firstRows ?? []) {
+      if (!startedBy.has(row.user_id)) startedBy.set(row.user_id, row.local_date);
+    }
+
     const checkinsByDate = new Map<string, Set<string>>();
     for (const row of checkinRows ?? []) {
       const set = checkinsByDate.get(row.local_date) ?? new Set<string>();
@@ -107,6 +122,9 @@ Deno.serve(async (request: Request) => {
         // the whole of countsAsDue(): the rule below only ever looks at who is
         // due on a weekday, so somebody out of trial simply stops appearing,
         // and the four people still turning up keep their streak.
+        joinedOn: member.joined_at.slice(0, 10),
+        leftOn: member.left_on,
+        startedOn: startedBy.get(member.user_id) ?? null,
         daysOfWeek: isLocked({
           createdAt: member.profiles.created_at,
           trialStartedAt: member.profiles.trial_started_at,

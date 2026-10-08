@@ -23,7 +23,37 @@ export type MemberState = {
   /** 0 = Sunday … 6 = Saturday. */
   daysOfWeek: number[];
   graceUsed: boolean;
+  /**
+   * The day they joined, and the first day they are no longer in — null while
+   * they still are. Both are needed because this judges days that have already
+   * happened: "who is in this crew" is not the same question as "who was in it
+   * on the third", and only the second one is any use a month later.
+   */
+  joinedOn?: string;
+  leftOn?: string | null;
+  /**
+   * The first day they ever checked this habit in, null if they never have.
+   *
+   * Somebody who joins a crew on a forty-day run should not be able to end it
+   * before they have done anything. They opt in by turning up, which needs no
+   * grace period and no explaining.
+   */
+  startedOn?: string | null;
 };
+
+/** Was this member due on this date — in the crew, and past their first day? */
+export function memberDueOn(member: MemberState, localDate: string): boolean {
+  if (!member.daysOfWeek.includes(weekdayOf(localDate))) return false;
+  if (member.joinedOn !== undefined && localDate < member.joinedOn) return false;
+  if (member.leftOn !== undefined && member.leftOn !== null && localDate >= member.leftOn) {
+    return false;
+  }
+  // Undefined means the caller is not tracking this, which is the old
+  // behaviour and stays due. Null means they have genuinely never turned up.
+  if (member.startedOn === null) return false;
+  if (member.startedOn !== undefined && localDate < member.startedOn) return false;
+  return true;
+}
 
 export type CrewState = {
   streakCurrent: number;
@@ -58,8 +88,7 @@ export function evaluateDay(
   localDate: string,
   checkedIn: ReadonlySet<string>,
 ): DayResult {
-  const weekday = weekdayOf(localDate);
-  const due = crew.members.filter((member) => member.daysOfWeek.includes(weekday));
+  const due = crew.members.filter((member) => memberDueOn(member, localDate));
 
   // Nobody was due: there is nothing here to miss.
   if (due.length === 0) {

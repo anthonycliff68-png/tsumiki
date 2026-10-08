@@ -9,8 +9,10 @@ import {
   evaluateDay,
   lastCompletedDate,
   localDateIn,
-  weekdayOf,
+  memberDueOn,
   type CrewState,
+  type MemberState,
+  weekdayOf,
 } from './streak.ts';
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -271,5 +273,65 @@ describe('which days to evaluate', () => {
 
   it('caps a long catch-up rather than walking back for ever', () => {
     assert.equal(datesToEvaluate('2020-01-01', '2026-09-21').length, 30);
+  });
+});
+
+/**
+ * Who was in the crew, and when.
+ *
+ * These exist because removing somebody used to delete their row, which made
+ * the streak riggable: miss twice, get removed before the nightly job runs,
+ * and the reset never happens. A membership change must not be able to rewrite
+ * a day that has already been judged.
+ */
+describe('membership over time', () => {
+  const MON = '2026-10-05'; // a Monday
+  const base = (over: Partial<MemberState>): MemberState => ({
+    userId: 'ana',
+    daysOfWeek: EVERY_DAY,
+    graceUsed: false,
+    ...over,
+  });
+
+  it('counts a member who is still in', () => {
+    assert.equal(memberDueOn(base({ joinedOn: '2026-09-01', leftOn: null }), MON), true);
+  });
+
+  it('stops counting them from the day they left, not before', () => {
+    // Left on the Monday: that day is already theirs to miss.
+    assert.equal(memberDueOn(base({ leftOn: MON }), MON), false);
+    assert.equal(memberDueOn(base({ leftOn: '2026-10-06' }), MON), true);
+  });
+
+  it('does not count them before they joined', () => {
+    assert.equal(memberDueOn(base({ joinedOn: '2026-10-06' }), MON), false);
+    assert.equal(memberDueOn(base({ joinedOn: MON }), MON), true);
+  });
+
+  it('does not count somebody who has never turned up', () => {
+    // Joining a crew on a long run must not let you end it on day one.
+    assert.equal(memberDueOn(base({ startedOn: null }), MON), false);
+  });
+
+  it('counts them from their first check-in onwards', () => {
+    assert.equal(memberDueOn(base({ startedOn: '2026-10-06' }), MON), false);
+    assert.equal(memberDueOn(base({ startedOn: MON }), MON), true);
+    assert.equal(memberDueOn(base({ startedOn: '2026-09-01' }), MON), true);
+  });
+
+  it('still respects the weekday, whatever the membership says', () => {
+    assert.equal(memberDueOn(base({ daysOfWeek: [0], joinedOn: '2026-09-01' }), MON), false);
+  });
+
+  it('leaves a crew alone on a day its only member had already gone', () => {
+    const crewAfterLeaving = {
+      streakCurrent: 4,
+      streakBest: 9,
+      members: [base({ userId: 'ben', leftOn: '2026-10-01' })],
+    };
+    const result = evaluateDay(crewAfterLeaving, MON, new Set());
+    // Nobody was due, so there is nothing here to miss and nothing to reset.
+    assert.equal(result.outcome, 'not-scheduled');
+    assert.equal(result.streakCurrent, 4);
   });
 });
