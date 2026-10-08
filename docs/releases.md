@@ -83,7 +83,15 @@ brand side is now starting.
 
 Candidates, roughly in the order I would argue for them:
 
-1. **The habit screen cannot be reached by a deep link.** `tsumiki:///habit/<id>`
+1. **The crew streak was reset by hand on 7 October, wrongly.** I read a
+   streak of 12 as inflated, had it zeroed, then spent an hour treating the
+   job's correct recovery of it as a bug. Both members had checked in every
+   day since 26 September; twelve was the true number and the job rebuilt it
+   from real check-ins. Nothing is broken here, and the backfill that
+   recovered it is deliberate behaviour worth keeping — the 30-day cap in
+   `datesToEvaluate` is what stops a long outage manufacturing a large number.
+
+2. **The habit screen cannot be reached by a deep link.** `tsumiki:///habit/<id>`
    lands on its empty state and stays there — cold or warm, with an id that is
    definitely the signed-in user's and definitely has history. The same screen
    renders correctly when tapped from Progress, and `crew/<id>` deep links
@@ -95,13 +103,13 @@ Candidates, roughly in the order I would argue for them:
    its *not found* state are the same bare Back button, so whatever goes wrong
    there is invisible to whoever it happens to.
 
-2. **Universal links**, so an invite opens the app. The crew is the
+3. **Universal links**, so an invite opens the app. The crew is the
    differentiator and the invite is how a crew grows; it is the one gap that
    costs new users.
-3. **Verify a quick action writes a check-in** end to end. The buttons render;
+4. **Verify a quick action writes a check-in** end to end. The buttons render;
    that the tap reaches the database without opening the app is still untested.
-4. **Automated screenshots beyond deep links** (Maestro), so the design board regenerates against
+5. **Automated screenshots beyond deep links** (Maestro), so the design board regenerates against
    every build instead of being captured by hand.
-5. **Change a crew's habit**, or decide it can only be replaced — an open
+6. **Change a crew's habit**, or decide it can only be replaced — an open
    question from the original brief, never resolved.
-6. **What happens to a crew when someone leaves mid-streak** — same.
+7. **What happens to a crew when someone leaves mid-streak** — same.
