@@ -61,7 +61,7 @@ export default function HabitStatsScreen() {
   // and a param that shadows one is a bug waiting for someone to trip on it.
   const { id, period } = useLocalSearchParams<{ id: string; period?: string }>();
   const { session } = useAuth();
-  const { data: history = [] } = useHabitHistory(session?.user.id);
+  const { data: history = [], isPending, isError } = useHabitHistory(session?.user.id);
 
   const today = localDateString(new Date());
   // Carried from the overview so stepping in keeps the period you were reading.
@@ -95,11 +95,27 @@ export default function HabitStatsScreen() {
   }, [habit, from, to, today]);
 
   if (!habit || !view) {
+    // Still fetching, or signed in but the query has not been allowed to start
+    // yet, is not the same as "there is no such habit" — and the two used to
+    // look identical.
+    const waiting = isPending || !session;
     return (
       <View style={styles.root}>
         <Bleed color={habitColors[0]} />
         <View style={{ paddingTop: insets.top + spacing.xxl, paddingHorizontal: spacing.xl }}>
           <TextButton label={copy.habitStats.back} onPress={() => router.back()} />
+          <View style={{ paddingTop: spacing.xxl }}>
+            {waiting ? (
+              <Text style={styles.waiting}>{copy.habitStats.loading}</Text>
+            ) : (
+              <>
+                <Display size={34} line={32}>{copy.habitStats.missingTitle}</Display>
+                <Text style={styles.waiting}>
+                  {isError ? copy.today.loadFailed : copy.habitStats.missingBody}
+                </Text>
+              </>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -219,6 +235,13 @@ export default function HabitStatsScreen() {
 }
 
 const makeStyles = (colors: Palette) => ({
+  waiting: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+  },
   root: { flex: 1, backgroundColor: colors.bg },
 
   title: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingTop: spacing.lg },

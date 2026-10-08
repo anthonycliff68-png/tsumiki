@@ -429,6 +429,14 @@ export const copy = {
 
   habitStats: {
     back: 'Progress',
+    // A screen that cannot find its habit used to render a bare Back button,
+    // which is also exactly what it rendered while it was still loading. Two
+    // very different situations wearing the same face, and the failing one
+    // invisible to whoever it happened to.
+    loading: 'Looking it up\u2026',
+    missingTitle: 'This habit is not here',
+    missingBody:
+      'It may have been archived, or it belongs to another account. Go back to Progress and open it from the list.',
     done: 'Done',
     run: 'Run',
     best: 'Best',
