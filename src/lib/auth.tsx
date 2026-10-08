@@ -86,7 +86,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = session?.user.id;
     if (!userId) return;
     const timezone = deviceTimezone();
-    void supabase.from('profiles').update({ timezone }).eq('id', userId);
+    // .then() is not decoration. A Supabase query builder is lazy: it sends
+    // nothing until something awaits it, so `void supabase.from(...)` builds a
+    // request and drops it. This one had been dropping it since the schema was
+    // written, which is why every profile in the database still said 'UTC'.
+    //
+    // It was not a cosmetic line on the You tab. Quiet hours were being read in
+    // UTC — ten at night became six in the evening for anyone on New York time,
+    // so the bedtime reminder was suppressed and three in the morning counted as
+    // a fine moment to push. Worse, the nightly job decides a day is over in
+    // this zone while the app files check-ins in the device's. An evening
+    // check-in landed on tomorrow, the day it belonged to was judged empty, and
+    // a streak quietly lost ground nobody had actually lost.
+    void supabase
+      .from('profiles')
+      .update({ timezone })
+      .eq('id', userId)
+      .then(({ error }) => {
+        if (error) console.warn('could not save the time zone', error.message);
+      });
   }, [session?.user.id]);
 
   /**
