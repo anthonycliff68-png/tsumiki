@@ -112,7 +112,10 @@ nine droplets off the top, and folds to its line with the strike drawing across.
 About two thirds of a second. Undo gets none of it — taking something back is a
 correction, not an achievement.
 
-**[The check-in](demos/2026-10-08-my-day-check-in.mp4)** — 6s.
+**[Before](demos/2026-10-08-check-in-before.mp4)** · **[After](demos/2026-10-08-my-day-check-in.mp4)**
+— 4s and 6s. The before is the old build, checked out of git and run again: tap
+an outlined card and it is solid in the next frame. Nothing moves, nothing
+lands, and the thing you just did is simply over.
 
 The droplets took three attempts and were invisible in all of them. They were
 painted under the card, they faded out a twelfth of the way into the flight

@@ -77,11 +77,16 @@ before/after on its own.
 
 **Status:** ready
 
-**Assets** — `2026-10-08-my-day-check-in.mp4` (6s, two habits checked off).
+**Assets** — `2026-10-08-check-in-before.mp4` (4s, the old build) and
+`2026-10-08-my-day-check-in.mp4` (6s). Post as a pair, before first — the
+comparison is the post.
 
 **X / Twitter**
 
-> Checking a habit off in Tsumiki.
+> Before and after of checking a habit off.
+>
+> The old one: tap an outlined card, it is solid in the next frame. Nothing
+> moves, nothing lands, and the thing you just did is already over.
 >
 > The colour floods up, two sheets of it drifting at different speeds so the
 > surface reads as liquid. It overshoots the brim, throws a few droplets, and
