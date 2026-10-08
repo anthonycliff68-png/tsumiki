@@ -27,6 +27,27 @@ scripts/shots.sh                      # every screen, as a board
 
 ## 8 October 2026
 
+### The paywall said "unlimited" above its own exception — `2d2dac1`
+
+The first feature line read *"Unlimited habits and crews — stack as many as your
+day can hold, with up to four friends on each"*. Wrong twice.
+
+Nothing in Tsumiki is capped at a number, so there was no limit for "unlimited"
+to lift. The free days run out and the app locks: a different promise, and the
+only one the build can actually be checked against — which matters on the screen
+that already drew a 3.1.2 rejection. And a crew really does stop at five,
+enforced by a trigger on `crew_members` rather than only by the UI, so the word
+sat directly above its own exception.
+
+| Before | After |
+|---|---|
+| <img src="demos/2026-10-08-paywall-before.png" width="260"> | <img src="demos/2026-10-08-paywall-after.png" width="260"> |
+| "Unlimited habits and crews" | What the app actually does |
+
+Copy only. No behaviour, no pricing, no entitlement logic changed.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--the-paywall-said-unlimited-above-its-own-exception).
+
 ### A done habit gets out of the way — `9f2e38e`
 
 My Day used to fill a habit's card with its colour when you checked it off. The

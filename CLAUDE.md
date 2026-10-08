@@ -155,7 +155,7 @@ Work in small steps. Get each one running on a device before starting the next.
 - Put all user-facing copy in `src/copy.ts` so wording is easy to change.
 - Write tests for the streak and nudge rules. They're the parts most likely to break quietly.
 - After each build-order step, summarize what works, what's stubbed, and how to try it on a device.
-- **Document every feature or UI change.** Capture the "before" *first* — once the change is in, it's gone for good. Then add an entry to `docs/changelog.md` with before and after side by side, and end it with a **Content** block saying what still needs writing for X/Twitter and for Twitch. `scripts/record.sh <name> [route]` records the simulator to a postable .mp4; `scripts/shots.sh` regenerates the whole-app board. Drafts live in `docs/content.md`. The record starts 8 October 2026 — don't backfill anything earlier.
+- **Document every feature or UI change.** Capture the "before" *first* — once the change is in, it's gone for good. Then add an entry to `docs/changelog.md` with before and after side by side, and end it with a **Content** block saying what still needs writing for X/Twitter. `scripts/record.sh <name> [route]` records the simulator to a postable .mp4; `scripts/shots.sh` regenerates the whole-app board. Drafts live in `docs/content.md`. The record starts 8 October 2026 — don't backfill anything earlier.
 
 ## Open questions (decide before or during build)
 

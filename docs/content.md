@@ -3,13 +3,32 @@
 Drafts for posting, one section per change in [changelog.md](changelog.md).
 Nothing here is published until you say so.
 
-Every entry carries the same three lines, so an unfinished one is obvious:
+Every entry carries the same two lines, so an unfinished one is obvious:
 
 - **Assets** — what exists in [demos/](demos/), and what still needs capturing
 - **X / Twitter** — the post, ready to paste
-- **Twitch** — what to show or talk through on stream
 
 Status is `todo`, `ready`, or `posted`.
+
+---
+
+## 8 October 2026 · The paywall said "unlimited" above its own exception
+
+**Status:** ready
+
+**Assets** — `2026-10-08-paywall-before.png`, `2026-10-08-paywall-after.png`.
+Post as a pair, before first.
+
+**X / Twitter**
+
+> Found this on my own paywall.
+>
+> "Unlimited habits and crews" — directly above "with up to four friends on
+> each". Nothing in the app is capped at a number anyway; the free days just run
+> out. So the word was lifting a limit that doesn't exist, while standing on top
+> of one that does.
+>
+> Now it says what the app does.
 
 ---
 
@@ -29,10 +48,6 @@ Both full device resolution, post as a two-image pair in that order.
 >
 > The fill wasn't wrong. It was wrong as a resting state.
 
-**Twitch** — good five-minute segment on encoding. Open My Day with everything
-done, ask chat what the screen is telling them, then show it after. The point
-lands on its own: loudness should mean *attention needed*, not *attention
-already given*. Have the old build ready to flip between.
 
 ---
 
@@ -64,12 +79,6 @@ travel further than the first:
 >
 > Screenshots said it was working. Twice.
 
-**Twitch** — the strongest segment available right now. Step through the screen
-recording frame by frame live and let chat spot why nothing is visible before
-you say it. Lands three real lessons: a still can't verify an animation, paint
-order is invisible until it isn't, and an opacity curve can cancel a motion
-curve. Have `scripts/record.sh` and the frame extractor on screen; the tooling
-is half the story.
 
 ---
 
@@ -88,5 +97,3 @@ Copy this for the next change.
 
 > draft
 
-**Twitch** — what to show, and what the point is.
-```

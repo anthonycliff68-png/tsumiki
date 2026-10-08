@@ -501,14 +501,25 @@ export const copy = {
     overTitle: 'Your free days are up. Keep going.',
     browsingTitle: 'Everything, for everyone you do it with.',
 
+    /**
+     * These used to read "Unlimited habits and crews / Stack as many as your
+     * day can hold, with up to four friends on each", which was wrong twice.
+     *
+     * Nothing in Tsumiki is capped at a number, so there was no limit for
+     * "unlimited" to lift: the free days run out and the app locks, which is a
+     * different promise and the only one the build can actually be checked
+     * against. And a crew really does stop at five, enforced by a trigger on
+     * crew_members rather than only by the UI, so "unlimited" sat directly
+     * above its own exception.
+     */
     features: [
       {
-        title: 'Unlimited habits and crews',
-        sub: 'Stack as many as your day can hold, with up to four friends on each',
+        title: 'As many habits as your day holds',
+        sub: 'Stack them onto the routine you already have',
       },
       {
-        title: 'Nudges and shared streaks',
-        sub: 'The part that makes people actually turn up, kept alive',
+        title: 'Crews of up to five',
+        sub: 'Nudges, and a streak the whole crew shares',
       },
     ],
 
