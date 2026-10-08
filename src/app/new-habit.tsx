@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,7 +84,7 @@ export default function NewHabitScreen() {
     if (days.length === 0) return setError(copy.newHabit.needDay);
 
     const input = { name, color, mode, anchorId, atTime, daysOfWeek: days };
-    const onDone = () => router.back();
+    const onDone = () => goBack();
     const onFail = (e: unknown) => setError(e instanceof Error ? e.message : copy.auth.genericError);
 
     if (isEdit && id) updateHabit.mutate({ habitId: id, ...input }, { onSuccess: onDone, onError: onFail });
@@ -103,7 +105,7 @@ export default function NewHabitScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.pill}>
+          <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
             <Text style={styles.pillText}>{copy.newHabit.cancel}</Text>
           </Pressable>
           <View style={styles.pill}>
@@ -248,7 +250,7 @@ export default function NewHabitScreen() {
         {isEdit && id && (
           <TextButton
             label={copy.newHabit.archive}
-            onPress={() => archiveHabit.mutate(id, { onSuccess: () => router.back() })}
+            onPress={() => archiveHabit.mutate(id, { onSuccess: () => goBack() })}
           />
         )}
       </ScrollView>

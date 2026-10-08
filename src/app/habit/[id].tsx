@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,7 +70,13 @@ export default function HabitStatsScreen() {
   const window: StatsWindow = period === 'day' || period === 'month' ? period : 'week';
   const { from, to } = useMemo(() => periodRange(window, today, 0), [window, today]);
 
-  const habit = history.find((entry) => entry.habitId === id);
+  // A prefix counts. Ids reach this screen by hand — out of a deep link, a log
+  // line, the screenshot script — and a human copying a uuid copies the front
+  // of it. "5d3d238e" meaning that habit is obvious to everyone except a
+  // string comparison, which called it missing.
+  const habit = history.find(
+    (entry) => entry.habitId === id || (!!id && entry.habitId.startsWith(id)),
+  );
 
   const view = useMemo(() => {
     if (!habit) return null;
@@ -103,7 +111,7 @@ export default function HabitStatsScreen() {
       <View style={styles.root}>
         <Bleed color={habitColors[0]} />
         <View style={{ paddingTop: insets.top + spacing.xxl, paddingHorizontal: spacing.xl }}>
-          <TextButton label={copy.habitStats.back} onPress={() => router.back()} />
+          <TextButton label={copy.habitStats.back} onPress={() => goBack()} />
           <View style={{ paddingTop: spacing.xxl }}>
             {waiting ? (
               <Text style={styles.waiting}>{copy.habitStats.loading}</Text>
@@ -112,14 +120,6 @@ export default function HabitStatsScreen() {
                 <Display size={34} line={32}>{copy.habitStats.missingTitle}</Display>
                 <Text style={styles.waiting}>
                   {isError ? copy.today.loadFailed : copy.habitStats.missingBody}
-                </Text>
-                {/* TEMPORARY. Three theories about this were wrong, so this
-                    prints what the screen actually has instead of what it
-                    ought to. Remove once the cause is known. */}
-                <Text style={[styles.waiting, { fontSize: 11 }]}>
-                  {`looking for: ${JSON.stringify(id)}\nhistory has ${history.length}: ${history
-                    .map((h) => h.habitId.slice(0, 8))
-                    .join(', ')}`}
                 </Text>
               </>
             )}
@@ -153,7 +153,7 @@ export default function HabitStatsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <TextButton label={`‹ ${copy.habitStats.back}`} onPress={() => router.back()} />
+        <TextButton label={`‹ ${copy.habitStats.back}`} onPress={() => goBack()} />
 
         <View style={styles.title}>
           <View style={[styles.spine, { backgroundColor: habit.color }]} />

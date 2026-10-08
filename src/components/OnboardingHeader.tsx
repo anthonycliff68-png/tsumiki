@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { Pressable, Text, View } from 'react-native';
 
 import { ChevronLeftIcon } from '@/components/icons';
@@ -26,7 +28,7 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={copy.onboarding.back}
-          onPress={() => (onBack ? onBack() : router.back())}
+          onPress={() => (onBack ? onBack() : goBack())}
           style={({ pressed }) => [styles.back, pressed && styles.pressed]}
         >
           <ChevronLeftIcon size={18} color={colors.text} />

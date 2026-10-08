@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,7 +47,7 @@ export default function CrewPromptScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingHeader step={4} onBack={() => router.back()} />
+        <OnboardingHeader step={4} onBack={() => goBack()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.crew.eyebrow}</Text>

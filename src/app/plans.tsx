@@ -1,5 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { goBack } from '@/lib/back';
+
 import { Paywall } from '@/components/Paywall';
 import { copy } from '@/copy';
 import { TRIAL_DAYS } from '@/lib/entitlement';
@@ -32,7 +34,7 @@ export default function PlansScreen() {
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
       dismissLabel={first === '1' ? copy.paywall.notNow(TRIAL_DAYS) : copy.paywall.back}
-      onDismiss={() => router.back()}
+      onDismiss={() => goBack()}
     />
   );
 }

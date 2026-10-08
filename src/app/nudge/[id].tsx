@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +53,7 @@ export default function NudgeScreen() {
     return (
       <View style={styles.loading}>
         <Text style={styles.gone}>{copy.nudge.notAllowed}</Text>
-        <TextButton label={copy.crews.back} onPress={() => router.back()} />
+        <TextButton label={copy.crews.back} onPress={() => goBack()} />
       </View>
     );
   }
@@ -73,7 +75,7 @@ export default function NudgeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.close}>
+          <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.close}>
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
           <View style={styles.pill}>
@@ -164,14 +166,14 @@ export default function NudgeScreen() {
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => headingOut.mutate(nudge.crewId, { onSuccess: () => router.back() })}
+                onPress={() => headingOut.mutate(nudge.crewId, { onSuccess: () => goBack() })}
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.85 }]}
               >
                 <Text style={styles.actionText}>{copy.nudge.headingOut}</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.back()}
+                onPress={() => goBack()}
                 style={({ pressed }) => [styles.action, pressed && { opacity: 0.85 }]}
               >
                 <Text style={styles.actionText}>{copy.nudge.skipToday}</Text>

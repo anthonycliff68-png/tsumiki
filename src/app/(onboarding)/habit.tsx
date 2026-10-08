@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -97,7 +99,7 @@ export default function FirstHabitScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <OnboardingHeader step={3} onBack={() => router.back()} />
+        <OnboardingHeader step={3} onBack={() => goBack()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.habit.eyebrow}</Text>

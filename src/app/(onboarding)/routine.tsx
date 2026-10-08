@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -151,7 +153,7 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <OnboardingHeader step={2} onBack={() => router.back()} />
+        <OnboardingHeader step={2} onBack={() => goBack()} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.routine.eyebrow}</Text>

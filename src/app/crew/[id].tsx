@@ -1,4 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View , TextInput} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -95,7 +97,7 @@ export default function CrewScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.pill}>
+          <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
             <Text style={styles.pillText}>‹ {copy.crews.back}</Text>
           </Pressable>
           <View style={styles.pill}>
@@ -230,7 +232,7 @@ export default function CrewScreen() {
 
         <TextButton
           label={copy.crews.leave}
-          onPress={() => leaveCrew.mutate(crew.id, { onSuccess: () => router.back() })}
+          onPress={() => leaveCrew.mutate(crew.id, { onSuccess: () => goBack() })}
         />
       </ScrollView>
 

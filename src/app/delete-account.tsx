@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -46,7 +48,7 @@ export default function DeleteAccountRoute() {
           })
         }
       />
-      <TextButton label={copy.newHabit.cancel} onPress={() => router.back()} />
+      <TextButton label={copy.newHabit.cancel} onPress={() => goBack()} />
     </Screen>
   );
 }

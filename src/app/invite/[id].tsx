@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,7 +59,7 @@ export default function InviteScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.pill}>
+          <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
             <Text style={styles.pillText}>‹ {crew.name}</Text>
           </Pressable>
           <View style={styles.pill}>

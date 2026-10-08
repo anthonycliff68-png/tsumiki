@@ -1,4 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
+
+import { goBack } from '@/lib/back';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -127,7 +129,7 @@ export default function ScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topRow}>
-          <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.pill}>
+          <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
             <Text style={styles.pillText}>{copy.schedule.done}</Text>
           </Pressable>
         </View>
