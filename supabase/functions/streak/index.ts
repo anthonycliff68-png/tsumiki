@@ -83,6 +83,16 @@ Deno.serve(async (request: Request) => {
     const through = lastCompletedDate(members.map((member) => member.profiles.timezone), now);
     if (!through) continue;
 
+    // First sight of this crew: write down where counting starts and judge
+    // nothing. Without this the cursor would never be set and the crew would
+    // stay unwatched for ever, because an empty list looks the same as
+    // "already up to date".
+    if (crew.streak_updated_on === null) {
+      await supabase.from('crews').update({ streak_updated_on: through }).eq('id', crew.id);
+      summary.push({ crew: crew.id, startedWatching: through });
+      continue;
+    }
+
     const dates = datesToEvaluate(crew.streak_updated_on, through);
     if (dates.length === 0) continue;
 
