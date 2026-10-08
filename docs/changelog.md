@@ -21,7 +21,13 @@ To capture more:
 ```sh
 scripts/record.sh check-in /my-day    # a clip you can post
 scripts/shots.sh                      # every screen, as a board
+scripts/stage.sh                      # lay it all out in Downloads, by date
 ```
+
+`docs/demos/` is the repo's flat, date-prefixed copy — it is what the images on
+this page point at, so nothing here gets moved out of it. `scripts/stage.sh`
+copies them into `~/Downloads/Tsumiki Posts/<date>/`, drops the date prefix once
+the folder carries it, and puts the drafts in beside them.
 
 ---
 
