@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
@@ -17,6 +17,20 @@ const RAIL_GAP = 8;
 const HOUR_MIN = 72;
 /** Past this many habits, a moment folds the finished ones away. */
 const STACK_CAP = 3;
+
+/**
+ * Checking a habit off, in milliseconds.
+ *
+ * The card fills and springs out, settles, holds long enough to be seen, then
+ * folds down to its line and the strike draws across. The hold is the whole
+ * point: without it the fold starts before the eye has registered the fill, and
+ * the thing you did disappears instead of landing.
+ */
+const HOLD_MS = 380;
+const FOLD_MS = 240;
+const STRIKE_MS = 200;
+/** What a finished habit stands down to, and the smallest thing worth tapping. */
+const DONE_ROW_H = 44;
 
 export type DropTarget =
   | { kind: 'anchor'; anchorId: string; label: string }
@@ -289,6 +303,51 @@ function HabitCard({
   const aimOffset = useRef(0);
   const cardRef = useRef<View>(null);
 
+  // 1 is the open card, 0 is the folded line. Only moves during the moment a
+  // habit is checked off; the rest of the time the card simply is one or the
+  // other.
+  const fold = useRef(new Animated.Value(1)).current;
+  const strike = useRef(new Animated.Value(habit.checkedIn ? 1 : 0)).current;
+  const wasChecked = useRef(habit.checkedIn);
+  const [celebrating, setCelebrating] = useState(false);
+  const [cardH, setCardH] = useState(0);
+  const [nameW, setNameW] = useState(0);
+
+  useEffect(() => {
+    if (habit.checkedIn === wasChecked.current) return;
+    const justDone = habit.checkedIn && !wasChecked.current;
+    wasChecked.current = habit.checkedIn;
+
+    // Undoing is a correction, not an achievement. It snaps back.
+    if (!justDone) {
+      setCelebrating(false);
+      fold.setValue(1);
+      strike.setValue(0);
+      return;
+    }
+
+    setCelebrating(true);
+    fold.setValue(1);
+    strike.setValue(0);
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 1.06, useNativeDriver: true, speed: 50, bounciness: 14 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+      Animated.delay(HOLD_MS),
+      // Height cannot be driven natively, so this one runs on the JS thread.
+      // It is one card for a quarter of a second; the fill and the spring,
+      // which are the parts you actually watch, stay on the UI thread.
+      Animated.timing(fold, { toValue: 0, duration: FOLD_MS, useNativeDriver: false }),
+    ]).start(({ finished }) => {
+      if (!finished) return;
+      setCelebrating(false);
+      Animated.timing(strike, {
+        toValue: 1,
+        duration: STRIKE_MS,
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [habit.checkedIn, fold, scale, strike]);
+
   const measureAim = (fingerY: number) => {
     cardRef.current?.measureInWindow((_x, y, _width, height) => {
       aimOffset.current = y + height / 2 - fingerY;
@@ -341,7 +400,43 @@ function HabitCard({
           zIndex: carried ? 10 : 0,
         }}
       >
-        {habit.checkedIn ? (
+        {celebrating ? (
+          /* The moment itself: filled, sprung, held, then folding away. */
+          <Animated.View
+            style={{
+              height: fold.interpolate({
+                inputRange: [0, 1],
+                outputRange: [DONE_ROW_H, cardH || DONE_ROW_H],
+              }),
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            <Animated.View
+              style={{
+                // Holds its colour for most of the fold and goes near the end,
+                // so the card reads as shrinking rather than dissolving.
+                opacity: fold.interpolate({ inputRange: [0, 0.55, 1], outputRange: [0, 1, 1] }),
+              }}
+            >
+              <View
+                style={[
+                  styles.card,
+                  { borderColor: habit.color, backgroundColor: habit.color },
+                ]}
+              >
+                <View style={styles.cardText}>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {habit.name}
+                  </Text>
+                  <Text style={[styles.cardSub, styles.cardSubDone]} numberOfLines={1}>
+                    {copy.myDay.solo} · {describeDays(habit.daysOfWeek).toLowerCase()}
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          </Animated.View>
+        ) : habit.checkedIn ? (
           /**
            * Done gets out of the way.
            *
@@ -365,9 +460,26 @@ function HabitCard({
             style={[styles.doneRow, carried && styles.carried]}
           >
             <View style={[styles.doneStub, { backgroundColor: habit.color }]} />
-            <Text style={styles.doneName} numberOfLines={1}>
-              {habit.name}
-            </Text>
+            <View style={styles.doneNameWrap}>
+              <Text
+                style={styles.doneName}
+                numberOfLines={1}
+                onLayout={(event) => setNameW(event.nativeEvent.layout.width)}
+              >
+                {habit.name}
+              </Text>
+              {/* Drawn rather than declared, so the line arrives with the fold
+                  instead of being there before it finishes. */}
+              <Animated.View
+                style={[
+                  styles.strike,
+                  {
+                    backgroundColor: colors.textFaint,
+                    width: strike.interpolate({ inputRange: [0, 1], outputRange: [0, nameW] }),
+                  },
+                ]}
+              />
+            </View>
           </View>
         ) : (
           <View
@@ -376,6 +488,7 @@ function HabitCard({
             accessibilityRole="button"
             accessibilityState={{ checked: false }}
             accessibilityLabel={copy.today.checkInLabel(habit.name)}
+            onLayout={(event) => setCardH(event.nativeEvent.layout.height)}
             style={[
               styles.card,
               { borderColor: habit.color, backgroundColor: 'transparent' },
@@ -568,13 +681,16 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: spacing.sm,
   },
   doneStub: { width: 14, height: 3, borderRadius: 2, opacity: 0.7 },
+  doneNameWrap: { flex: 1, justifyContent: 'center' },
   doneName: {
-    flex: 1,
+    alignSelf: 'flex-start',
     fontFamily: fonts.body,
     fontSize: 15,
+    lineHeight: 20,
     color: colors.textFaint,
-    textDecorationLine: 'line-through',
   },
+  strike: { position: 'absolute', left: 0, top: 10, height: 1 },
+  cardSubDone: { color: 'rgba(255,255,255,0.75)' },
   cardEdit: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nowDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: habitColors[1] },
