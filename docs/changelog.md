@@ -8,7 +8,13 @@ built here without anyone noticing it was invisible. The other one: this is the
 record of how the thing got made, and the good bits of it are worth posting.
 
 Stills and clips live in [demos/](demos/). The whole-app board, regenerated in
-one command, is [screenshots/](screenshots/).
+one command, is [screenshots/](screenshots/). Posts are drafted in
+[content.md](content.md) — every change gets a **Content** line here pointing at
+its draft, so one that was never written is easy to spot.
+
+**Capture the before first.** Once a change is in, the old screen is gone and no
+amount of care gets it back. The record starts 8 October 2026; nothing earlier
+is being backfilled.
 
 To capture more:
 
@@ -39,6 +45,8 @@ gives its room back.
 Costs the edit handle on a done habit. Editing is still a tap away on Today and
 on Progress, and comes back if you undo.
 
+**Content:** drafted — [content.md](content.md#8-october-2026--a-done-habit-gets-out-of-the-way).
+
 ### Checking off feels like water — `4435cc7`, `54f47e1`
 
 The fold alone was efficient and felt like nothing — card to line in one frame,
@@ -61,6 +69,8 @@ painted under the card, they faded out a twelfth of the way into the flight
 — brightest while still inside the card, in exactly the card's colour — and they
 launched from its centre rather than its brim. Found by stepping through a
 screen recording frame by frame. A still screenshot had said "working" twice.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--checking-off-feels-like-water).
 
 ### Always a way back — `73cc26c`
 
