@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
-### A button that did not look like one — `PENDING`
+### A button that did not look like one — `19217f2`
 
 Reported by a reader with a screenshot: *"I can't delete habits at the start of
 setting up. This makes it rough if for example I don't do lunch but now I'm
