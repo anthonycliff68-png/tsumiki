@@ -14,3 +14,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `674b623` — Name the commit in the entry for it
 - 2026-10-09 · `eff9edf` — Flush the device when an account is deleted
 - 2026-10-09 · `d5697e5` — Name the commit in the entry for it
+- 2026-10-09 · `12e7c49` — One command from "it compiles" to "look at it"
