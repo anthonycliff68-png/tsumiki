@@ -20,3 +20,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `356ceee` — Name the commit in the entry for it
 - 2026-10-09 · `79fe4fe` — Make saving a moment twice harmless, in the database
 - 2026-10-09 · `41de1d2` — Name the commit in the entry for it
+- 2026-10-09 · `3b95d01` — Say what actually went wrong when a routine will not save

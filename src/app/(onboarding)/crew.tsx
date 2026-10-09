@@ -103,10 +103,16 @@ export default function CrewPromptScreen() {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
         <PrimaryButton
           label={copy.onboarding.crew.invite}
-          onPress={() => router.replace('/crews')}
+          // Through the plans rather than past them: the offer belongs at the
+          // end of setting up, not as something that interrupts the app a
+          // moment after you first see it.
+          onPress={() => router.replace({ pathname: '/plans', params: { first: '1', then: '/crews' } })}
           icon={<ArrowRightIcon size={20} color={colors.bg} />}
         />
-        <TextButton label={copy.onboarding.crew.solo} onPress={() => router.replace('/')} />
+        <TextButton
+          label={copy.onboarding.crew.solo}
+          onPress={() => router.replace({ pathname: '/plans', params: { first: '1' } })}
+        />
       </View>
     </View>
   );

@@ -198,7 +198,7 @@ export default function FirstHabitScreen() {
 
         <TextButton
           label={copy.onboarding.habit.makeOwn}
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace({ pathname: '/plans', params: { first: '1' } })}
         />
 
         {error && (

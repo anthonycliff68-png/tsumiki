@@ -20,7 +20,9 @@ import { hasAccess } from '@/lib/entitlement';
  *
  * Renders nothing.
  */
-const KEY = 'tsumiki.plansOffered';
+/** Shared with the plans screen, which sets it when onboarding hands over. */
+export const PLANS_OFFERED = 'tsumiki.plansOffered';
+const KEY = PLANS_OFFERED;
 
 export function FirstRunPlans() {
   const { session } = useAuth();
