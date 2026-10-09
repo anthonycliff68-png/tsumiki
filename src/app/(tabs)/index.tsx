@@ -348,6 +348,17 @@ export default function TodayScreen() {
               {openCount === 0 ? copy.today.allDone : copy.today.fanHint}
             </Text>
 
+            {/* The end of setting up, moved onto the screen it is about.
+                Before the first check-in it points at the orb; after it, it
+                explains the rule that check-in just started. Each shows once
+                and only when it is true. */}
+            {done === 0 && (
+              <FirstTimeHint id="first-check-in">{copy.hints.firstCheckIn}</FirstTimeHint>
+            )}
+            {done > 0 && (
+              <FirstTimeHint id="streak-rule">{copy.hints.streakRule}</FirstTimeHint>
+            )}
+
             <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
 
             {showingDone && (

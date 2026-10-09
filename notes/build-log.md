@@ -9,3 +9,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `05b310c` — Stop the first check-in screen congratulating you for nothing
 - 2026-10-09 · `76a8407` — Let the first check-in take you in on its own
 - 2026-10-09 · `d1b7d2c` — Name the commits in the entry for them
+- 2026-10-09 · `1e012aa` — Shorten the hold before the app opens itself

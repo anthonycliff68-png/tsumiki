@@ -12,6 +12,29 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · The last page of setting up is gone
+
+**Status:** ready
+
+**Assets** — `2026-10-09-end-of-setup-compare.mp4` (9s).
+
+**X / Twitter**
+
+> Deleted the last page of my onboarding today.
+>
+> Its only job was hosting one check-in. Two people told me it felt
+> unnecessary and one of them couldn't tell the button was working — which is
+> a fair verdict on a page that exists for a single tap.
+>
+> But the tap wasn't the problem. Someone told me months ago the app only
+> clicked once they'd actually used it, and that's still true. So the check-in
+> stays and the page goes: you land on the real screen with one line pointing
+> at the button.
+>
+> The value was in doing it, not in the page around it.
+
+---
+
 ## 9 October 2026 · The screen that stopped reporting
 
 **Status:** ready

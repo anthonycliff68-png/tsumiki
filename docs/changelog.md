@@ -48,6 +48,29 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
+### The last page of setting up is gone — `PENDING`
+
+Onboarding ended on a page whose only job was one check-in. Two readers found
+it unnecessary and one of them could not tell the button was working, which is
+a fair verdict on a page that exists to host a single tap.
+
+The tap was never the problem. A reader told us months ago that the app only
+made sense once they had actually used it, and that is still true — so the
+check-in stays and the page goes. You land on Today, the real screen, with one
+line pointing at the orb: *"One tap on the circle checks a habit off. Try it."*
+Same habit, same tap, nothing in between.
+
+The page was also the only place the app explained the rule it runs on. That
+moves to Today too, and arrives the first time there is a check-in to explain
+it against — which is the first moment it means anything rather than the last
+moment before you are let in. Both use the hint component that was already
+there for exactly this: one line, once, then never again.
+
+**[Side by side](demos/2026-10-09-end-of-setup-compare.mp4)** — 9s. Same step,
+same button, different landing.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--the-last-page-of-setting-up-is-gone).
+
 ### The screen that stopped reporting — `05b310c`, `76a8407`
 
 Two reports, one screen, and the first one was right about the symptom and

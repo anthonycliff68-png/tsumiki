@@ -15,8 +15,8 @@ import { hasAccess } from '@/lib/entitlement';
  * would otherwise have to go looking for one.
  *
  * It waits until after onboarding, because it sits inside the tabs, behind the
- * redirects to routine and first-check-in. Being asked to consider paying
- * before you have set up a single habit would be the wrong order.
+ * redirect to routine. Being asked to consider paying before you have set up a
+ * single habit would be the wrong order.
  *
  * Renders nothing.
  */

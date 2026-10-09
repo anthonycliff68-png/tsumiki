@@ -434,6 +434,21 @@ export const copy = {
     dismiss: 'Got it',
     /** The dock's pips are the only undiscoverable thing the walkthrough skips. */
     dockPips: 'The bars at the top of the dock are the rest of your day. Tap one and the dock points at it, so you can check anything off from anywhere.',
+    /**
+     * Onboarding used to end on a page whose only job was one check-in. Two
+     * readers found it unnecessary and one of them could not tell the button
+     * was working, so the page went and the tap stayed: this points at the
+     * same orb, on the real screen, with nothing in the way.
+     */
+    firstCheckIn:
+      'One tap on the circle checks a habit off. Try it \u2014 you can undo it straight after if you have not actually done it.',
+    /**
+     * The rule the whole app runs on, and the page that used to explain it has
+     * gone. It arrives the first time there is a check-in to explain it
+     * against, which is the first moment it means anything.
+     */
+    streakRule:
+      'Tomorrow, at the moment you picked, Tsumiki will nudge you. Miss a day and you get it back \u2014 miss two in a row and the streak starts again.',
     /** The reviewer's exact complaint: rings, a wall and a line, unexplained. */
     progressViews: 'Day shows what is due today. Week is every habit against every day, so gaps are obvious. Month is the shape over time.',
   },
