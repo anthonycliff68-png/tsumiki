@@ -48,6 +48,33 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
+### Three things the eye caught before the code did — `PENDING`
+
+**Today scrolled its header into the status bar.** THURSDAY and the day's count
+rode straight over the clock and the battery — white on white, each legible
+alone and neither readable together. Every tab scrolls the same way and none of
+them handled it, so the fix is one scrim over the whole tab area rather than
+five patches. A fade rather than a bar: each screen carries a large coloured
+bleed at the top and a solid band would cut a flat edge across it.
+
+**[Side by side](demos/2026-10-08-today-header-compare.mp4)** — 8s.
+
+**Progress tinted each card with its habit's colour.** A teal habit at 43% read
+as healthier than an orange one at 45% sitting directly under it: the two things
+on the card that look like a verdict were the hue and the number, and they
+disagreed. The colour now identifies the habit — in the bar, and nowhere else —
+and nothing on the card carries an opinion except the figure.
+
+**Two habits got letter-identical advice.** Both landed on the same rule and the
+same prescription, which was correct and read as a copy-paste fault. Each
+sentence now carries its own habit's figures: *Kept 13 of 30* against *Kept 5 of
+11*. The count that used to sit above the advice went with it, since it was then
+being said twice.
+
+**[Side by side](demos/2026-10-08-progress-compare.mp4)** — 8s.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--three-things-the-eye-caught-before-the-code-did).
+
 ### The water never actually reached the brim — `9fb0e92`, `6208321`
 
 Two things on the same screen, both of them the gap between what the code

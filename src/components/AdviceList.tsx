@@ -63,7 +63,13 @@ export function AdviceList({
             onPress={() => onOpen(verdict.habitId)}
             style={({ pressed }) => [
               styles.card,
-              { borderColor: alpha(verdict.color, 0.55), backgroundColor: alpha(verdict.color, 0.1) },
+              // Neutral. The habit's colour used to tint the whole card, so a
+              // teal habit at 43% read as healthier than an orange one at 45%
+              // sitting right under it — the two things on the card that look
+              // like a verdict were the hue and the number, and they disagreed.
+              // The colour now identifies the habit, in the spine and the bar,
+              // and nothing else on the card carries an opinion.
+              { borderColor: colors.border, backgroundColor: alpha(colors.overlay, 0.05) },
               pressed && styles.pressed,
             ]}
           >
@@ -71,7 +77,7 @@ export function AdviceList({
               <Text style={[display(20, 20), styles.cardName]} numberOfLines={1}>
                 {verdict.name}
               </Text>
-              <Text style={[styles.cardRate, { color: verdict.color }]}>
+              <Text style={[styles.cardRate, { color: colors.text }]}>
                 {Math.round(verdict.rate * 100)}%
               </Text>
             </View>
@@ -85,12 +91,10 @@ export function AdviceList({
               />
             </View>
 
-            <Text style={styles.cardSub}>{copy.stats.doneOfDue(verdict.done, verdict.due)}</Text>
-
             {verdict.advice !== null && (
-              <View style={[styles.suggestion, { borderColor: alpha(verdict.color, 0.4) }]}>
+              <View style={[styles.suggestion, { borderColor: colors.hairline }]}>
                 <Text style={[styles.suggestionText, { color: colors.text }]}>
-                  {adviceText(verdict.advice)}
+                  {adviceText(verdict.advice, verdict)}
                 </Text>
               </View>
             )}
@@ -131,7 +135,7 @@ function Tab({
 
 const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
 
-function adviceText(advice: Advice): string {
+function adviceText(advice: Advice, verdict: Verdict): string {
   if (advice.kind === 'stack') return copy.stats.advice.stack;
   if (advice.kind === 'drop-day') {
     return copy.stats.advice.dropDay(WEEKDAYS[advice.weekday] ?? 'that day');
@@ -139,7 +143,9 @@ function adviceText(advice: Advice): string {
   if (advice.kind === 'lighten') {
     return copy.stats.advice.lighten(advice.anchorLabel, advice.load);
   }
-  if (advice.kind === 'ease-off') return copy.stats.advice.easeOff(advice.from, advice.to);
+  if (advice.kind === 'ease-off') {
+    return copy.stats.advice.easeOff(advice.from, advice.to, verdict.done, verdict.due);
+  }
   if (advice.kind === 'let-go') return copy.stats.advice.letGo;
   return copy.stats.advice.run(advice.days);
 }

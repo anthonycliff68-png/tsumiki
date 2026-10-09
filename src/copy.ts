@@ -611,8 +611,14 @@ export const copy = {
       run: (days: number) => `${days} days straight. Leave this one alone.`,
       // The point is that the schedule was wrong, not the person. Name the
       // number they are already keeping and offer it back to them.
-      easeOff: (from: number, to: number) =>
-        `Asked for ${from} days a week, kept about ${to}. Ask for ${to} \u2014 a schedule you hit beats one you do not.`,
+      /**
+       * Carries this habit's own figures, because two habits that need the same
+       * change used to get a letter-identical sentence. Side by side, correct
+       * advice twice over reads as a copy-paste fault rather than as two
+       * habits with the same problem.
+       */
+      easeOff: (from: number, to: number, kept: number, due: number) =>
+        `Kept ${kept} of ${due}. Asked for ${from} days a week \u2014 ask for ${to}, and a schedule you hit beats one you do not.`,
       // The only suggestion someone might resent, so it says the quiet part
       // kindly and gives a reason to act rather than a verdict to accept.
       letGo: 'This one has not stuck, and the smaller versions have been tried. Letting it go frees the slot for something that will.',

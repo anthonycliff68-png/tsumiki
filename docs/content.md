@@ -12,6 +12,37 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 8 October 2026 · Three things the eye caught before the code did
+
+**Status:** ready
+
+**Assets** — `2026-10-08-today-header-compare.mp4` and
+`2026-10-08-progress-compare.mp4` (8s each). Post separately; they are two
+different points.
+
+**X / Twitter** — the status bar one:
+
+> My app's header scrolled straight over the clock. White on white — each
+> perfectly legible on its own, neither readable together.
+>
+> All five tabs scroll the same way and none of them handled it, so it's one
+> fade over the whole tab area rather than five patches. A fade, not a bar:
+> every screen has a big coloured wash at the top and a solid band cuts a flat
+> edge through it.
+
+**X / Twitter** — the Progress one:
+
+> A habit at 43% looked healthier than one at 45% sitting right under it.
+>
+> Each card was tinted with its own habit's colour. So the two things on the
+> card that read as a verdict — the hue and the number — disagreed with each
+> other, and the hue won.
+>
+> The colour identifies the habit now. The number is the only thing allowed an
+> opinion.
+
+---
+
 ## 8 October 2026 · The water never actually reached the brim
 
 **Status:** ready

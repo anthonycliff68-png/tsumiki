@@ -7,6 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { Dock, DockClearanceProvider } from '@/components/Dock';
 import { FirstRunPlans } from '@/components/FirstRunPlans';
 import { PaywallGate } from '@/components/PaywallGate';
+import { StatusBarScrim } from '@/components/StatusBarScrim';
 import { WALKTHROUGH_SEEN } from '@/app/(onboarding)/first-check-in';
 import { useAnchors, useHabits, useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -81,6 +82,9 @@ export default function TabsLayout() {
           <Tabs.Screen name="progress" />
           <Tabs.Screen name="you" />
         </Tabs>
+        {/* Over the tabs, under the dock: every screen scrolls up into the
+            status bar and none of them handled it. */}
+        <StatusBarScrim />
       </DockClearanceProvider>
     </PaywallGate>
   );
