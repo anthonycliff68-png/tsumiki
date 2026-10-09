@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
-### The screen that stopped reporting — `PENDING`
+### The screen that stopped reporting — `05b310c`, `76a8407`
 
 Two reports, one screen, and the first one was right about the symptom and
 wrong about the cause: *"when it has the last habit on the 'take me in' — it
