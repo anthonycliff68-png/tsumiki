@@ -19,8 +19,14 @@ import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme
 /** Set once the walkthrough has been through, so it never interrupts twice. */
 export const WALKTHROUGH_SEEN = 'tsumiki.walkthrough.seen';
 
-/** How long "That was it" stays up before the app opens itself. */
-const AFTER_CHECK_MS = 1500;
+/**
+ * How long "That was it" stays up before the app opens itself.
+ *
+ * Long enough to see the headline land and catch the first line; short enough
+ * that it never feels like waiting. A second and a half read as a pause at the
+ * end of setting something up, which is the one moment nobody wants a pause.
+ */
+const AFTER_CHECK_MS = 900;
 
 /**
  * The last step: doing it, rather than being told about it.

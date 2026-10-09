@@ -64,10 +64,13 @@ from the habit means the whole screen moves when the orb does: headline,
 explanation, and the button between "I will do it later" and "Take me in".
 
 Then the second report: **the check should take you in on its own.** It now
-does, after holding the confirmation for a second and a half. Long enough to
-read what happens tomorrow and how one missed day is forgiven, which onboarding
-explains nowhere else; short enough not to feel stuck. Going instantly would
-have bought a tap and lost the only explanation of the rule the app is built on.
+does, after holding the confirmation for nine tenths of a second. Long enough
+to see the headline land and catch the first line about what happens tomorrow,
+which onboarding explains nowhere else; short enough that it never reads as
+waiting. It began at a second and a half and that was too long — a pause at the
+end of setting something up is the one pause nobody wants. Going instantly
+would have bought a tap and lost the only explanation of the rule the app is
+built on.
 
 Two edges that needed saying out loud. Arriving on a habit already checked off
 does **not** trigger the exit — you have not just done anything, and being
