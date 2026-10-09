@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 
 import { goBack } from '@/lib/back';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -65,8 +65,16 @@ export default function RoutineScreen() {
    * that changes later. Cheaper to make the screen refuse than to remember
    * every route into it.
    */
+  const arrivedWithRoutine = useRef<boolean | null>(null);
   useEffect(() => {
-    if (existing && existing.length > 0) router.replace('/');
+    if (!existing) return;
+    // Only what was true on arrival. Saving the routine makes this query
+    // answer "yes, there are moments" a moment later, and the screen was
+    // reading its own work as somebody else's: it redirected into the app
+    // while the save was still pushing on to the first habit, so steps 3 and
+    // 4 never appeared and the plans arrived instead.
+    if (arrivedWithRoutine.current === null) arrivedWithRoutine.current = existing.length > 0;
+    if (arrivedWithRoutine.current) router.replace('/');
   }, [existing]);
 
   const [rows, setRows] = useState<Row[]>(initialRows);

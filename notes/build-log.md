@@ -22,3 +22,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `41de1d2` — Name the commit in the entry for it
 - 2026-10-09 · `3b95d01` — Say what actually went wrong when a routine will not save
 - 2026-10-09 · `ed8a310` — Put the plans at the end of setting up, not after it
+- 2026-10-09 · `8d0e50b` — Show step 1 to everyone setting up

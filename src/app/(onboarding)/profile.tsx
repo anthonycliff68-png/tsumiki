@@ -190,10 +190,17 @@ const makeStyles = (colors: Palette) => ({
     color: colors.white,
   },
   // An emoji is a glyph, not type: the display face would letter-space it.
+  //
+  // The line height has to come with the size. This overrode the family, the
+  // size and the spacing but left lineHeight at the display face's 34 — a 44pt
+  // glyph in a 34pt box, so the emoji sat high in the disc with its top
+  // shaved off.
   previewEmoji: {
     fontFamily: undefined,
     fontSize: 44,
+    lineHeight: 52,
     letterSpacing: 0,
+    textAlign: 'center',
   },
   footer: {
     position: 'absolute',

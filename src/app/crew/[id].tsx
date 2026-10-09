@@ -464,7 +464,9 @@ const makeStyles = (colors: Palette) => ({
   tile: { width: 100, height: 100, borderRadius: radii.card, alignItems: 'center', justifyContent: 'center' },
   tileInitials: { ...display(34, 34), color: colors.white },
   // An emoji is a glyph, not type: the display face would letter-space it.
-  tileEmoji: { fontFamily: undefined, fontSize: 34, letterSpacing: 0 },
+  // As on the profile disc: the size was overridden and the line box was
+  // not, so the glyph overflowed the one it inherited.
+  tileEmoji: { fontFamily: undefined, fontSize: 34, lineHeight: 42, letterSpacing: 0, textAlign: 'center' },
   memberName: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   memberMoment: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   memberButton: {

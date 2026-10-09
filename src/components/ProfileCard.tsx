@@ -185,7 +185,9 @@ const makeStyles = (colors: Palette) => ({
   },
   discFace: { ...display(24, 24), color: colors.white },
   // An emoji is a glyph, not type: the display face would letter-space it.
-  discEmoji: { fontFamily: undefined, fontSize: 30, letterSpacing: 0 },
+  // The line box has to come with the size, or a 30pt glyph sits in the
+  // display face's 24pt box and loses its top.
+  discEmoji: { fontFamily: undefined, fontSize: 30, lineHeight: 36, letterSpacing: 0, textAlign: 'center' },
   who: { flex: 1, gap: 2 },
   name: { ...display(26, 26), color: colors.text },
   since: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
