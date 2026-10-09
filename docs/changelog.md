@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
-### I broke setting up, for an hour — `PENDING`
+### I broke setting up, for an hour — `79fe4fe`
 
 The unique index an hour earlier did what it was for and something it was not.
 
