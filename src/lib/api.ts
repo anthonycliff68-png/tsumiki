@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { EVERY_DAY } from '@/data/defaults';
@@ -1281,12 +1282,40 @@ export function useResetHistory(userId: string | undefined) {
 /**
  * Delete the account and everything hanging off it. There is no undo and no
  * grace period: the row goes, and the cascade takes the rest.
+ *
+ * And then the device, which is the part this used to forget. Deleting wiped
+ * the server and left the phone remembering every flag it had ever set, so
+ * somebody who deleted their account and signed up again got no welcome
+ * carousel, no offer of the plans, and stale hints — the app treating a brand
+ * new account as a returning one. Reported from the live build the day 1.1
+ * came out.
+ *
+ * Everything under the `tsumiki.` prefix goes, the session with it, and the
+ * query cache after that. The next person to open this app should find it the
+ * way the App Store does.
  */
 export function useDeleteAccount() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc('delete_my_account');
       if (error) throw error;
+
+      // Asked for rather than assumed: the keys on the device are
+      // `tsumiki.*` for our own flags and `sb-*` for the stored session. The
+      // session is the one that matters most and is the one a prefix of
+      // "tsumiki." would have missed — signOut alone is not enough to rely on,
+      // because the user it belongs to has just stopped existing.
+      await supabase.auth.signOut().catch(() => {});
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const ours = keys.filter((key) => key.startsWith('tsumiki.') || key.startsWith('sb-'));
+        if (ours.length > 0) await AsyncStorage.multiRemove(ours);
+      } catch {
+        // A device that will not let go of its flags is not a reason to leave
+        // the account half-deleted; the server row is already gone.
+      }
+      queryClient.clear();
     },
   });
 }

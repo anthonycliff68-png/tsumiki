@@ -44,6 +44,9 @@ export default function DeleteAccountRoute() {
         busy={remove.isPending}
         onPress={() =>
           remove.mutate(undefined, {
+            // Back to the top, where a signed-out app starts: the welcome
+            // carousel, because its "seen" flag went with everything else.
+            onSuccess: () => router.replace('/'),
             onError: (e) => setError(e instanceof Error ? e.message : copy.auth.genericError),
           })
         }

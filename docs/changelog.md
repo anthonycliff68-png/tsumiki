@@ -48,6 +48,30 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
+### Deleting your account left the phone remembering everything — `PENDING`
+
+Reported from the live build the day 1.1 was approved: delete your account,
+sign up again, and the app skips the welcome carousel, never offers the plans,
+and drops you somewhere in the middle of setting up.
+
+`delete_my_account` wiped the server and nothing else. The device kept every
+flag it had ever set — `tsumiki.welcome.seen`, `tsumiki.plansOffered`, the
+hints — and the stored session with them, so a brand new account was handed a
+returning user's app. Nothing was broken; the phone was just answering
+questions about somebody who no longer existed.
+
+Deleting now flushes the device: the session first, then every `tsumiki.` key,
+then the query cache, then back to the top. The next person to open the app
+finds it the way the App Store does.
+
+Two things that only came out of actually listing what is stored. The session
+is kept under `sb-…`, not `tsumiki.`, so a prefix sweep would have cleared the
+flags and left the session behind — the one key that matters most. And
+`signOut` cannot be relied on to remove it, because by then the user it belongs
+to has stopped existing, so the key is removed by hand as well.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--deleting-your-account-left-the-phone-remembering-everything).
+
 ### The last page of setting up is gone — `46f29a6`
 
 Onboarding ended on a page whose only job was one check-in. Two readers found

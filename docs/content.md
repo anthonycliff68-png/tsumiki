@@ -12,6 +12,30 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · Deleting your account left the phone remembering everything
+
+**Status:** todo — no clip. Filming it means deleting a real account; worth
+capturing next time one is genuinely being thrown away.
+
+**Assets** — none yet.
+
+**X / Twitter**
+
+> My app shipped yesterday. Today someone deleted their account, signed up
+> again, and got no welcome screen, no paywall, and a half-finished setup.
+>
+> Deleting wiped the server and nothing else. The phone still held every flag
+> it had ever set — seen the welcome, been offered the plans, read the hints —
+> so a brand new account was handed a returning user's app.
+>
+> The part I'd have got wrong by guessing: the session isn't stored under my
+> app's prefix. It's under the auth library's. A tidy one-line sweep would
+> have cleared the flags and left the session sitting there.
+>
+> Listing what's actually on the device took a minute and changed the fix.
+
+---
+
 ## 9 October 2026 · The last page of setting up is gone
 
 **Status:** ready
