@@ -48,6 +48,36 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
+### Six people were seeing their day twice — `PENDING`
+
+Caedon reported "each event pops up twice" with a screenshot of Wake up, Gym,
+Coffee, Work starts and Lunch all doubled. I said it was the crewmate-leak bug
+fixed on 1 October and that he only needed the release. **That was wrong**, and
+checking his rows rather than reasoning about them is what showed it: the
+duplicates are genuine rows on his own account, and no release would have
+touched them.
+
+It is six accounts, not one, and the App Review login is among them. Every one
+signed up on 1.0, which went to the App Store on 28 September — two days before
+the setup screen learned to refuse a second save. The guard protects everyone
+from this version on and nobody it already happened to.
+
+29 duplicate rows are gone, each an exact copy of one that stays. No habit
+moved: nothing was hanging off any of them. A unique index on
+`(user_id, label, usual_time)` now refuses the next one, from any client and
+any version — a rule the app keeps is only as good as the version running it.
+
+**Label and time, not label alone.** One account has "Brush teeth, bed" at
+22:00 *and* 22:30, which is somebody editing a copy rather than the bug. A
+constraint on the name by itself would have forced the cleanup to choose which
+of their two bedtimes to destroy. Exact copies are the fault; a repeated name
+at a different time is a decision, and it is still allowed.
+
+Verified after: no duplicates left, the index present, and an attempted
+duplicate insert rejected by name inside a transaction that rolled back.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--six-people-were-seeing-their-day-twice).
+
 ### Deleting your account left the phone remembering everything — `eff9edf`
 
 Reported from the live build the day 1.1 was approved: delete your account,

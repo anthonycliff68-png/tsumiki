@@ -12,6 +12,29 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · Six people were seeing their day twice
+
+**Status:** ready — no clip; this one lives in the database.
+
+**Assets** — none. A screenshot of the before is in Caedon's bug report.
+
+**X / Twitter**
+
+> A tester sent me a screenshot: every moment in his day showing twice.
+>
+> I told him it was a bug I'd fixed on 1 October and he just needed the
+> update. Then I actually looked at his rows. They were real duplicates on his
+> own account — no release was ever going to touch them. And it wasn't one
+> person, it was six, including the account Apple reviews with.
+>
+> All of them signed up on 1.0, which shipped two days before the screen
+> learned to refuse a second save. The fix protected everyone except the people
+> it had already happened to.
+>
+> Reasoning about the bug got me the wrong answer. Querying it took a minute.
+
+---
+
 ## 9 October 2026 · Deleting your account left the phone remembering everything
 
 **Status:** todo — no clip. Filming it means deleting a real account; worth
