@@ -26,3 +26,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `0c4c71d` — Let setting up reach steps 3 and 4, and stop cropping the emoji
 - 2026-10-09 · `8048fd4` — Call this one 1.2
 - 2026-10-09 · `3804de2` — Cut the dead air out of the middle of a clip
+- 2026-10-09 · `1c2c78d` — Put the test account back after something deletes it
