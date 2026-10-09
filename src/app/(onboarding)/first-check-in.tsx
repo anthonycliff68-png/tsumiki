@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +18,9 @@ import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme
 
 /** Set once the walkthrough has been through, so it never interrupts twice. */
 export const WALKTHROUGH_SEEN = 'tsumiki.walkthrough.seen';
+
+/** How long "That was it" stays up before the app opens itself. */
+const AFTER_CHECK_MS = 1500;
 
 /**
  * The last step: doing it, rather than being told about it.
@@ -61,6 +64,41 @@ export default function FirstCheckInScreen() {
         : habit.time
           ? `at ${formatTime(habit.time)}`
           : '';
+
+  /**
+   * Once it is checked off, the screen shows its piece and then leaves.
+   *
+   * Making somebody tap a second button to get into an app they have just
+   * finished setting up is a tap too many, and a reader said so. But going
+   * instantly would skip the only place onboarding explains what happens
+   * tomorrow and how one missed day is forgiven, so the hold is the point
+   * rather than a delay: long enough to read the headline and start the first
+   * line, short enough not to feel stuck. Undo is still a tap away on Today.
+   */
+  const leaving = useRef(false);
+  /**
+   * The previous value of `done`, or null until the habit has loaded.
+   *
+   * What triggers the exit is the change from unchecked to checked while this
+   * screen is open — not the state itself. Someone arriving on a habit they
+   * have already done has not just done anything, and throwing them out a
+   * second and a half later would read as a malfunction rather than a finish.
+   * Checking that it merely *is* done was not enough: undo it and check it
+   * again and the screen sat there, because it had only ever asked how things
+   * started.
+   */
+  const wasDone = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!habit) return;
+    const before = wasDone.current;
+    wasDone.current = done;
+    if (before !== false || !done || leaving.current) return;
+    leaving.current = true;
+    const timer = setTimeout(() => leave(), AFTER_CHECK_MS);
+    return () => clearTimeout(timer);
+    // leave only writes a flag and replaces the route, so it needs no deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habit, done]);
 
   const leave = () => {
     // Remembered before navigating: arriving in the app and being bounced

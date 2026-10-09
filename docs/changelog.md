@@ -46,6 +46,39 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ---
 
+## 9 October 2026
+
+### The screen that stopped reporting — `PENDING`
+
+Two reports, one screen, and the first one was right about the symptom and
+wrong about the cause: *"when it has the last habit on the 'take me in' — it
+won't let me tap the check mark."*
+
+It let you tap it every time. **"That was it" had its own piece of state**, set
+the moment the orb was first tapped and never set back, so the headline froze
+there for good — undo the check-in and the words still congratulated you. The
+orb draws a tick in *both* states and changes only its colour, so somebody
+toggling it saw a frozen headline above a circle that looked much the same
+either way. Entirely reasonable to call that a dead button. Reading the state
+from the habit means the whole screen moves when the orb does: headline,
+explanation, and the button between "I will do it later" and "Take me in".
+
+Then the second report: **the check should take you in on its own.** It now
+does, after holding the confirmation for a second and a half. Long enough to
+read what happens tomorrow and how one missed day is forgiven, which onboarding
+explains nowhere else; short enough not to feel stuck. Going instantly would
+have bought a tap and lost the only explanation of the rule the app is built on.
+
+Two edges that needed saying out loud. Arriving on a habit already checked off
+does **not** trigger the exit — you have not just done anything, and being
+thrown out would read as a malfunction. And it is the *change* from unchecked to
+checked that triggers it, not the state: an earlier version asked only how
+things started, so undoing and re-checking sat there doing nothing.
+
+**[Side by side](demos/2026-10-09-first-check-in-compare.mp4)** — 12s.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--the-screen-that-stopped-reporting).
+
 ## 8 October 2026
 
 ### A button that did not look like one — `19217f2`

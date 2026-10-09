@@ -12,6 +12,28 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · The screen that stopped reporting
+
+**Status:** ready
+
+**Assets** — `2026-10-09-first-check-in-compare.mp4` (12s).
+
+**X / Twitter**
+
+> "It won't let me tap the check mark."
+>
+> It let him tap it every time. The screen just stopped reporting it.
+>
+> "That was it" was its own piece of state, set on the first tap and never set
+> back. So the headline froze — undo the check-in and the words still
+> congratulated you. And the circle draws a tick in both states, changing only
+> its colour. Frozen headline, near-identical circle. Of course it looked dead.
+>
+> Right about the symptom, wrong about the cause. Worth remembering when
+> someone tells you a button is broken.
+
+---
+
 ## 8 October 2026 · A button that did not look like one
 
 **Status:** ready
