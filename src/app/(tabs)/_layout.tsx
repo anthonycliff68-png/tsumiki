@@ -30,18 +30,25 @@ export default function TabsLayout() {
     );
   }
 
-  // No name means a blank tile to everyone sharing a crew with you, so this
-  // comes before the routine. It also catches accounts made before the step
-  // existed — anyone who signed in by email was never asked.
-  if (!profileError && profile && profile.display_name.trim() === '') {
+  /**
+   * Step 1, for everyone setting up, and for anyone still missing a name.
+   *
+   * It used to be skipped whenever a name was already there, which Sign in
+   * with Apple always provides — so half the people who installed the app
+   * opened it on a screen headed "Step 2" with the third of five dots lit, and
+   * no idea what they had missed. The numbering was honest about a sequence
+   * that had quietly had a step removed from it, which is not the same as
+   * being right.
+   *
+   * Nobody is asked for something we already know: the field arrives filled in
+   * with whatever Apple told us, so it costs one tap and buys the same five
+   * screens for everybody. A blank name is still caught on its own, because an
+   * account made before this step existed has a routine and no name.
+   */
+  const settingUp = !isError && anchors && anchors.length === 0;
+  const unnamed = !profileError && profile && profile.display_name.trim() === '';
+  if (settingUp || unnamed) {
     return <Redirect href="/profile" />;
-  }
-
-  // A day with no anchors has nothing to stack onto: set the routine up first.
-  // If the query failed, let the tabs render — better a thin screen than a
-  // sign-up loop the user cannot escape.
-  if (!isError && anchors && anchors.length === 0) {
-    return <Redirect href="/routine" />;
   }
 
   return (
