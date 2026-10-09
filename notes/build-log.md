@@ -24,3 +24,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `ed8a310` — Put the plans at the end of setting up, not after it
 - 2026-10-09 · `8d0e50b` — Show step 1 to everyone setting up
 - 2026-10-09 · `0c4c71d` — Let setting up reach steps 3 and 4, and stop cropping the emoji
+- 2026-10-09 · `8048fd4` — Call this one 1.2

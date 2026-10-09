@@ -12,6 +12,43 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · Setting up runs all five steps
+
+**Status:** todo
+
+**Assets** — [demos/2026-10-09-setting-up.mp4](demos/2026-10-09-setting-up.mp4),
+20s, the whole flow start to finish.
+
+**X / Twitter**
+
+> My onboarding is five steps. Most people were seeing two of them.
+>
+> Step 2 writes your routine. Step 2 also checks, on mount, whether you already
+> have a routine — and if you do, it sends you out of setup, because you are
+> not supposed to be there.
+>
+> It never unmounted. So the moment it saved, its own guard turned true and
+> threw you out of the flow you were halfway through. Steps 3 and 4 never
+> happened. You landed on the paywall having never been asked what your day
+> looks like.
+>
+> The guard was right about the rule and wrong about the tense. It now reads
+> what was true when the screen opened, not what is true by the time it
+> finishes.
+
+Attach the clip. The first second is step 1, which is the point — it is the
+screen most people never saw.
+
+Reply, if you want the second beat:
+
+> Third time this week I have written a guard that cannot tell "this was
+> already true" from "I just made it true."
+>
+> Same bug in the first check-in screen and in the account-deletion flush.
+> It is not a typo, it is a habit.
+
+---
+
 ## 9 October 2026 · I broke setting up, for an hour
 
 **Status:** ready — no clip. The evidence is a screenshot of the error on a real phone.

@@ -48,6 +48,45 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
+### Setting up runs all five steps, and 1.2 goes out — `0c4c71d`, `8048fd4`
+
+Setting up was five steps and most people saw two of them. Step 1 was shown
+only to accounts old enough to have missed it the first time, and steps 3 and 4
+were skipped outright: the screen that writes your routine checks on mount
+whether you already have one, and by the time step 2 had saved, that check was
+true — so it sent you away from the flow it was in the middle of. Everyone
+landed on the paywall having never been asked what their day looks like or what
+habit they wanted.
+
+The guard now reads what was true when the screen opened, not what is true by
+the time it finishes. Same commit stops the chosen emoji being cropped: the
+style overrode the font, the size and the letter-spacing, and left the display
+face's 34pt line height around a 44pt glyph.
+
+![Setting up, all five steps](demos/2026-10-09-setting-up.mp4)
+
+`8048fd4` calls it 1.2 and sends it to build. Forty-eight commits since 1.1
+reached the App Store and none of them have reached a phone. It is also the
+first build carrying `expo-updates`, so it is the last one that needs App
+Review to fix a line of JavaScript.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--setting-up-runs-all-five-steps).
+
+### Cutting the dead air out of the middle
+
+`scripts/clip.swift` trimmed the still screen off each end, which was never the
+whole problem. Driving the simulator leaves two or three seconds of nothing
+between every tap, and a clip of a working flow reads as a slow app. It is not
+the app that is slow.
+
+`scripts/tighten.swift` finds every stretch where the screen does not change and
+keeps a beat of it. The run above went from 142 seconds to 20. Animations stay
+at their real speed on purpose — speeding the whole video up would misrepresent
+the thing the clip exists to show.
+
+**Content:** not needed — tooling.
+
+
 ### I broke setting up, for an hour — `79fe4fe`
 
 The unique index an hour earlier did what it was for and something it was not.
