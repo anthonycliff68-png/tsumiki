@@ -48,6 +48,28 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
+### A button that did not look like one — `PENDING`
+
+Reported by a reader with a screenshot: *"I can't delete habits at the start of
+setting up. This makes it rough if for example I don't do lunch but now I'm
+accepting that into my new schedule with the app."*
+
+He could. The control was there the whole time — a 16px cross in the faintest
+grey in the palette, sitting outside the row with nothing around it, next to a
+filled and obviously tappable time chip. It read as a divider. He changed his
+actual daily routine to fit a screen he had misread, which is the most
+expensive kind of interface bug there is.
+
+It is a button, so it looks like one: the cross sits in a bordered circle, a
+shade brighter, inside a 44pt target. And the blurb now says the thing out loud
+— *"Rough times are fine, and drop any you do not do."* A control nobody can
+find and a permission nobody knows they have are the same bug twice.
+
+**[Side by side](demos/2026-10-08-routine-remove-compare.mp4)** — 9s. The after
+drops Lunch, which is the one he was stuck with.
+
+**Content:** drafted — [content.md](content.md#8-october-2026--a-button-that-did-not-look-like-one).
+
 ### Three things the eye caught before the code did — `82844d6`
 
 **Today scrolled its header into the status bar.** THURSDAY and the day's count

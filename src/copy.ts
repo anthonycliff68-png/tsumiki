@@ -166,7 +166,7 @@ export const copy = {
       // worked out what it was after reaching the home screen. Saying what
       // these are not is the part that was missing.
       blurb:
-        'Not habits to tick off \u2014 these already happen. They are the moments in your day, and habits hang off them. Rough times are fine.',
+        'Not habits to tick off \u2014 these already happen. They are the moments in your day, and habits hang off them. Rough times are fine, and drop any you do not do.',
       addOwn: 'Your own',
       ownPlaceholder: 'Name this moment',
       timeLabel: (label: string) => `Change the time for ${label}`,

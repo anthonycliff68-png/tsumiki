@@ -12,6 +12,28 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 8 October 2026 · A button that did not look like one
+
+**Status:** ready
+
+**Assets** — `2026-10-08-routine-remove-compare.mp4` (9s).
+
+**X / Twitter**
+
+> A reader told me he couldn't delete a moment while setting up my app, so he
+> was keeping Lunch in his day to fit the schedule it gave him.
+>
+> He could. The × was there the whole time — 16px, the faintest grey in the
+> palette, floating outside the row next to a filled, obviously tappable time
+> chip. It read as a divider.
+>
+> He changed his actual daily routine to fit a screen he had misread. That is
+> the most expensive kind of interface bug there is.
+>
+> It's a button. It looks like one now.
+
+---
+
 ## 8 October 2026 · Three things the eye caught before the code did
 
 **Status:** ready

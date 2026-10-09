@@ -188,13 +188,23 @@ export default function RoutineScreen() {
                 <Text style={styles.timeLabel}>{formatTimeGutter(row.usualTime)}</Text>
               </Pressable>
 
+              {/**
+                * This used to be a bare 16px cross in textFaint, floating off
+                * the end of the row with nothing around it. Next to a filled,
+                * obviously tappable time chip it read as a divider, and a
+                * reader told us he was keeping Lunch in his day because he
+                * could not see how to drop it — he changed his actual routine
+                * to fit the screen. It is a button, so it looks like one now.
+                */}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={copy.onboarding.routine.removeLabel(row.label)}
                 onPress={() => removeRow(row.id)}
                 style={({ pressed }) => [styles.remove, pressed && styles.pressed]}
               >
-                <CloseIcon size={16} color={colors.textFaint} />
+                <View style={styles.removeCircle}>
+                  <CloseIcon size={14} color={colors.textMuted} />
+                </View>
               </Pressable>
             </View>
           ))}
@@ -301,8 +311,17 @@ const makeStyles = (colors: Palette) => ({
   },
   // Its own target rather than a corner of the row, so removing a moment is
   // never something you do by reaching for its time.
+  removeCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   remove: {
-    width: 40,
+    width: 44,
     height: 44,
     flexShrink: 0,
     alignItems: 'center',
