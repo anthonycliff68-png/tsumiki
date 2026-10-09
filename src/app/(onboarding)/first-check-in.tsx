@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,7 +41,17 @@ export default function FirstCheckInScreen() {
   const undo = useUndoCheckIn(userId);
 
   const habit = useMemo(() => orderForDay(habits)[0], [habits]);
-  const [done, setDone] = useState(false);
+  /**
+   * Read from the habit, not held separately.
+   *
+   * This used to be its own piece of state, set to true the moment the orb was
+   * tapped and never set back. So the screen said "That was it" for good — undo
+   * the check-in and the words still congratulated you. Worse, the orb draws a
+   * tick in both states and only changes colour, so somebody toggling it saw a
+   * frozen headline above a circle that looked much the same either way, and
+   * reasonably concluded the button was dead. It was working the whole time.
+   */
+  const done = habit?.checkedIn ?? false;
 
   const moment =
     !habit || habit.mode === 'any'
@@ -107,7 +117,6 @@ export default function FirstCheckInScreen() {
                     undo.mutate({ habitId: habit.id });
                   } else {
                     checkIn.mutate({ habitId: habit.id });
-                    setDone(true);
                   }
                 }}
               />
