@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 8 October 2026
 
-### Three things the eye caught before the code did — `PENDING`
+### Three things the eye caught before the code did — `82844d6`
 
 **Today scrolled its header into the status bar.** THURSDAY and the day's count
 rode straight over the clock and the battery — white on white, each legible
