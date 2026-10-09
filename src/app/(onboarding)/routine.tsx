@@ -12,6 +12,7 @@ import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
+import { messageFrom } from '@/lib/errors';
 import { DEFAULT_ANCHORS, EXTRA_ANCHORS, formatTimeGutter } from '@/data/defaults';
 import { useAnchors, useSaveRoutine } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -133,7 +134,7 @@ export default function RoutineScreen() {
       await saveRoutine.mutateAsync(payload);
       then();
     } catch (e) {
-      setError(e instanceof Error ? e.message : copy.onboarding.routine.failed);
+      setError(messageFrom(e, copy.onboarding.routine.failed));
     }
   };
 

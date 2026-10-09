@@ -18,3 +18,5 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `c46e574` — Re-run onboarding without sending an email
 - 2026-10-09 · `21f0ace` — Refuse a moment that already exists, and clean up the ones that do
 - 2026-10-09 · `356ceee` — Name the commit in the entry for it
+- 2026-10-09 · `79fe4fe` — Make saving a moment twice harmless, in the database
+- 2026-10-09 · `41de1d2` — Name the commit in the entry for it
