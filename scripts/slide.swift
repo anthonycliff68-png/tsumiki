@@ -14,6 +14,12 @@
 //
 // Usage:
 //   swift scripts/slide.swift <shot.png> <out.png> [width] [height]
+//   swift scripts/slide.swift <shot.png> <out.png> --cutout [width] [height]
+//
+// --cutout drops the ground and the glow and leaves the rounded screen alone
+// on transparency, for dropping onto a background chosen somewhere else. With
+// no size it is cropped tight to the device; with one it is centred on a
+// transparent canvas of that size, so it lands already aligned.
 
 import AppKit
 import Foundation
@@ -23,11 +29,14 @@ guard args.count >= 3 else {
     FileHandle.standardError.write("usage: slide.swift <shot.png> <out.png> [w] [h]\n".data(using: .utf8)!)
     exit(2)
 }
-let W = args.count > 3 ? Int(args[3]) ?? 1080 : 1080
-let H = args.count > 4 ? Int(args[4]) ?? 1920 : 1920
+let cutout = args.contains("--cutout")
+let sizes = args.dropFirst(3).filter { $0 != "--cutout" }.compactMap { Int($0) }
+// A tight cutout takes its size from the screenshot; everything else defaults
+// to the 9:16 the phone feeds want.
+let wantsSize = sizes.count >= 2 || !cutout
 
-guard let shot = NSImage(contentsOfFile: args[1]),
-      let shotCG = shot.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+guard let shot0 = NSImage(contentsOfFile: args[1]),
+      let shotCG = shot0.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
     FileHandle.standardError.write("could not read \(args[1])\n".data(using: .utf8)!)
     exit(1)
 }
@@ -63,6 +72,9 @@ func tint(of image: CGImage) -> NSColor {
 
 let accent = tint(of: shotCG)
 
+let W = wantsSize ? (sizes.first ?? 1080) : shotCG.width
+let H = wantsSize ? (sizes.dropFirst().first ?? 1920) : shotCG.height
+
 // Drawn into a bitmap of exactly the requested size, not via NSImage's
 // lockFocus. lockFocus renders at the display's backing scale, so on a retina
 // Mac it quietly produced 2160x3840 while reporting 1080x1920 — right aspect,
@@ -78,10 +90,12 @@ NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = gctx
 let ctx = gctx.cgContext
 
-// Ground: the app's own near-black, so the slide reads as part of the app and
-// not as a screenshot someone pasted onto a gradient.
-NSColor(red: 0x0B / 255.0, green: 0x0B / 255.0, blue: 0x0C / 255.0, alpha: 1).setFill()
-NSBezierPath(rect: NSRect(x: 0, y: 0, width: W, height: H)).fill()
+if !cutout {
+    // Ground: the app's own near-black, so the slide reads as part of the app
+    // and not as a screenshot someone pasted onto a gradient.
+    NSColor(red: 0x0B / 255.0, green: 0x0B / 255.0, blue: 0x0C / 255.0, alpha: 1).setFill()
+    NSBezierPath(rect: NSRect(x: 0, y: 0, width: W, height: H)).fill()
+}
 
 // Two soft circles of the screen's own colour, the same move the app makes
 // behind every screen.
@@ -94,12 +108,14 @@ func bleed(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ alpha: CGFloat) {
                            endCenter: CGPoint(x: cx, y: cy), endRadius: r,
                            options: .drawsAfterEndLocation)
 }
-bleed(CGFloat(W) * 0.18, CGFloat(H) * 0.80, CGFloat(W) * 0.95, 0.50)
-bleed(CGFloat(W) * 0.88, CGFloat(H) * 0.26, CGFloat(W) * 0.80, 0.34)
+if !cutout {
+    bleed(CGFloat(W) * 0.18, CGFloat(H) * 0.80, CGFloat(W) * 0.95, 0.50)
+    bleed(CGFloat(W) * 0.88, CGFloat(H) * 0.26, CGFloat(W) * 0.80, 0.34)
+}
 
 // The phone, sized to leave a clear margin top and bottom so nothing lands
 // under TikTok's own caption and button furniture.
-let targetH = CGFloat(H) * 0.80
+let targetH = CGFloat(H) * (cutout && sizes.count < 2 ? 1.0 : 0.80)
 let scale = targetH / CGFloat(shotCG.height)
 let targetW = CGFloat(shotCG.width) * scale
 let x = (CGFloat(W) - targetW) / 2
@@ -107,22 +123,28 @@ let y = (CGFloat(H) - targetH) / 2
 let frame = CGRect(x: x, y: y, width: targetW, height: targetH)
 let radius = targetW * 0.092   // close to the device's own corner
 
-ctx.saveGState()
-ctx.setShadow(offset: .zero, blur: 70, color: accent.withAlphaComponent(0.55).cgColor)
-NSColor.black.setFill()
-NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius).fill()
-ctx.restoreGState()
+if !cutout {
+    ctx.saveGState()
+    ctx.setShadow(offset: .zero, blur: 70, color: accent.withAlphaComponent(0.55).cgColor)
+    NSColor.black.setFill()
+    NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius).fill()
+    ctx.restoreGState()
+}
 
 ctx.saveGState()
 NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius).addClip()
 ctx.draw(shotCG, in: frame)
 ctx.restoreGState()
 
-// A hairline so the dark screen never dissolves into the dark ground.
-NSColor.white.withAlphaComponent(0.16).setStroke()
-let edge = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
-edge.lineWidth = 2
-edge.stroke()
+if !cutout {
+    // A hairline so the dark screen never dissolves into the dark ground.
+    // Left off a cutout: it has no idea what it is going to be placed on, and
+    // an edge drawn for a dark background is a visible seam on a light one.
+    NSColor.white.withAlphaComponent(0.16).setStroke()
+    let edge = NSBezierPath(roundedRect: frame, xRadius: radius, yRadius: radius)
+    edge.lineWidth = 2
+    edge.stroke()
+}
 
 NSGraphicsContext.restoreGraphicsState()
 
