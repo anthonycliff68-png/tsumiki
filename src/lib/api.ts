@@ -72,7 +72,21 @@ export function useSaveRoutine(userId: string | undefined) {
         sort_order: index,
         is_default: anchor.isDefault,
       }));
-      const { data, error } = await supabase.from('anchors').insert(rows).select();
+      // Upsert, not insert, so saving the same routine twice is harmless.
+      //
+      // The screen guards on mount, but going forward to the next step and
+      // coming back leaves it mounted, so the guard never runs again and
+      // "Looks right" fires a second save. That is how six accounts ended up
+      // with every moment doubled, and once the database started refusing
+      // duplicates it turned into "Could not save your routine" instead.
+      //
+      // The unique index on (user_id, label, usual_time) is what makes this
+      // possible: a moment that is already there is skipped rather than
+      // repeated, and the screen moves on as if it had worked, because it has.
+      const { data, error } = await supabase
+        .from('anchors')
+        .upsert(rows, { onConflict: 'user_id,label,usual_time', ignoreDuplicates: true })
+        .select();
       if (error) throw error;
       return data;
     },

@@ -48,6 +48,37 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
+### I broke setting up, for an hour — `PENDING`
+
+The unique index an hour earlier did what it was for and something it was not.
+
+The setup screen inserts the whole routine on "Looks right". It guards against
+a second save when it first appears, but going forward a step and coming back
+leaves it mounted, so the guard never re-runs and a second tap fires a second
+insert. **That is how all six accounts got their doubled day** — not a
+mysterious old build, just a back button.
+
+Before the index that quietly made duplicates. After it, the insert failed, the
+screen said *"Could not save your routine. Try again."*, and it would have said
+it every time. Somebody could have sat on step 2 of setting up with no way
+forward. Paq hit it on his own phone within the hour.
+
+The app now upserts, which is the proper fix and is in a build nobody has: 1.1
+shipped before over-the-air updates existed, so the only place a fix reaches
+today's users is the database. A trigger drops an insert for a moment that
+already exists instead of raising — the row the caller wanted is already there,
+which is what they were asking for. The index still guarantees there is only
+ever one.
+
+Live users were fixed without a release. Verified: the trigger is on, a repeat
+insert raises nothing, and there are still no duplicates anywhere.
+
+The lesson is not about the index, which was right. It is that tightening a
+rule in the database changes what every client already in the wild does when it
+breaks that rule — and the client in the wild could not be changed.
+
+**Content:** drafted — [content.md](content.md#9-october-2026--i-broke-setting-up-for-an-hour).
+
 ### Six people were seeing their day twice — `21f0ace`
 
 Caedon reported "each event pops up twice" with a screenshot of Wake up, Gym,

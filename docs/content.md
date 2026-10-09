@@ -12,6 +12,34 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 9 October 2026 · I broke setting up, for an hour
+
+**Status:** ready — no clip. The evidence is a screenshot of the error on a real phone.
+
+**Assets** — none.
+
+**X / Twitter**
+
+> Added a unique constraint this morning to stop a bug that had given six
+> users a doubled schedule. Correct fix. Took an hour to find out what else it
+> did.
+>
+> The setup screen inserts your whole routine on save. Go forward a step, come
+> back, tap save again — the screen never unmounted, so its guard never re-ran.
+> Before the constraint that silently duplicated everything. That's how all six
+> got their doubled day. A back button.
+>
+> After the constraint, it errors. Forever. You can't finish setting up.
+>
+> The app fix was one line. It's in a build nobody has — we shipped before
+> over-the-air updates existed. So the fix had to go in the database: a trigger
+> that drops a duplicate insert instead of raising.
+>
+> Tightening a rule in the database changes what every client already in the
+> wild does when it breaks that rule. And those clients can't be changed.
+
+---
+
 ## 9 October 2026 · Six people were seeing their day twice
 
 **Status:** ready — no clip; this one lives in the database.
