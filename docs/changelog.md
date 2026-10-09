@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
-### The last page of setting up is gone — `PENDING`
+### The last page of setting up is gone — `46f29a6`
 
 Onboarding ended on a page whose only job was one check-in. Two readers found
 it unnecessary and one of them could not tell the button was working, which is
