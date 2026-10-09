@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
-### Deleting your account left the phone remembering everything — `PENDING`
+### Deleting your account left the phone remembering everything — `eff9edf`
 
 Reported from the live build the day 1.1 was approved: delete your account,
 sign up again, and the app skips the welcome carousel, never offers the plans,
