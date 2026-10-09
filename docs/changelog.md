@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 9 October 2026
 
-### Six people were seeing their day twice — `PENDING`
+### Six people were seeing their day twice — `21f0ace`
 
 Caedon reported "each event pops up twice" with a screenshot of Wake up, Gym,
 Coffee, Work starts and Lunch all doubled. I said it was the crewmate-leak bug
