@@ -5,6 +5,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 
 import { TextButton } from '@/components/Button';
 import { ProfileCard } from '@/components/ProfileCard';
+import { Reveal } from '@/components/Reveal';
 import { Screen, Title } from '@/components/Screen';
 import { SettingsGroup, SettingsRow } from '@/components/SettingsRow';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/brand';
@@ -66,11 +67,16 @@ export default function YouScreen() {
     <Screen color={habitColors[3]}>
       <Title size={64}>{copy.you.profile}</Title>
 
-      <ProfileCard userId={userId} />
+      <Reveal index={0}>
+        <ProfileCard userId={userId} />
+      </Reveal>
 
-      {/* Who you are to other people, and how you get back in. */}
-      <Text style={styles.label}>{copy.you.groupAccount}</Text>
-      <SettingsGroup>
+      {/* Who you are to other people, and how you get back in. Each group
+          arrives just behind the one above, which gives the eye an order to
+          read them in — the reason they were grouped at all. */}
+      <Reveal index={1} style={styles.group}>
+        <Text style={styles.label}>{copy.you.groupAccount}</Text>
+        <SettingsGroup>
         <SettingsRow
           label={copy.account.title}
           value={session?.user.email ?? undefined}
@@ -86,10 +92,12 @@ export default function YouScreen() {
           value={THEME_LABEL[choice]}
           onPress={() => router.push('/appearance')}
         />
-      </SettingsGroup>
+        </SettingsGroup>
+      </Reveal>
 
-      <Text style={styles.label}>{copy.you.groupApp}</Text>
-      <SettingsGroup>
+      <Reveal index={2} style={styles.group}>
+        <Text style={styles.label}>{copy.you.groupApp}</Text>
+        <SettingsGroup>
         <SettingsRow
           label={copy.you.subscription}
           value={profile?.subscribed_until ? copy.you.rowOn : undefined}
@@ -111,17 +119,20 @@ export default function YouScreen() {
             onPress={() => router.push('/blocked')}
           />
         )}
-      </SettingsGroup>
+        </SettingsGroup>
+      </Reveal>
 
-      <Text style={styles.label}>{copy.you.groupLegal}</Text>
-      <SettingsGroup>
-        <SettingsRow label={copy.you.terms} onPress={() => void Linking.openURL(TERMS_URL)} />
-        <SettingsRow label={copy.you.privacy} onPress={() => void Linking.openURL(PRIVACY_URL)} />
-      </SettingsGroup>
+      <Reveal index={3} style={styles.group}>
+        <Text style={styles.label}>{copy.you.groupLegal}</Text>
+        <SettingsGroup>
+          <SettingsRow label={copy.you.terms} onPress={() => void Linking.openURL(TERMS_URL)} />
+          <SettingsRow label={copy.you.privacy} onPress={() => void Linking.openURL(PRIVACY_URL)} />
+        </SettingsGroup>
+      </Reveal>
 
       {/* Leaving, in both senses. Kept apart from everything above, and last,
           because neither of these is a setting. */}
-      <View style={styles.leaving}>
+      <Reveal index={4} style={styles.leaving}>
         <TextButton label={copy.auth.signOut} onPress={() => void signOut()} />
 
         {confirming ? (
@@ -154,7 +165,7 @@ export default function YouScreen() {
         ) : (
           <TextButton label={copy.auth.deleteAction} onPress={() => setConfirming(true)} />
         )}
-      </View>
+      </Reveal>
     </Screen>
   );
 }
@@ -166,8 +177,8 @@ const makeStyles = (colors: Palette) => ({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: colors.textFaint,
-    paddingTop: spacing.md,
   },
+  group: { gap: spacing.sm, paddingTop: spacing.md },
   leaving: { gap: spacing.sm, paddingTop: spacing.xl },
   danger: {
     gap: spacing.sm,
