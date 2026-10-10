@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 
 import { Paywall } from '@/components/Paywall';
-import { useAccess, useOffering } from '@/lib/access';
+import { useAccess, useOffering, useTrialOffer } from '@/lib/access';
 import { hasAccess } from '@/lib/entitlement';
 import { usePaywallActions } from '@/lib/paywallActions';
 
@@ -17,6 +17,7 @@ import { usePaywallActions } from '@/lib/paywallActions';
 export function PaywallGate({ children }: { children: ReactNode }) {
   const { access } = useAccess();
   const offering = useOffering();
+  const trial = useTrialOffer();
   const { busy, error, subscribe, bringBack } = usePaywallActions();
 
   if (hasAccess(access)) return <>{children}</>;
@@ -30,6 +31,10 @@ export function PaywallGate({ children }: { children: ReactNode }) {
       onSubscribe={(pkg) => void subscribe(pkg)}
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
+      // Usually null here: somebody who reached the wall has been using the
+      // app, and most of them have already spent their one offer. StoreKit
+      // decides, not us.
+      trial={trial.annual}
     />
   );
 }

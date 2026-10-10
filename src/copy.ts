@@ -547,13 +547,27 @@ export const copy = {
     ],
 
     subscribe: 'Subscribe',
+    // Only ever shown when StoreKit has confirmed this Apple ID is eligible.
+    // An introductory offer is one per Apple ID per subscription group, for
+    // ever, so a returning customer sees "Subscribe" and is charged at once —
+    // which is exactly what the button then says.
+    startTrial: (days: number) => `Start my free ${days} days`,
+    // Apple requires the length, the price after it and the renewal stated
+    // together before the purchase. Built from the live offer, never a
+    // constant, so the words cannot outlive what App Store Connect is set to.
+    trialTerms: (days: number, price: string, per: string) =>
+      `${days} days free, then ${price} ${per.replace('/ ', 'a ')}. Auto-renews. Cancel any time in Settings. Payment is taken by Apple.`,
     subscribing: 'One moment\u2026',
     seeMonthly: 'See monthly',
     seeAnnual: 'See annual',
     // Says what happens next rather than "Not now", which reads like a refusal
     // and hides the fact that the free days start either way. The number comes
     // from TRIAL_DAYS so it cannot drift from the rule that enforces it.
-    notNow: (days: number) => `Start my free ${days} days`,
+    // Was "Start my free 3 days", which was the whole problem: it took no
+    // payment, started no trial with Apple, and only set a clock of our own
+    // that locked the app three days later with no card on file. The real
+    // trial is on the button above this one now, where it is actually bought.
+    notNow: 'Not now',
     // Opened on purpose from You, the way out is just the way out. Offering to
     // start a free week to somebody who is grandfathered, already paying, or
     // three days into their days is nonsense dressed as a button.

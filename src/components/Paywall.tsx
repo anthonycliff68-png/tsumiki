@@ -8,6 +8,7 @@ import { CardCollage } from '@/components/CardCollage';
 import { TextButton } from '@/components/Button';
 import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
+import type { TrialOffer } from '@/lib/trialOffer';
 import { useStyles } from '@/lib/appearance';
 import { TRIAL_DAYS, type Access } from '@/lib/entitlement';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
@@ -33,6 +34,12 @@ type Props = {
   onDismiss?: () => void;
   /** What the way out says. The offer and the screen you opened differ. */
   dismissLabel?: string;
+  /**
+   * The trial this Apple ID would actually get, from StoreKit. Null means they
+   * are charged straight away — because they have used their one offer, or
+   * because none is configured. Never assumed: see lib/trialOffer.ts.
+   */
+  trial?: TrialOffer | null;
 };
 
 /**
@@ -58,6 +65,7 @@ export function Paywall({
   onDeleteAccount,
   onDismiss,
   dismissLabel,
+  trial,
 }: Props) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -71,6 +79,11 @@ export function Paywall({
     chosen?.product.priceString ??
     (plan === 'annual' ? copy.paywall.annualPrice : copy.paywall.monthlyPrice);
   const per = plan === 'annual' ? copy.paywall.perYear : copy.paywall.perMonth;
+
+  // The button says what will happen. "Start free trial" to somebody who is
+  // about to be charged $29.99 is the single worst thing this screen could do,
+  // so the words come from StoreKit's answer and never from a constant.
+  const cta = trial ? copy.paywall.startTrial(trial.days) : copy.paywall.subscribe;
 
   return (
     <View style={styles.root}>
@@ -117,7 +130,7 @@ export function Paywall({
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${copy.paywall.subscribe}, ${price} ${per}`}
+          accessibilityLabel={`${cta}, ${price} ${per}`}
           accessibilityState={{ busy, disabled: busy }}
           disabled={busy}
           onPress={() => onSubscribe(chosen, plan)}
@@ -133,9 +146,7 @@ export function Paywall({
             </Defs>
             <Rect x="0" y="0" width="100%" height="62" rx="31" fill="url(#ctaGrad)" />
           </Svg>
-          <Text style={styles.ctaLabel}>
-            {busy ? copy.paywall.subscribing : copy.paywall.subscribe}
-          </Text>
+          <Text style={styles.ctaLabel}>{busy ? copy.paywall.subscribing : cta}</Text>
         </Pressable>
 
         <Pressable
@@ -152,13 +163,18 @@ export function Paywall({
 
         {onDismiss && (
           <TextButton
-            label={dismissLabel ?? copy.paywall.notNow(TRIAL_DAYS)}
+            label={dismissLabel ?? copy.paywall.notNow}
             onPress={onDismiss}
             disabled={busy}
           />
         )}
         <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
-        <Text style={styles.terms}>{copy.paywall.terms}</Text>
+        {/* Apple requires the length, the price that follows and the renewal
+            stated together, before the purchase. Built from the same two facts
+            the button is built from, so they cannot drift apart. */}
+        <Text style={styles.terms}>
+          {trial ? copy.paywall.trialTerms(trial.days, price, per) : copy.paywall.terms}
+        </Text>
         <View style={styles.legal}>
           <TextButton
             label={copy.paywall.termsLink}

@@ -4,7 +4,14 @@ import { useEffect } from 'react';
 import { useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { decideAccess, type Access } from '@/lib/entitlement';
-import { configurePurchases, currentOffering, isSubscribed, subscriptionExpiry } from '@/lib/purchases';
+import {
+  configurePurchases,
+  currentOffering,
+  isSubscribed,
+  subscriptionExpiry,
+  trialEligibility,
+} from '@/lib/purchases';
+import { trialFrom, type TrialOffer } from '@/lib/trialOffer';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -83,4 +90,52 @@ export function useOffering() {
     queryFn: currentOffering,
     staleTime: 10 * 60_000,
   });
+}
+
+/**
+ * The trial this Apple ID would actually get on each plan.
+ *
+ * Two facts are needed and neither may be assumed: whether the product has an
+ * introductory offer configured, and whether this particular Apple ID has
+ * already used the one offer Apple allows per subscription group. The second
+ * is the one that matters — a returning customer is charged immediately, and
+ * a button promising them free days would be a lie the App Store takes
+ * seriously.
+ */
+export function useTrialOffer(): {
+  annual: TrialOffer | null;
+  monthly: TrialOffer | null;
+  known: boolean;
+} {
+  const offering = useOffering();
+  const annualProduct = offering.data?.annual?.product ?? null;
+  const monthlyProduct = offering.data?.monthly?.product ?? null;
+
+  const ids = [annualProduct?.identifier, monthlyProduct?.identifier].filter(
+    (id): id is string => typeof id === 'string',
+  );
+
+  const eligibility = useQuery({
+    queryKey: ['intro-eligibility', ...ids],
+    enabled: ids.length > 0,
+    queryFn: () => trialEligibility(ids),
+    // Cannot change without a purchase, and a purchase reloads everything.
+    staleTime: 10 * 60_000,
+  });
+
+  const read = (product: typeof annualProduct) =>
+    product
+      ? trialFrom({
+          introPrice: product.introPrice,
+          eligibility: eligibility.data?.[product.identifier],
+        })
+      : null;
+
+  return {
+    annual: read(annualProduct),
+    monthly: read(monthlyProduct),
+    // Until the store has answered, the paywall says "Subscribe" rather than
+    // guessing at a trial it cannot yet confirm.
+    known: !offering.isPending && !eligibility.isPending,
+  };
 }

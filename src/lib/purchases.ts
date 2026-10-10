@@ -117,6 +117,36 @@ export async function currentOffering(): Promise<PurchasesOffering | null> {
   }
 }
 
+/**
+ * Which of these products this Apple ID may still have a free trial on.
+ *
+ * iOS only — Android has no equivalent call, and RevenueCat simply does not
+ * answer there. An absent answer means "do not claim a trial", which
+ * trialOffer.ts already treats correctly.
+ *
+ * Worth being clear about what is being asked, because the obvious reading is
+ * wrong: this is not "does the product have an offer". It is "has this person
+ * already used the one offer their Apple ID gets for this subscription group".
+ * Apple allows exactly one, for ever, across every product in the group.
+ */
+export async function trialEligibility(
+  productIds: string[],
+): Promise<Record<string, number>> {
+  const p = load();
+  if (!p || productIds.length === 0) return {};
+  try {
+    const result = await p.checkTrialOrIntroductoryPriceEligibility(productIds);
+    return Object.fromEntries(
+      Object.entries(result).map(([id, eligibility]) => [id, eligibility.status as number]),
+    );
+  } catch {
+    // Unknown rather than eligible. Failing to mention a trial costs a
+    // conversion; promising one that does not arrive costs trust and may cost
+    // the listing.
+    return {};
+  }
+}
+
 export type PurchaseResult = 'subscribed' | 'cancelled' | 'failed';
 
 /** Buy a package. A cancelled sheet is not an error and must not be shown as one. */

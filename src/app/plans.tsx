@@ -6,8 +6,7 @@ import { goBack } from '@/lib/back';
 import { PLANS_OFFERED } from '@/components/FirstRunPlans';
 import { Paywall } from '@/components/Paywall';
 import { copy } from '@/copy';
-import { TRIAL_DAYS } from '@/lib/entitlement';
-import { useAccess, useOffering } from '@/lib/access';
+import { useAccess, useOffering, useTrialOffer } from '@/lib/access';
 import { usePaywallActions } from '@/lib/paywallActions';
 
 /**
@@ -31,6 +30,7 @@ export default function PlansScreen() {
     if (first === '1') void AsyncStorage.setItem(PLANS_OFFERED, 'yes').catch(() => {});
   }, [first]);
   const offering = useOffering();
+  const trial = useTrialOffer();
   const { busy, error, subscribe, bringBack } = usePaywallActions();
 
   return (
@@ -40,9 +40,12 @@ export default function PlansScreen() {
       busy={busy}
       error={error}
       onSubscribe={(pkg) => void subscribe(pkg)}
+      // The annual plan is what the screen opens on. The paywall swaps this
+      // itself when somebody switches to monthly.
+      trial={trial.annual}
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
-      dismissLabel={first === '1' ? copy.paywall.notNow(TRIAL_DAYS) : copy.paywall.back}
+      dismissLabel={first === '1' ? copy.paywall.notNow : copy.paywall.back}
       /**
        * At the end of setting up there is nothing behind this to go back to —
        * it replaced the last step — so dismissing goes on to wherever
