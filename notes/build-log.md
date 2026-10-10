@@ -33,3 +33,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-10 · `1f9e209` — Say when the product email switch fails to save
 - 2026-10-10 · `f387ebc` — Make the new screens look like the rest of the app
 - 2026-10-10 · `3c2ae22` — Make You a profile instead of a list of everything
+- 2026-10-10 · `21b8b2d` — Stop the bleed washing out the light theme

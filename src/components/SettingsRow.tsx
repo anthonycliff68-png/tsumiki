@@ -1,7 +1,8 @@
 import { Children, Fragment, type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { ChevronRightIcon } from '@/components/icons';
+import { PressGive } from '@/components/WaterPress';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { alpha, fonts, habitColors, spacing, type Palette } from '@/theme';
 
@@ -27,11 +28,10 @@ export function SettingsRow({ label, value, onPress, destructive }: RowProps) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
+    <PressGive
       accessibilityLabel={value ? `${label}, ${value}` : label}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={styles.row}
     >
       <Text style={[styles.label, destructive && { color: habitColors[1] }]} numberOfLines={1}>
         {label}
@@ -47,7 +47,7 @@ export function SettingsRow({ label, value, onPress, destructive }: RowProps) {
         )}
         <ChevronRightIcon size={18} color={destructive ? habitColors[1] : colors.textFaint} />
       </View>
-    </Pressable>
+    </PressGive>
   );
 }
 
@@ -94,7 +94,6 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  pressed: { backgroundColor: alpha(colors.overlay, 0.08) },
   // Shrinks, so a long label loses characters rather than shoving the chevron
   // off the side of the screen.
   label: { flexShrink: 1, fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.text },

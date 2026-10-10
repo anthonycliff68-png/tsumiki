@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 
+import { WaterPress } from '@/components/WaterPress';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { fonts, radii, type Palette } from '@/theme';
 
@@ -20,17 +21,17 @@ export function PrimaryButton({ label, accessibilityLabel, onPress, disabled, bu
   const colors = useTheme();
   const inactive = disabled || busy;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <WaterPress
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!busy }}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.primary,
-        inactive && styles.inactive,
-        pressed && styles.pressed,
-      ]}
+      radius={radii.chip}
+      // The swell is drawn in the ground colour because this button's fill is
+      // the text colour — ink on a near-white pill, which is the only thing
+      // that reads on it.
+      tint={colors.bg}
+      style={[styles.primary, inactive && styles.inactive]}
     >
       {busy ? (
         <ActivityIndicator color={colors.bg} />
@@ -40,7 +41,7 @@ export function PrimaryButton({ label, accessibilityLabel, onPress, disabled, bu
           {icon}
         </>
       )}
-    </Pressable>
+    </WaterPress>
   );
 }
 
@@ -82,24 +83,21 @@ export function CompactButton({
   const colors = useTheme();
   const inactive = disabled || busy;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <WaterPress
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: !!inactive, busy: !!busy }}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.compact,
-        inactive && styles.inactive,
-        pressed && styles.pressed,
-      ]}
+      radius={radii.chip}
+      tint={colors.bg}
+      style={[styles.compact, inactive && styles.inactive]}
     >
       {busy ? (
         <ActivityIndicator color={colors.bg} size="small" />
       ) : (
         <Text style={styles.compactLabel}>{label}</Text>
       )}
-    </Pressable>
+    </WaterPress>
   );
 }
 
