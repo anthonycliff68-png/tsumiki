@@ -36,3 +36,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-10 · `21b8b2d` — Stop the bleed washing out the light theme
 - 2026-10-10 · `cd1123d` — Let a button answer the finger that pressed it
 - 2026-10-10 · `af121e1` — Make a habit readable before it is checked off
+- 2026-10-10 · `996048d` — Fill the check-in orb instead of recolouring it
