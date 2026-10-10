@@ -609,7 +609,7 @@ function HabitCard({
                 </Animated.View>
 
                 <View style={styles.cardText}>
-                  <Text style={styles.cardName} numberOfLines={1}>
+                  <Text style={[styles.cardName, styles.cardNameOnWater]} numberOfLines={1}>
                     {habit.name}
                   </Text>
                   <Text style={[styles.cardSub, styles.cardSubDone]} numberOfLines={1}>
@@ -918,7 +918,13 @@ const makeStyles = (colors: Palette) => ({
   },
   carried: { borderWidth: 2, borderColor: colors.white },
   cardText: { flex: 1, gap: 2 },
-  cardName: { ...display(20, 20), color: colors.white },
+  // The ink colour, because this card is an outline with nothing behind it.
+  // It was white, which on the dark palette is close enough to the text colour
+  // that nobody noticed — and on the light one is white on near-white.
+  cardName: { ...display(20, 20), color: colors.text },
+  // Only once the water has filled the card, where white is the only thing
+  // that reads on a saturated habit colour.
+  cardNameOnWater: { color: colors.white },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
 
   doneRow: {
