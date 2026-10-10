@@ -115,29 +115,37 @@ export default function ResetPasswordScreen() {
             <Body>{copy.reset.blurb}</Body>
           </View>
 
-          <Field
-            label={copy.reset.emailLabel}
-            placeholder={copy.auth.emailPlaceholder}
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (error) setError(null);
-            }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            editable={!busy && !codeSent}
-          />
-
-          {note !== null && (
-            <Text style={styles.note} accessibilityLiveRegion="polite">
-              {note}
-            </Text>
-          )}
+          {/* Each step is its own surface, so the screen shows what it is
+              asking for rather than two bare fields floating in a page that is
+              two-thirds empty. */}
+          <View style={styles.card}>
+            <Text style={styles.label}>{copy.reset.step1Label}</Text>
+            <Field
+              label={copy.reset.emailLabel}
+              placeholder={copy.auth.emailPlaceholder}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (error) setError(null);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              editable={!busy && !codeSent}
+            />
+            {note !== null ? (
+              <Text style={styles.note} accessibilityLiveRegion="polite">
+                {note}
+              </Text>
+            ) : (
+              <Text style={styles.hint}>{copy.reset.needInbox}</Text>
+            )}
+          </View>
 
           {codeSent && (
-            <>
+            <View style={styles.card}>
+              <Text style={styles.label}>{copy.reset.step2Label}</Text>
               <Field
                 label={copy.reset.codeLabel}
                 placeholder={copy.reset.codePlaceholder}
@@ -167,7 +175,7 @@ export default function ResetPasswordScreen() {
                 textContentType="newPassword"
                 editable={!busy}
               />
-            </>
+            </View>
           )}
 
           {error !== null && (
@@ -210,6 +218,22 @@ const makeStyles = (colors: Palette) => ({
   },
   pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   head: { gap: spacing.md, paddingTop: spacing.xl },
+  card: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.04),
+  },
+  label: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+  },
+  hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   note: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.success },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: habitColors[1] },
 }) as const;

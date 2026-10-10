@@ -67,6 +67,11 @@ export function ChevronLeftIcon(props: IconProps) {
   return <StrokeIcon strokeWidth={2.4} {...props} d="M15 5l-7 7 7 7" />;
 }
 
+/** The affordance on a row that leads somewhere else. */
+export function ChevronRightIcon(props: IconProps) {
+  return <StrokeIcon strokeWidth={2.4} {...props} d="M9 5l7 7-7 7" />;
+}
+
 /** Forward, on primary buttons. */
 export function ArrowRightIcon(props: IconProps) {
   return <StrokeIcon strokeWidth={2.6} {...props} d="M5 12h14M13 6l6 6-6 6" />;

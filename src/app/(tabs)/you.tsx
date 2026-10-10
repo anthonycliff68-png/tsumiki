@@ -1,216 +1,158 @@
 import Constants from 'expo-constants';
-import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { ProfileCard } from '@/components/ProfileCard';
-import { Body, Screen, Stub, Title } from '@/components/Screen';
 import { TextButton } from '@/components/Button';
-import { APP_NAME, APP_TAGLINE, TERMS_URL } from '@/constants/brand';
+import { ProfileCard } from '@/components/ProfileCard';
+import { Screen, Title } from '@/components/Screen';
+import { SettingsGroup, SettingsRow } from '@/components/SettingsRow';
+import { PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
-import { useBlocked, useDeleteAccount, useMyProfile, useUnblockUser } from '@/lib/api';
+import { useBlocked, useDeleteAccount, useMyProfile } from '@/lib/api';
 import { useAppearance, useStyles } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
-import { formatTime } from '@/data/defaults';
-import { registerForPush, unregisterPush, type PushRegistration } from '@/lib/push';
-import { fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { registerForPush, type PushRegistration } from '@/lib/push';
+import { fonts, habitColors, spacing, type Palette } from '@/theme';
 
-/** You. Artboard: none yet — settings follow the same tokens as everything else. */
 const THEME_LABEL = {
   light: copy.you.themeLight,
   dark: copy.you.themeDark,
   system: copy.you.themeSystem,
 } as const;
 
+/**
+ * You.
+ *
+ * Who you are, then a way to everything else.
+ *
+ * This used to be one scroll carrying eight unrelated settings with their whole
+ * interfaces open at once — theme chips, four lines of push status, the blocked
+ * list, and a delete confirmation that expanded in place. Nothing was findable
+ * because everything was visible. Each setting now says only what it is and
+ * what it is set to, and lives on its own screen where there is room to explain
+ * itself.
+ */
 export default function YouScreen() {
-  const { choice, setChoice, colors } = useAppearance();
+  const { choice } = useAppearance();
   const styles = useStyles(makeStyles);
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
-  const { data: profile, refetch } = useMyProfile(userId);
+  const { data: profile } = useMyProfile(userId);
+  const { data: blocked = [] } = useBlocked(userId);
   const [push, setPush] = useState<PushRegistration | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deleteAccount = useDeleteAccount();
-  const { data: blocked = [] } = useBlocked(userId);
-  const unblock = useUnblockUser(userId);
 
   const isExpoGo = Constants.appOwnership === 'expo';
 
+  // Read here only to summarise it on the row. The screen it leads to does the
+  // same work again, which is cheap and keeps that screen able to stand alone.
   useEffect(() => {
     if (!userId || isExpoGo) return;
     void registerForPush(userId).then(setPush);
   }, [userId, isExpoGo]);
 
-  const pushLine = isExpoGo
-    ? copy.you.expoGo
+  const pushValue = isExpoGo
+    ? copy.you.rowOff
     : !push
-      ? null
+      ? undefined
       : push.ok
-        ? copy.you.on
-        : push.reason === 'simulator'
-          ? copy.you.simulator
-          : push.reason === 'denied'
-            ? copy.you.denied
-            : push.reason === 'no-project-id'
-              ? copy.you.noProjectId
-              : copy.you.failed;
+        ? copy.you.rowOn
+        : copy.you.rowOff;
 
   return (
     <Screen color={habitColors[3]}>
-      <Title size={64}>You</Title>
-      <Body>
-        {APP_NAME} — {APP_TAGLINE}
-      </Body>
-      {session?.user.email && <Body>Signed in as {session.user.email}</Body>}
+      <Title size={64}>{copy.you.profile}</Title>
 
-      <Text style={styles.label}>{copy.you.profile}</Text>
       <ProfileCard userId={userId} />
 
-      <Text style={styles.label}>{copy.you.appearance}</Text>
-      <View style={styles.themes}>
-        {(['light', 'dark', 'system'] as const).map((option) => {
-          const picked = choice === option;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="button"
-              accessibilityState={{ selected: picked }}
-              accessibilityLabel={THEME_LABEL[option]}
-              onPress={() => setChoice(option)}
-              style={[
-                styles.theme,
-                { borderColor: colors.border },
-                picked && { backgroundColor: colors.text, borderColor: 'transparent' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.themeText,
-                  { color: picked ? colors.bg : colors.textMuted },
-                ]}
-              >
-                {THEME_LABEL[option]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <Text style={styles.meta}>{copy.you.themeHint}</Text>
-
-      <Text style={styles.label}>{copy.you.subscription}</Text>
-      <Text style={styles.meta}>{copy.you.seePlansHint}</Text>
-      <TextButton label={copy.you.seePlans} onPress={() => router.push('/plans')} />
-
-      <Text style={styles.label}>{copy.you.notifications}</Text>
-      {pushLine && <Body>{pushLine}</Body>}
-      {profile && (
-        <>
-          <Text style={styles.meta}>
-            {copy.you.quietHours(formatTime(profile.quiet_start), formatTime(profile.quiet_end))}
-          </Text>
-          <Text style={styles.meta}>{copy.you.timezone(profile.timezone)}</Text>
-        </>
-      )}
-      {push?.ok && userId && (
-        <TextButton
-          label={copy.you.turnOff}
-          onPress={() => {
-            void unregisterPush(userId).then(() => {
-              setPush(null);
-              void refetch();
-            });
-          }}
+      {/* Who you are to other people, and how you get back in. */}
+      <Text style={styles.label}>{copy.you.groupAccount}</Text>
+      <SettingsGroup>
+        <SettingsRow
+          label={copy.account.title}
+          value={session?.user.email ?? undefined}
+          onPress={() => router.push('/account')}
         />
-      )}
+        <SettingsRow
+          label={copy.you.notifications}
+          value={pushValue}
+          onPress={() => router.push('/notifications')}
+        />
+        <SettingsRow
+          label={copy.you.appearance}
+          value={THEME_LABEL[choice]}
+          onPress={() => router.push('/appearance')}
+        />
+      </SettingsGroup>
 
-      <Text style={styles.label}>{copy.account.title}</Text>
-      <Text style={styles.meta}>{copy.account.emailCurrent(session?.user.email ?? '')}</Text>
-      <TextButton label={copy.account.title} onPress={() => router.push('/account')} />
+      <Text style={styles.label}>{copy.you.groupApp}</Text>
+      <SettingsGroup>
+        <SettingsRow
+          label={copy.you.subscription}
+          value={profile?.subscribed_until ? copy.you.rowOn : undefined}
+          onPress={() => router.push('/plans')}
+        />
+        <SettingsRow
+          label={copy.account.sendFeedback}
+          onPress={() => router.push('/feedback')}
+        />
+        <SettingsRow
+          label={copy.safety.blockedTitle}
+          value={blocked.length > 0 ? String(blocked.length) : undefined}
+          onPress={() => router.push('/blocked')}
+        />
+      </SettingsGroup>
 
-      <Text style={styles.label}>{copy.account.feedbackLabel}</Text>
-      <Text style={styles.meta}>{copy.account.feedbackHint}</Text>
-      <TextButton label={copy.account.sendFeedback} onPress={() => router.push('/feedback')} />
+      <Text style={styles.label}>{copy.you.groupLegal}</Text>
+      <SettingsGroup>
+        <SettingsRow label={copy.you.terms} onPress={() => void Linking.openURL(TERMS_URL)} />
+        <SettingsRow label={copy.you.privacy} onPress={() => void Linking.openURL(PRIVACY_URL)} />
+      </SettingsGroup>
 
-      <Text style={styles.label}>{copy.safety.blockedTitle}</Text>
-      {blocked.length === 0 ? (
-        <Text style={styles.meta}>{copy.safety.blockedEmpty}</Text>
-      ) : (
-        blocked.map((person) => (
-          <View key={person.userId} style={styles.blockedRow}>
-            <View style={[styles.blockedDot, { backgroundColor: person.avatarColor }]} />
-            <Text style={styles.blockedName} numberOfLines={1}>
-              {person.displayName}
-            </Text>
-            <Text
-              accessibilityRole="button"
-              onPress={() => unblock.mutate(person.userId)}
-              style={styles.unblock}
-            >
-              {copy.safety.unblock}
-            </Text>
-          </View>
-        ))
-      )}
-
-      <Text
-        accessibilityRole="link"
-        onPress={() => void Linking.openURL(TERMS_URL)}
-        style={styles.termsLink}
-      >
-        {copy.safety.terms}
-      </Text>
-
-      <Stub>{copy.placeholder.you}</Stub>
-
-      <View style={{ paddingTop: spacing.md }}>
+      {/* Leaving, in both senses. Kept apart from everything above, and last,
+          because neither of these is a setting. */}
+      <View style={styles.leaving}>
         <TextButton label={copy.auth.signOut} onPress={() => void signOut()} />
+
+        {confirming ? (
+          <View style={styles.danger}>
+            <Text style={styles.dangerTitle}>{copy.auth.deleteTitle}</Text>
+            <Text style={styles.dangerBody}>{copy.auth.deleteBody}</Text>
+            <Text style={styles.dangerBody}>{copy.auth.deleteCrews}</Text>
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={copy.auth.deleteConfirm}
+              disabled={deleteAccount.isPending}
+              onPress={() =>
+                deleteAccount.mutate(undefined, {
+                  // The account is gone; drop the session so the app returns to
+                  // sign-in rather than holding a token for a user that no
+                  // longer exists.
+                  onSuccess: () => void signOut(),
+                  onError: () => setError(copy.auth.deleteFailed),
+                })
+              }
+              style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.dangerButtonText}>{copy.auth.deleteConfirm}</Text>
+            </Pressable>
+
+            <TextButton label={copy.auth.cancel} onPress={() => setConfirming(false)} />
+          </View>
+        ) : (
+          <TextButton label={copy.auth.deleteAction} onPress={() => setConfirming(true)} />
+        )}
       </View>
-
-      {confirming ? (
-        <View style={styles.danger}>
-          <Text style={styles.dangerTitle}>{copy.auth.deleteTitle}</Text>
-          <Text style={styles.dangerBody}>{copy.auth.deleteBody}</Text>
-          <Text style={styles.dangerBody}>{copy.auth.deleteCrews}</Text>
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={copy.auth.deleteConfirm}
-            disabled={deleteAccount.isPending}
-            onPress={() =>
-              deleteAccount.mutate(undefined, {
-                // The account is gone; drop the session so the app returns to
-                // sign-in rather than holding a token for a user that no
-                // longer exists.
-                onSuccess: () => void signOut(),
-                onError: () => setError(copy.auth.deleteFailed),
-              })
-            }
-            style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.85 }]}
-          >
-            <Text style={styles.dangerButtonText}>{copy.auth.deleteConfirm}</Text>
-          </Pressable>
-
-          <TextButton label={copy.auth.cancel} onPress={() => setConfirming(false)} />
-        </View>
-      ) : (
-        <TextButton label={copy.auth.deleteAction} onPress={() => setConfirming(true)} />
-      )}
     </Screen>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
-  themes: { flexDirection: 'row', gap: spacing.sm },
-  theme: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    borderRadius: radii.chip,
-    borderWidth: 1,
-  },
-  themeText: { fontFamily: fonts.bodyBold, fontSize: 14 },
   label: {
     fontFamily: fonts.bodyBold,
     fontSize: 11,
@@ -219,22 +161,7 @@ const makeStyles = (colors: Palette) => ({
     color: colors.textFaint,
     paddingTop: spacing.md,
   },
-  meta: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint },
-  blockedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 44,
-  },
-  blockedDot: { width: 10, height: 10, borderRadius: 5 },
-  blockedName: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
-  unblock: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.textMuted },
-  termsLink: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.textMuted,
-    paddingTop: spacing.md,
-  },
+  leaving: { gap: spacing.sm, paddingTop: spacing.xl },
   danger: {
     gap: spacing.sm,
     padding: spacing.lg,

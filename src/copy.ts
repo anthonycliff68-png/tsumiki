@@ -748,8 +748,18 @@ export const copy = {
     moveFailed: 'Could not move it. Try again.',
   },
 
+  notifications: {
+    statusLabel: 'This phone',
+    quietLabel: 'Quiet hours',
+    quietHint: 'Nothing arrives between these. A nudge sent inside them waits until they end.',
+  },
+
   feedback: {
-    title: 'Tell us\nwhat is\nwrong.',
+    // Was "Tell us what is wrong." — three lines of display face shouting at
+    // somebody already annoyed enough to be filing a complaint. Same voice,
+    // less volume, and it no longer assumes the only reason to write in is that
+    // something broke.
+    title: 'What is\non your mind?',
     blurb:
       'Something broken, something confusing, something missing. It goes straight to the person who makes this.',
     label: 'Your message',
@@ -818,10 +828,15 @@ export const copy = {
     // registered here.
     sent: (email: string) =>
       `If ${email} has an account, a code is on its way. It lasts an hour.`,
+    step1Label: 'Your email',
+    step2Label: 'The code, and a new password',
     codeLabel: 'Code from the email',
     codePlaceholder: '000000',
     newPassword: 'New password',
     newPasswordPlaceholder: 'At least 8 characters',
+    // Said on the first screen rather than discovered on the second, so nobody
+    // starts this on a phone with the inbox on a different device.
+    needInbox: 'You will need the inbox open — the code only arrives by email.',
     save: 'Save and sign in',
     saving: 'Saving\u2026',
     failed: 'That code did not work. It may have expired.',
@@ -830,6 +845,17 @@ export const copy = {
 
   you: {
     profile: 'You',
+    // The headings over each run of rows. Short, because they name a group
+    // rather than explain it — the rows do that themselves.
+    groupAccount: 'Your account',
+    groupApp: 'App',
+    groupLegal: 'Legal',
+    terms: 'Terms of use',
+    privacy: 'Privacy policy',
+    // The answer on a row, not a sentence. "On" beats "Reminders and nudges
+    // are on for this phone" when it has to fit beside its own label.
+    rowOn: 'On',
+    rowOff: 'Off',
     editProfile: 'Edit',
     editProfileLabel: 'Edit your name, face and colour',
     doneEditing: 'Done',
