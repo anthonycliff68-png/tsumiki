@@ -99,11 +99,18 @@ export default function YouScreen() {
           label={copy.account.sendFeedback}
           onPress={() => router.push('/feedback')}
         />
-        <SettingsRow
-          label={copy.safety.blockedTitle}
-          value={blocked.length > 0 ? String(blocked.length) : undefined}
-          onPress={() => router.push('/blocked')}
-        />
+        {/* Only once there is somebody on it. Apple requires a way to block
+            abusive people in an app with names and messages in it, so the
+            capability stays — blocking happens from a crew or a nudge, and
+            this is the only way back from it. But an empty list does not need
+            a permanent slot on the profile, which is virtually everyone. */}
+        {blocked.length > 0 && (
+          <SettingsRow
+            label={copy.safety.blockedTitle}
+            value={String(blocked.length)}
+            onPress={() => router.push('/blocked')}
+          />
+        )}
       </SettingsGroup>
 
       <Text style={styles.label}>{copy.you.groupLegal}</Text>

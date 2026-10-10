@@ -1,11 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
 
+import { useTheme } from '@/lib/appearance';
 import { alpha, companionColor } from '@/theme';
 
 /** The canvas was drawn at 390 pt wide; the glows scale from that. */
 const DESIGN_WIDTH = 390;
 const CROSSFADE_MS = 400;
+
+/**
+ * How much of the glow survives on a light ground.
+ *
+ * The canvas is dark, and these opacities were read off it. On near-black a
+ * colour wash *adds* light: it reads as depth behind the content. On near-white
+ * the identical numbers *darken and saturate*, so the same four circles stop
+ * being atmosphere and become a coloured panel — and every card, label and
+ * hairline sitting on top of it loses most of its contrast.
+ *
+ * This is why light mode looked washed out while the palette itself measured
+ * fine: nothing was wrong with the colours, they were just being asked to sit
+ * on a ground that was no longer the near-white they were chosen against.
+ */
+const LIGHT_STRENGTH = 0.3;
 
 type CircleSpec = {
   top?: number;
@@ -61,7 +77,9 @@ type Layer = { key: number; color: string; anim: Animated.Value };
  */
 export function Bleed({ color }: { color: string }) {
   const { width } = useWindowDimensions();
+  const colors = useTheme();
   const scale = width / DESIGN_WIDTH;
+  const strength = colors.dark ? 1 : LIGHT_STRENGTH;
 
   const nextKey = useRef(1);
   const currentColor = useRef(color);
@@ -108,7 +126,7 @@ export function Bleed({ color }: { color: string }) {
                 borderRadius: (circle.width * scale) / 2,
                 experimental_backgroundImage: glow(
                   circle.hue === 'companion' ? companionColor(layer.color) : layer.color,
-                  circle.opacity,
+                  circle.opacity * strength,
                 ),
               }}
             />

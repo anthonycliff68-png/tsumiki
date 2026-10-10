@@ -32,3 +32,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-10 · `ec6dd71` — Give people a way to write in, and a way back into their own account
 - 2026-10-10 · `1f9e209` — Say when the product email switch fails to save
 - 2026-10-10 · `f387ebc` — Make the new screens look like the rest of the app
+- 2026-10-10 · `3c2ae22` — Make You a profile instead of a list of everything
