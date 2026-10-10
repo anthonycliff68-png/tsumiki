@@ -1,16 +1,23 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
-import { PrimaryButton, TextButton } from '@/components/Button';
+import { PrimaryButton } from '@/components/Button';
 import { Field } from '@/components/Field';
-import { Body, Screen, Title } from '@/components/Screen';
+import { Body, Display, Screen } from '@/components/Screen';
 import { copy } from '@/copy';
 import { useStyles } from '@/lib/appearance';
 import { goBack } from '@/lib/back';
 import { messageFrom } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
-import { fonts, habitColors, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const MIN_PASSWORD = 8;
 
@@ -97,8 +104,14 @@ export default function ResetPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.topRow}>
+            <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
+              <Text style={styles.pillText}>{copy.newHabit.cancel}</Text>
+            </Pressable>
+          </View>
+
           <View style={styles.head}>
-            <Title size={46}>{copy.reset.title}</Title>
+            <Display size={52} line={46}>{copy.reset.title}</Display>
             <Body>{copy.reset.blurb}</Body>
           </View>
 
@@ -176,7 +189,6 @@ export default function ResetPasswordScreen() {
             busy={busy}
             onPress={() => void (codeSent ? save() : sendCode())}
           />
-          <TextButton label={copy.reset.back} onPress={() => goBack()} />
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
@@ -186,6 +198,17 @@ export default function ResetPasswordScreen() {
 const makeStyles = (colors: Palette) => ({
   fill: { flex: 1 },
   body: { gap: spacing.md, paddingBottom: spacing.xxl },
+  topRow: { flexDirection: 'row', paddingBottom: spacing.sm },
+  pill: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.06),
+  },
+  pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   head: { gap: spacing.md, paddingTop: spacing.xl },
   note: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.success },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: habitColors[1] },

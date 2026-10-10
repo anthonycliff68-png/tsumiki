@@ -773,6 +773,7 @@ export const copy = {
     title: 'Account',
     emailLabel: 'Email address',
     emailCurrent: (email: string) => `Signed in as ${email}`,
+    save: 'Save',
     changeEmail: 'Change email',
     newEmail: 'New email address',
     emailSent: (email: string) =>

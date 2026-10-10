@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
-import { PrimaryButton, TextButton } from '@/components/Button';
+import { CompactButton } from '@/components/Button';
 import { Field } from '@/components/Field';
-import { Body, Screen, Title } from '@/components/Screen';
+import { Display, Screen } from '@/components/Screen';
 import { ToggleRow } from '@/components/ToggleRow';
 import { copy } from '@/copy';
 import { useMyProfile, useProductEmailOptIn } from '@/lib/api';
@@ -12,10 +19,10 @@ import { useAuth } from '@/lib/auth';
 import { goBack } from '@/lib/back';
 import { messageFrom } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
-import { fonts, habitColors, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
-/** Supabase accepts six. Eight is the shortest that is worth calling a
- *  password, and the field says so before anyone finds out by being refused. */
+/** Supabase accepts six. Eight is the shortest worth calling a password, and
+ *  the field says so before anyone finds out by being refused. */
 const MIN_PASSWORD = 8;
 
 export default function AccountScreen() {
@@ -40,10 +47,10 @@ export default function AccountScreen() {
   const currentEmail = session?.user.email ?? '';
 
   /**
-   * Whether to say "set" or "change". Somebody who came in through Apple has
-   * no password at all, and telling them to change one they never had is how
-   * a person decides the app is broken. A code sign-in is indistinguishable
-   * from a password one here, so this errs towards "change".
+   * Whether to say "set" or "change". Somebody who came in through Apple has no
+   * password at all, and telling them to change one they never had is how a
+   * person decides the app is broken. A code sign-in cannot be told apart from
+   * a password one here, so this errs towards "change".
    */
   const providers = session?.user.app_metadata?.providers;
   const hasPassword = Array.isArray(providers) ? providers.includes('email') : true;
@@ -60,9 +67,8 @@ export default function AccountScreen() {
     try {
       const { error } = await supabase.auth.updateUser({ email: next });
       if (error) throw error;
-      // Nothing has changed yet, and saying otherwise would leave somebody
-      // locked out: Supabase keeps the old address working until the new one
-      // is confirmed.
+      // Nothing has changed yet, and saying otherwise would strand somebody:
+      // Supabase keeps the old address working until the new one is confirmed.
       setEmailNote(copy.account.emailSent(next));
       setEmail('');
     } catch (e) {
@@ -103,12 +109,20 @@ export default function AccountScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.head}>
-            <Title size={46}>{copy.account.title}</Title>
-            <Body>{copy.account.emailCurrent(currentEmail)}</Body>
+          {/* The way out goes at the top, where every other screen in this app
+              puts it, rather than at the bottom underneath three forms. */}
+          <View style={styles.topRow}>
+            <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
+              <Text style={styles.pillText}>{copy.newHabit.cancel}</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.section}>
+          <Display size={56} line={50}>{copy.account.title}</Display>
+          <Text style={styles.meta}>{copy.account.emailCurrent(currentEmail)}</Text>
+
+          {/* Each setting gets its own surface, so a field and the button that
+              submits it visibly belong together. */}
+          <View style={styles.card}>
             <Text style={styles.label}>{copy.account.changeEmail}</Text>
             <Field
               label={copy.account.newEmail}
@@ -134,18 +148,19 @@ export default function AccountScreen() {
                 {emailError}
               </Text>
             )}
-            <PrimaryButton
-              label={emailBusy ? copy.feedback.sending : copy.account.changeEmail}
+            <CompactButton
+              label={copy.account.save}
+              accessibilityLabel={copy.account.changeEmail}
               busy={emailBusy}
               onPress={() => void changeEmail()}
             />
           </View>
 
-          <View style={styles.section}>
+          <View style={styles.card}>
             <Text style={styles.label}>
               {hasPassword ? copy.account.changePassword : copy.account.setPassword}
             </Text>
-            <Text style={styles.meta}>
+            <Text style={styles.hint}>
               {hasPassword ? copy.account.passwordHintSome : copy.account.passwordHintNone}
             </Text>
             <Field
@@ -172,29 +187,25 @@ export default function AccountScreen() {
                 {passwordError}
               </Text>
             )}
-            <PrimaryButton
-              label={
-                passwordBusy
-                  ? copy.feedback.sending
-                  : hasPassword
-                    ? copy.account.changePassword
-                    : copy.account.setPassword
+            <CompactButton
+              label={copy.account.save}
+              accessibilityLabel={
+                hasPassword ? copy.account.changePassword : copy.account.setPassword
               }
               busy={passwordBusy}
               onPress={() => void changePassword()}
             />
           </View>
 
-          <View style={styles.section}>
+          <View style={styles.card}>
             <Text style={styles.label}>{copy.account.productEmail}</Text>
             <ToggleRow
               label={copy.account.productEmailToggle}
               hint={copy.account.productEmailHint}
               value={profile?.product_email_opt_in ?? false}
-              // The switch is drawn from the server's answer, not from a local
-              // copy, so a write that fails leaves it exactly where it was —
-              // indistinguishable from a tap that never landed. It cost half an
-              // hour of looking in the wrong place; say so instead.
+              // The switch is drawn from the server's answer, not a local copy,
+              // so a write that fails leaves it exactly where it was —
+              // indistinguishable from a tap that never landed.
               onValueChange={(next) =>
                 optIn.mutate(next, {
                   onError: (e) => setOptInError(messageFrom(e, copy.account.productEmailFailed)),
@@ -202,22 +213,19 @@ export default function AccountScreen() {
                 })
               }
               disabled={optIn.isPending || !profile}
+              bare
             />
             {optInError !== null && (
               <Text style={styles.error} accessibilityLiveRegion="polite">
                 {optInError}
               </Text>
             )}
-            {!profile && (
-              <Text style={styles.meta}>{copy.account.productEmailLoading}</Text>
-            )}
-            {/* Kept separate from the hint on purpose. Somebody turning the
-                switch off still gets their sign-in code, and not saying so
-                reads as a trick the first time one arrives. */}
-            <Text style={styles.meta}>{copy.account.productEmailAlways}</Text>
+            {!profile && <Text style={styles.hint}>{copy.account.productEmailLoading}</Text>}
+            {/* Kept apart from the hint on purpose. Somebody turning the switch
+                off still gets their sign-in code, and not saying so reads as a
+                trick the first time one arrives. */}
+            <Text style={styles.hint}>{copy.account.productEmailAlways}</Text>
           </View>
-
-          <TextButton label={copy.newHabit.cancel} onPress={() => goBack()} />
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
@@ -226,17 +234,41 @@ export default function AccountScreen() {
 
 const makeStyles = (colors: Palette) => ({
   fill: { flex: 1 },
-  body: { gap: spacing.lg, paddingBottom: spacing.xxl },
-  head: { gap: spacing.md, paddingTop: spacing.xl },
-  section: { gap: spacing.sm },
+  body: { gap: spacing.md, paddingBottom: spacing.xxl },
+  topRow: { flexDirection: 'row', paddingBottom: spacing.sm },
+  pill: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.06),
+  },
+  pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
+  card: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.04),
+  },
   label: {
     fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.5,
+    fontSize: 11,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: colors.textFaint,
   },
-  meta: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.textFaint },
+  meta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+    paddingBottom: spacing.sm,
+  },
+  hint: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   note: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: colors.success },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, color: habitColors[1] },
 }) as const;

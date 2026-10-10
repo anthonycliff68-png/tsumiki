@@ -9,6 +9,12 @@ type Props = {
   value: boolean;
   onValueChange: (next: boolean) => void;
   disabled?: boolean;
+  /**
+   * Drop the border and fill, for when this already sits inside a surface.
+   * A bordered row inside a bordered card reads as a card inside a card, which
+   * is two frames doing the job of one and makes neither of them mean anything.
+   */
+  bare?: boolean;
 };
 
 /**
@@ -19,11 +25,11 @@ type Props = {
  * whatever the person has set for reduced motion — all of which a hand-rolled
  * one would have to be given, and would be given slightly wrong.
  */
-export function ToggleRow({ label, hint, value, onValueChange, disabled }: Props) {
+export function ToggleRow({ label, hint, value, onValueChange, disabled, bare }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, bare && styles.bare]}>
       <View style={styles.text}>
         <Text style={styles.label}>{label}</Text>
         {hint !== undefined && <Text style={styles.hint}>{hint}</Text>}
@@ -55,6 +61,11 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: alpha(colors.overlay, 0.05),
+  },
+  bare: {
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
   },
   // Without a min-width of zero a flex child refuses to shrink below its
   // content, so a long hint pushes the switch off the side of the screen

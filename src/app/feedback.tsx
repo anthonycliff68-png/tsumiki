@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
-import { PrimaryButton, TextButton } from '@/components/Button';
+import { PrimaryButton } from '@/components/Button';
 import { Field } from '@/components/Field';
-import { Body, Screen, Title } from '@/components/Screen';
+import { Body, Display, Screen } from '@/components/Screen';
 import { ToggleRow } from '@/components/ToggleRow';
 import { copy } from '@/copy';
 import { useSendFeedback } from '@/lib/api';
@@ -11,7 +18,7 @@ import { useStyles } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
 import { goBack } from '@/lib/back';
 import { messageFrom } from '@/lib/errors';
-import { fonts, habitColors, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /** Matches the check on the table, so the limit is felt here rather than
  *  rejected by the database after somebody has written four paragraphs. */
@@ -44,7 +51,7 @@ export default function FeedbackScreen() {
     return (
       <Screen color={habitColors[2]} underDock={false}>
         <View style={styles.head}>
-          <Title size={46}>{copy.feedback.sentTitle}</Title>
+          <Display size={52} line={46}>{copy.feedback.sentTitle}</Display>
           <Body>{copy.feedback.sentBody}</Body>
         </View>
         <PrimaryButton label={copy.feedback.done} onPress={() => goBack()} />
@@ -67,8 +74,14 @@ export default function FeedbackScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.topRow}>
+            <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
+              <Text style={styles.pillText}>{copy.newHabit.cancel}</Text>
+            </Pressable>
+          </View>
+
           <View style={styles.head}>
-            <Title size={46}>{copy.feedback.title}</Title>
+            <Display size={52} line={46}>{copy.feedback.title}</Display>
             <Body>{copy.feedback.blurb}</Body>
           </View>
 
@@ -116,7 +129,6 @@ export default function FeedbackScreen() {
             busy={send.isPending}
             onPress={() => void submit()}
           />
-          <TextButton label={copy.newHabit.cancel} onPress={() => goBack()} />
         </ScrollView>
       </Screen>
     </KeyboardAvoidingView>
@@ -126,6 +138,17 @@ export default function FeedbackScreen() {
 const makeStyles = (colors: Palette) => ({
   fill: { flex: 1 },
   body: { gap: spacing.md, paddingBottom: spacing.xxl },
+  topRow: { flexDirection: 'row', paddingBottom: spacing.sm },
+  pill: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: alpha(colors.overlay, 0.06),
+  },
+  pillText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
   head: { gap: spacing.md, paddingTop: spacing.xl },
   input: { minHeight: 150, paddingTop: 16, paddingBottom: 16 },
   counter: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint, textAlign: 'right' },

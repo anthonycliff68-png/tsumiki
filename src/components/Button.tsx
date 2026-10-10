@@ -61,6 +61,48 @@ export function TextButton({ label, accessibilityLabel, onPress, disabled }: Omi
   );
 }
 
+/**
+ * The action that belongs to one section rather than to the whole screen.
+ *
+ * PrimaryButton is 58pt tall and full width: it is the one thing a screen is
+ * for. A settings screen has three or four things, and giving each of them that
+ * treatment produces a stack of identical hero pills with no hierarchy at all —
+ * nothing reads as more important than anything else, because nothing is.
+ *
+ * This sizes to its label and sits at the end of its row.
+ */
+export function CompactButton({
+  label,
+  accessibilityLabel,
+  onPress,
+  disabled,
+  busy,
+}: Omit<Props, 'icon'>) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
+  const inactive = disabled || busy;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled: !!inactive, busy: !!busy }}
+      disabled={inactive}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.compact,
+        inactive && styles.inactive,
+        pressed && styles.pressed,
+      ]}
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.bg} size="small" />
+      ) : (
+        <Text style={styles.compactLabel}>{label}</Text>
+      )}
+    </Pressable>
+  );
+}
+
 const makeStyles = (colors: Palette) => ({
   primary: {
     flexDirection: 'row',
@@ -75,6 +117,23 @@ const makeStyles = (colors: Palette) => ({
   primaryLabel: {
     fontFamily: fonts.bodyBold,
     fontSize: 17,
+    color: colors.bg,
+  },
+  compact: {
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // 44 is the smallest a touch target may be, and this is deliberately at
+    // that floor rather than below it.
+    minHeight: 44,
+    minWidth: 96,
+    paddingHorizontal: 20,
+    borderRadius: radii.chip,
+    backgroundColor: colors.text,
+  },
+  compactLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
     color: colors.bg,
   },
   text: {
