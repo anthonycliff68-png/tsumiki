@@ -46,6 +46,62 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ---
 
+## 10 October 2026
+
+### The free trial that was not a trial — `3604d18`
+
+The paywall carried a button reading "Start my free 3 days". It took no
+payment, started nothing with Apple, and only set a clock of our own — which
+locked the app three days later with no card on file. The Subscribe button
+beside it charged full price with no free days at all, because no introductory
+offer had ever been created in App Store Connect. The thing the screen was
+advertising did not exist anywhere except in copy.ts.
+
+Both products now carry one: three days free, no end date, 175 regions. What
+the button says comes from StoreKit rather than a constant, and an ineligible
+Apple ID is told "Subscribe" — because an introductory offer is one per Apple
+ID per subscription *group*, for ever, so somebody who trialled annual and
+cancelled is charged the instant they tap monthly.
+
+Unknown eligibility resolves to no trial. Failing to mention a trial costs a
+conversion; promising one that never arrives costs more than that.
+`lib/trialOffer.ts` is a pure function with eight tests, because it decides
+what people are charged.
+
+Checked the production data the same afternoon: sixteen accounts, two
+grandfathered, **twelve locking within 48 hours** — six of them the day before
+launch and five on the day itself.
+
+**Content:** drafted — [content.md](content.md#10-october-2026--the-free-trial-that-was-not-a-trial).
+
+### You is a profile now, not a list of everything — `3c2ae22`, `f387ebc`
+
+One scroll carrying eight unrelated settings with their whole interfaces open
+at once: theme chips, four lines of push status, the blocked list, and a delete
+confirmation that expanded in place. Nothing was findable because everything
+was visible.
+
+A row now says only what the setting is and what it is set to, and the detail
+lives on its own screen. Appearance, Notifications and Blocked people each got
+one. The new account, feedback and reset screens were rebuilt to match the rest
+of the app at the same time — they had been written as generic forms, which is
+the mistake the working rules warn about.
+
+**Content:** drafted — [content.md](content.md#10-october-2026--eight-settings-on-one-screen).
+
+### Light mode was being washed out by its own glow — `21b8b2d`
+
+The bleed opacities were read off the canvas, which is dark. On near-black a
+colour wash adds light and reads as depth. On near-white the identical numbers
+darken and saturate, so the same four circles became a coloured panel and
+everything on top of them lost contrast. The palette measured fine the whole
+time; it was being asked to sit on a ground that was no longer near-white.
+
+Same release: a habit you had not done yet was drawn in white on My Day — an
+outline card with nothing behind it — which was invisible on the light theme.
+
+**Content:** folded into the 1.2 post.
+
 ## 9 October 2026
 
 ### Setting up runs all five steps, and 1.2 goes out — `0c4c71d`, `8048fd4`

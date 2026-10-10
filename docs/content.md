@@ -12,6 +12,118 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 10 October 2026 · Eight settings on one screen
+
+**Status:** todo
+
+**Assets** — [demos/2026-10-10-profile-reveal.mp4](demos/2026-10-10-profile-reveal.mp4),
+and a before/after still would carry this one even better than the clip.
+
+**X / Twitter**
+
+> My settings screen had eight sections on it, and every one of them was fully
+> expanded at all times.
+>
+> Theme chips. Four lines of push status. A list of blocked people that is
+> empty for virtually everyone. A delete-account confirmation that unfolded in
+> the middle of it.
+>
+> Nothing was findable because everything was visible.
+>
+> It is a profile now. A row says what the setting is and what it is set to —
+> "Notifications · Off" — and the detail lives on its own screen where there is
+> room to explain itself.
+>
+> The fix was mostly deletion. Three new screens, and the one I was proudest of
+> writing is the one nobody will ever notice: the divider between rows is drawn
+> by the group, not by each row, so the last one does not carry a line to
+> nothing.
+
+Reply, if you want it:
+
+> Related: I had built the account and feedback screens the week before as
+> plain forms, and they looked nothing like the rest of the app. My own
+> working rules say to reuse the components when something is not on the
+> canvas. I wrote that rule. I did not follow it.
+
+---
+
+## 10 October 2026 · The free trial that was not a trial
+
+**Status:** todo
+
+**Assets** — a screenshot of the paywall is enough. The button is the story and
+it is right there in the middle of it.
+
+**X / Twitter**
+
+> My paywall had a button that said "Start my free 3 days".
+>
+> It did nothing.
+>
+> No payment, no Apple, no trial. It closed the sheet and started a timer of
+> my own, and three days later the app locked with no card on file and no way
+> back in except paying.
+>
+> The Subscribe button next to it was worse. It charged full price with zero
+> free days — because I had never actually created the introductory offer in
+> App Store Connect. The offer the paywall was advertising did not exist
+> anywhere except in my own copy.
+>
+> I checked the database this afternoon. Sixteen accounts. Twelve of them lock
+> within 48 hours.
+>
+> Fixed in 1.2: the offer is real now, and what the button says comes from
+> StoreKit instead of a constant. If you have already used your one trial —
+> Apple allows one per Apple ID per subscription group, for ever — it says
+> "Subscribe", because that is what is about to happen to your card.
+
+The number is the post. "Twelve of them lock within 48 hours" is the line
+people will quote, so do not bury it.
+
+Reply, if you want the second beat:
+
+> The part that gets me is that every piece of it was separately reasonable.
+>
+> A free trial, a paywall, a button to dismiss it. I wrote the copy for the
+> dismiss button and the copy for the trial on the same afternoon and never
+> noticed they were the same promise made twice, once by something that could
+> keep it and once by something that could not.
+
+---
+
+## 10 October 2026 · Tsumiki 1.2
+
+**Status:** todo
+
+**Assets** — [demos/2026-10-09-setting-up.mp4](demos/2026-10-09-setting-up.mp4)
+for the onboarding fix, and the 1080x1920 slides in
+[slides/](slides/) for anywhere that wants a still.
+
+**X / Twitter**
+
+> Tsumiki 1.2 is going to Apple. It is almost entirely things people told me
+> were broken.
+>
+> Setting up had five steps. Most people saw two — step 2 writes your routine,
+> and step 2 also checks on mount whether you already have one and throws you
+> out if you do. It never unmounted. So the moment it saved, its own guard
+> turned true and ejected you from the flow you were halfway through.
+>
+> You can now tell me what is wrong from inside the app. Change your email.
+> Set a password. Reset one you forgot — none of which were possible before,
+> which I did not fully register until somebody asked.
+>
+> Light mode was washing everything out. Turned out the colour glow behind
+> every screen was using the same opacity on both themes. On near-black it
+> reads as depth. On near-white it is a coloured panel sitting on top of your
+> content.
+
+Shorter than the trial post on purpose. A release note is not a story; the
+trial one is. If only one goes out this week, send that one.
+
+---
+
 ## 9 October 2026 · Setting up runs all five steps
 
 **Status:** todo
