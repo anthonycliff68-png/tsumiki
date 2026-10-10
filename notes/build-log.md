@@ -29,3 +29,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-09 · `1c2c78d` — Put the test account back after something deletes it
 - 2026-10-09 · `96d5bbb` — Put a screen on a slide, at the size a phone feed wants
 - 2026-10-09 · `ab1c696` — Let a slide be a cutout instead
+- 2026-10-10 · `ec6dd71` — Give people a way to write in, and a way back into their own account

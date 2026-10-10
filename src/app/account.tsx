@@ -35,6 +35,8 @@ export default function AccountScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordBusy, setPasswordBusy] = useState(false);
 
+  const [optInError, setOptInError] = useState<string | null>(null);
+
   const currentEmail = session?.user.email ?? '';
 
   /**
@@ -189,9 +191,26 @@ export default function AccountScreen() {
               label={copy.account.productEmailToggle}
               hint={copy.account.productEmailHint}
               value={profile?.product_email_opt_in ?? false}
-              onValueChange={(next) => optIn.mutate(next)}
+              // The switch is drawn from the server's answer, not from a local
+              // copy, so a write that fails leaves it exactly where it was —
+              // indistinguishable from a tap that never landed. It cost half an
+              // hour of looking in the wrong place; say so instead.
+              onValueChange={(next) =>
+                optIn.mutate(next, {
+                  onError: (e) => setOptInError(messageFrom(e, copy.account.productEmailFailed)),
+                  onSuccess: () => setOptInError(null),
+                })
+              }
               disabled={optIn.isPending || !profile}
             />
+            {optInError !== null && (
+              <Text style={styles.error} accessibilityLiveRegion="polite">
+                {optInError}
+              </Text>
+            )}
+            {!profile && (
+              <Text style={styles.meta}>{copy.account.productEmailLoading}</Text>
+            )}
             {/* Kept separate from the hint on purpose. Somebody turning the
                 switch off still gets their sign-in code, and not saying so
                 reads as a trick the first time one arrives. */}

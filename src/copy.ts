@@ -797,6 +797,9 @@ export const copy = {
       'The occasional note about what is new. Not often, never sold on, and you can turn it off here any time.',
     // Separated on purpose. Somebody turning the first one off still needs the
     // second, and not saying so reads as a trick.
+    productEmailFailed: 'Could not save that. Try again.',
+    // Shown rather than leaving a dead switch somebody taps at twice.
+    productEmailLoading: 'Loading your settings\u2026',
     productEmailAlways: 'Sign-in codes and anything about your account are sent either way.',
     feedbackLabel: 'Feedback',
     feedbackHint: 'Tell us what is broken or missing.',
