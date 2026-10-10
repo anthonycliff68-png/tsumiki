@@ -124,6 +124,14 @@ export default function YouScreen() {
         />
       )}
 
+      <Text style={styles.label}>{copy.account.title}</Text>
+      <Text style={styles.meta}>{copy.account.emailCurrent(session?.user.email ?? '')}</Text>
+      <TextButton label={copy.account.title} onPress={() => router.push('/account')} />
+
+      <Text style={styles.label}>{copy.account.feedbackLabel}</Text>
+      <Text style={styles.meta}>{copy.account.feedbackHint}</Text>
+      <TextButton label={copy.account.sendFeedback} onPress={() => router.push('/feedback')} />
+
       <Text style={styles.label}>{copy.safety.blockedTitle}</Text>
       {blocked.length === 0 ? (
         <Text style={styles.meta}>{copy.safety.blockedEmpty}</Text>

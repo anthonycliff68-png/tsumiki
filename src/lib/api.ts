@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 import { EVERY_DAY } from '@/data/defaults';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
@@ -1330,6 +1332,58 @@ export function useDeleteAccount() {
         // the account half-deleted; the server row is already gone.
       }
       queryClient.clear();
+    },
+  });
+}
+
+// --- feedback and product email ----------------------------------------------
+
+/**
+ * Send what somebody wrote in the feedback form.
+ *
+ * The version and platform ride along because a report without them is a
+ * report you cannot place: "the check-in button does nothing" means something
+ * different on 1.1 than on 1.2, and by the time anyone notices the gap the
+ * build it was about has shipped twice over. Neither can be filled in later.
+ */
+export function useSendFeedback(userId: string | undefined) {
+  return useMutation({
+    mutationFn: async (input: { message: string; replyWanted: boolean }) => {
+      if (!userId) throw new Error(copy.feedback.signedOut);
+      const message = input.message.trim();
+      if (!message) throw new Error(copy.feedback.empty);
+      const { error } = await supabase.from('feedback').insert({
+        user_id: userId,
+        message,
+        reply_wanted: input.replyWanted,
+        app_version: Constants.expoConfig?.version ?? null,
+        platform: Platform.OS,
+      });
+      if (error) throw error;
+    },
+  });
+}
+
+/**
+ * Turn product email on or off.
+ *
+ * Only this one column, never alongside anything else: the date it was decided
+ * is stamped by a trigger on change, and bundling the answer into a wider
+ * profile save would restamp it every time somebody edited their name.
+ */
+export function useProductEmailOptIn(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (optIn: boolean) => {
+      if (!userId) throw new Error(copy.feedback.signedOut);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ product_email_opt_in: optIn })
+        .eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 }

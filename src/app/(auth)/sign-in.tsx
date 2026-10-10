@@ -1,4 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
@@ -325,6 +326,18 @@ export default function SignInScreen() {
             }}
             disabled={busy}
           />
+
+          {/* Only alongside the password field. Offering a reset to somebody
+              who signs in with a code is offering to fix something they do
+              not use, and the code they already asked for is the faster way
+              in anyway. */}
+          {withPassword && (
+            <TextButton
+              label={copy.auth.forgotPassword}
+              onPress={() => router.push('/reset-password')}
+              disabled={busy}
+            />
+          )}
         </View>
       )}
 

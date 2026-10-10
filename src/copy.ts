@@ -87,6 +87,7 @@ export const copy = {
     // nobody can make one. It exists so an account can be signed into
     // without an inbox, which App Review needs and a video could not give.
     usePassword: 'Use a password instead',
+    forgotPassword: 'Forgotten your password?',
     useCode: 'Email me a code instead',
     passwordLabel: 'Password',
     passwordPlaceholder: 'Your password',
@@ -745,6 +746,82 @@ export const copy = {
     dropOnMoment: (label: string) => `after ${label.toLowerCase()}`,
     dropAtHour: (hour: string) => `at ${hour}`,
     moveFailed: 'Could not move it. Try again.',
+  },
+
+  feedback: {
+    title: 'Tell us\nwhat is\nwrong.',
+    blurb:
+      'Something broken, something confusing, something missing. It goes straight to the person who makes this.',
+    label: 'Your message',
+    placeholder: 'What happened, and what did you expect instead?',
+    replyWanted: 'I would like a reply',
+    // Said out loud because the alternative is somebody wondering for a week
+    // whether anyone read it.
+    replyHint: 'We will use the email you signed in with. Leave it off and nobody writes back.',
+    send: 'Send it',
+    sending: 'Sending\u2026',
+    sentTitle: 'Got it.',
+    sentBody: 'Thank you \u2014 genuinely. Every one of these gets read.',
+    done: 'Back to the app',
+    empty: 'Write something first.',
+    signedOut: 'You need to be signed in to send this.',
+    failed: 'Could not send that. Try again in a moment.',
+    counter: (left: number) => `${left} left`,
+  },
+
+  account: {
+    title: 'Account',
+    emailLabel: 'Email address',
+    emailCurrent: (email: string) => `Signed in as ${email}`,
+    changeEmail: 'Change email',
+    newEmail: 'New email address',
+    emailSent: (email: string) =>
+      `Check ${email} and confirm. Until you do, keep signing in with the old address.`,
+    badEmail: 'That does not look like an email address.',
+    emailFailed: 'Could not change that email.',
+    changePassword: 'Change password',
+    setPassword: 'Set a password',
+    // Two different jobs behind one button: somebody who signed in with Apple
+    // or a code has no password at all, and telling them to "change" one they
+    // never had is how a person decides the app is broken.
+    passwordHintNone: 'You sign in with a code or with Apple. A password gives you a second way in.',
+    passwordHintSome: 'Used when you sign in with an email and password.',
+    newPassword: 'New password',
+    newPasswordPlaceholder: 'At least 8 characters',
+    passwordSaved: 'Password saved.',
+    passwordTooShort: 'Passwords need at least 8 characters.',
+    passwordFailed: 'Could not save that password.',
+    productEmail: 'Product email',
+    productEmailToggle: 'Send me app news',
+    productEmailHint:
+      'The occasional note about what is new. Not often, never sold on, and you can turn it off here any time.',
+    // Separated on purpose. Somebody turning the first one off still needs the
+    // second, and not saying so reads as a trick.
+    productEmailAlways: 'Sign-in codes and anything about your account are sent either way.',
+    feedbackLabel: 'Feedback',
+    feedbackHint: 'Tell us what is broken or missing.',
+    sendFeedback: 'Send feedback',
+  },
+
+  reset: {
+    title: 'Reset your\npassword.',
+    blurb: 'We will email you a code. It lasts an hour.',
+    emailLabel: 'Email address',
+    send: 'Email me a code',
+    sending: 'Sending\u2026',
+    // Deliberately the same words whether or not the address exists. Saying
+    // "no account with that email" tells anyone who asks which addresses are
+    // registered here.
+    sent: (email: string) =>
+      `If ${email} has an account, a code is on its way. It lasts an hour.`,
+    codeLabel: 'Code from the email',
+    codePlaceholder: '000000',
+    newPassword: 'New password',
+    newPasswordPlaceholder: 'At least 8 characters',
+    save: 'Save and sign in',
+    saving: 'Saving\u2026',
+    failed: 'That code did not work. It may have expired.',
+    back: 'Back to sign in',
   },
 
   you: {

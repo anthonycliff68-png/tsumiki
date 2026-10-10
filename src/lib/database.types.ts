@@ -287,6 +287,39 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          id: string
+          message: string
+          platform: string | null
+          reply_wanted: boolean
+          sent_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          platform?: string | null
+          reply_wanted?: boolean
+          sent_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          platform?: string | null
+          reply_wanted?: boolean
+          sent_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       habit_schedules: {
         Row: {
           anchor_id: string | null
@@ -568,12 +601,15 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          product_email_decided_at: string | null
+          product_email_opt_in: boolean
           push_token: string | null
           quiet_end: string
           quiet_start: string
           subscribed_until: string | null
           timezone: string
           trial_started_at: string | null
+          unsubscribe_token: string
         }
         Insert: {
           avatar_color?: string
@@ -581,12 +617,15 @@ export type Database = {
           created_at?: string
           display_name?: string
           id: string
+          product_email_decided_at?: string | null
+          product_email_opt_in?: boolean
           push_token?: string | null
           quiet_end?: string
           quiet_start?: string
           subscribed_until?: string | null
           timezone?: string
           trial_started_at?: string | null
+          unsubscribe_token?: string
         }
         Update: {
           avatar_color?: string
@@ -594,12 +633,15 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          product_email_decided_at?: string | null
+          product_email_opt_in?: boolean
           push_token?: string | null
           quiet_end?: string
           quiet_start?: string
           subscribed_until?: string | null
           timezone?: string
           trial_started_at?: string | null
+          unsubscribe_token?: string
         }
         Relationships: []
       }
