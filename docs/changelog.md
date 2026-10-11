@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 11 October 2026
 
-### Two trials were running at once — `5004905`, `cb097f2`
+### Two trials were running at once — `5004905`, `cb097f2`, `809896f`
 
 Apple's introductory offer gives a new person three free days with a card
 already on file. Alongside it the app kept a clock of its own: open the app with
@@ -93,17 +93,25 @@ Then counting who the new rule actually locks, which should have been the first
 thing done rather than the last: twelve accounts, most with five to nine moments
 on their routine, sitting between the two rules. They had been granted three
 free days on open; the next time they opened the app they would have met a
-paywall instead. They are the TestFlight testers the grandfather clause was
-written for, so the line moved to 12 October to cover them rather than leaving
-them on the wrong side of a rule that changed under them. All seventeen existing
-accounts are grandfathered now; none is locked.
+paywall instead.
 
-With that date in the future nothing can reach `locked` until it passes, which
-is the trap the constant's own comment warns about — the wall cannot be shown to
-anybody, App Review included. `/plans` is reachable from You, so the
-subscription can still be seen and bought without it. It also means the clip
-owed below cannot be recorded until after midnight UTC: there is no locked
-account anywhere to record it with.
+The grandfather line moved to cover them. The first attempt put it at 12
+October, which grandfathered all seventeen accounts in the database and was the
+wrong line for two reasons. It was in the future, so nothing could reach
+`locked` at all and the wall could not be shown to anybody, App Review included
+— the trap the constant's own comment warns about. And it gave the app away to
+people who had never asked for it free.
+
+It sits at the minute 1.1.0 became downloadable instead: 9 October 2026, 10:48
+EDT, read off the version history in App Store Connect. Before that the only way
+in was a TestFlight invite and the build carried no paywall. After it the app
+was on the App Store with a price on it, and 1.1.0 shipped with the paywall in
+it, so anyone who downloaded it had already agreed to pay. The minute matters
+rather than the day: an account made at 13:00 UTC that day is a tester, one made
+at 15:34 UTC is not.
+
+Twelve grandfathered, one still running out an old clock, three locked, one
+subscribed. Two of the locked three are our own test accounts.
 
 **Content:** drafted — [content.md](content.md#11-october-2026--two-trials-were-running-at-once).
 

@@ -45,8 +45,15 @@ rule.
 > And then the part I nearly shipped without doing: counting who the new rule
 > actually locks. Twelve accounts. People who had set up a routine, five to
 > nine moments each, who'd open the next build and find a paywall where three
-> free days used to be. Moved the grandfather line to cover them. They turned
-> up before there was any reason to.
+> free days used to be.
+>
+> Moved the grandfather line to cover them — then moved it again, because the
+> first version covered everybody and that was just giving the app away. It
+> sits on the minute v1.1 became downloadable now. Before that the only way in
+> was an invite and there was no paywall in the build. After it, the app was on
+> the store with a price on it.
+>
+> Twelve people keep it. The ones who turned up before there was any reason to.
 >
 > The streak one was the scary one. A locked member stops counting as due. Get
 > that backwards and one person who never subscribed resets a streak four other
