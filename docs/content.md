@@ -12,6 +12,40 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 11 October 2026 · Two trials were running at once
+
+**Status:** todo
+
+**Assets** — still to record: the end of setting up on a locked account, before
+and after, side by side. The before is the old paywall checked out of git and
+run again — tap "Not now" and the identical screen comes back. Needs the
+simulator signed in as the throwaway test account, which is locked under the new
+rule.
+
+**X / Twitter**
+
+> My app was running two free trials at the same time and I didn't notice for
+> a week.
+>
+> One was Apple's: three days free, card on file, renews into a subscription.
+> The normal thing.
+>
+> The other was mine. Open the app with no trial stamp and it wrote one. Three
+> days later it locked you out of your own habits — no card, no renewal, no way
+> back in. A trial that only knew how to end.
+>
+> Deleting mine took four lines. Finding everything that quietly depended on it
+> took the rest of the morning:
+>
+> · the nightly streak job had its own copy of the rule, and the two had drifted
+> apart on exactly the case I was changing
+> · the end of onboarding dismissed one paywall straight into another
+> · the wall said "your free days are up" to people who never had any
+>
+> The streak one was the scary one. A locked member stops counting as due. Get
+> that backwards and one person who never subscribed resets a streak four other
+> people are keeping alive.
+
 ## 10 October 2026 · Eight settings on one screen
 
 **Status:** todo

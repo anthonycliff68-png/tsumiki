@@ -46,6 +46,53 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ---
 
+## 11 October 2026
+
+### Two trials were running at once — `5004905`
+
+Apple's introductory offer gives a new person three free days with a card
+already on file. Alongside it the app kept a clock of its own: open the app with
+no `trial_started_at` and it wrote one, granting three days to anybody who had
+none. Three days later that clock hard-locked them out of their own habits, and
+because nothing had ever been bought there was no card, no renewal, and no way
+back in except finding the paywall and starting over.
+
+A missing stamp now means locked, and nothing writes one any more. The free days
+come from the store, where the end of them is a renewal rather than a door
+closing. The accounts already carrying a stamp keep their remaining days —
+cutting those short to tidy up the rule would have been taking back something
+already given.
+
+The Edge Function mirror flips the same way, and that half matters more than it
+looks. A locked member stops counting as due, so a non-subscriber sitting in a
+crew cannot burn its grace and then reset a streak four other people are keeping
+alive. The client and the mirror had quietly drifted apart on exactly this case:
+one treated a null stamp as *fall back to the signup date*, the other as *cannot
+be locked*. The mirror's own comment warns about that drift. It had already
+happened.
+
+Two things fell out of the change.
+
+The end of setting up sent a locked person to the paywall with a **Not now** on
+it. Behind that screen the tabs are wrapped in the same paywall, so dismissing
+one wall put them straight into another — the same screen twice, the first one
+pretending there was a way past it. There is no way out offered now unless they
+actually have one.
+
+And the wall said "Your free days are up. Keep going." That was only ever true
+of an account with a stamp. Everyone who meets it now never had days of ours to
+run out, so it says "Keep Tsumiki. Keep the streak." instead.
+
+Held back until the offer was confirmed working on a real device, because a
+build with this change and no working introductory offer charges $29.99 behind
+a button that says free. Verified on TestFlight build 12: StoreKit returned
+eligible, the purchase recorded as a trial, Total Spent $0, and Apple's
+server-to-server notification reached RevenueCat a minute later.
+
+**Content:** drafted — [content.md](content.md#11-october-2026--two-trials-were-running-at-once).
+
+---
+
 ## 10 October 2026
 
 ### The free trial that was not a trial — `3604d18`
