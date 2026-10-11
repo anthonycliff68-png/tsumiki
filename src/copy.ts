@@ -521,7 +521,12 @@ export const copy = {
     perYear: '/ year',
     perMonth: '/ month',
 
-    overTitle: 'Your free days are up. Keep going.',
+    // Was "Your free days are up. Keep going." — which was only ever true of
+    // the handful of accounts carrying a trial stamp from before Apple's
+    // introductory offer became the free days. Everyone who meets this wall
+    // now never had days of ours to run out, so the old line told them
+    // something that had not happened.
+    overTitle: 'Keep Tsumiki. Keep the streak.',
     browsingTitle: 'Everything, for everyone you do it with.',
 
     /**

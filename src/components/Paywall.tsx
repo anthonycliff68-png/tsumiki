@@ -10,7 +10,7 @@ import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import type { TrialOffer } from '@/lib/trialOffer';
 import { useStyles } from '@/lib/appearance';
-import { TRIAL_DAYS, type Access } from '@/lib/entitlement';
+import { type Access } from '@/lib/entitlement';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const { width: W } = Dimensions.get('window');

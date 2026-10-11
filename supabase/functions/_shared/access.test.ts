@@ -58,11 +58,22 @@ describe('who is locked out', () => {
     assert.equal(lock({ createdAt: daysBefore(30), subscribedUntil: 'rubbish' }), true);
   });
 
-  it('does not lock somebody whose clock has not been started', () => {
-    // They downloaded the free app and have not opened the paid one yet, so
-    // none of their days have been spent.
-    assert.equal(lock({ createdAt: daysBefore(400), trialStartedAt: null }), false);
-    assert.equal(lock({ createdAt: daysBefore(10), trialStartedAt: null }), false);
+  it('locks somebody who was never granted days of ours', () => {
+    // No stamp means no self-managed trial, which is now every new account:
+    // their free days come from Apple's introductory offer instead. Until they
+    // subscribe they cannot open the app, so they must not count as due — one
+    // non-subscriber sitting in a crew would otherwise burn its grace and then
+    // reset a streak four other people are keeping alive.
+    assert.equal(lock({ createdAt: daysBefore(40), trialStartedAt: null }), true);
+    assert.equal(lock({ createdAt: daysBefore(1), trialStartedAt: null }), true);
+  });
+
+  it('still exempts a paying or grandfathered member with no stamp', () => {
+    assert.equal(
+      lock({ createdAt: daysBefore(10), trialStartedAt: null, subscribedUntil: daysBefore(-5) }),
+      false,
+    );
+    assert.equal(lock({ createdAt: '2026-09-25T00:00:00.000Z', trialStartedAt: null }), false);
   });
 
   it('counts from when the clock started, not from the sign-up', () => {

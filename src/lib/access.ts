@@ -39,22 +39,6 @@ export function useAccess(): { access: Access; loading: boolean } {
     staleTime: 60_000,
   });
 
-  // Start the free days the first time this version runs, rather than letting
-  // them count from a signup that may predate the paywall by weeks. Somebody
-  // who downloaded the free app and updated later gets their three days now;
-  // anyone arriving after 1.1 is out has the two dates land together anyway.
-  useEffect(() => {
-    if (!userId || !profile.data || profile.data.trial_started_at !== null) return;
-    void supabase
-      .from('profiles')
-      .update({ trial_started_at: new Date().toISOString() })
-      .eq('id', userId)
-      // Only if nobody got there first, so two devices opening at once cannot
-      // restart a clock that is already running.
-      .is('trial_started_at', null)
-      .then(() => profile.refetch());
-  }, [userId, profile]);
-
   // Mirror the expiry onto the profile so the nightly streak job can tell who
   // is locked out. It cannot ask RevenueCat, and a locked member must stop
   // counting as due or one lapsed trial resets four other people's streak.

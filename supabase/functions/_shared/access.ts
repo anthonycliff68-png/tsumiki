@@ -11,7 +11,10 @@
  * shown another.
  */
 
-/** Days of full access before the paywall appears. Mirrors TRIAL_DAYS. */
+/**
+ * Days on the self-managed clock, for the accounts that still carry a stamp.
+ * Mirrors TRIAL_DAYS. Nothing stamps it any more.
+ */
 export const TRIAL_DAYS = 3;
 
 /** Accounts made before this keep the app for nothing. Mirrors GRANDFATHERED_BEFORE. */
@@ -47,10 +50,16 @@ export function isLocked({ createdAt, trialStartedAt, subscribedUntil, now }: Lo
   if (Number.isNaN(created)) return false; // our bug, not theirs
   if (created < Date.parse(GRANDFATHERED_BEFORE)) return false;
 
-  // The clock starts when the app said it did. Null means it has not been
-  // stamped yet — they have not opened the paid version — so nothing has run
-  // down and they cannot be locked.
-  if (trialStartedAt === null) return false;
+  // Null means no free days of ours were ever granted, which is now the normal
+  // case: a new person's three days come from Apple's introductory offer, not
+  // from us. They are locked until they subscribe, and a locked member stops
+  // counting as due — which is the point. A non-subscriber who cannot open the
+  // app must not sit in a crew burning its grace and then resetting a streak
+  // four other people are keeping alive.
+  //
+  // This is the one place the file's usual "every uncertain answer is false"
+  // instinct is wrong. Null is not uncertain here; it is a definite no.
+  if (trialStartedAt === null) return true;
   const started = Date.parse(trialStartedAt);
   if (Number.isNaN(started)) return false;
 

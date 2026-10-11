@@ -19,7 +19,14 @@
  * person lapsing must not punish the four who are still turning up.
  */
 
-/** Days of full access before the paywall appears. */
+/**
+ * Days of full access on the self-managed clock.
+ *
+ * Only ever applied to accounts that already carry a `trial_started_at` stamp
+ * from before the paywall became the gate. Nothing stamps it any more: the
+ * three free days a new person gets are Apple's introductory offer, bought
+ * with a card, so the end of them is a renewal rather than a lockout.
+ */
 export const TRIAL_DAYS = 3;
 
 /**
@@ -60,7 +67,11 @@ export type Access =
 export type AccessInput = {
   /** profiles.created_at, ISO. */
   accountCreatedAt: string;
-  /** When the trial clock started. Defaults to the account being made. */
+  /**
+   * When the self-managed trial clock started, or null if one was never
+   * granted — which is the normal case now. Null means locked: the free days
+   * come from Apple's introductory offer, not from us.
+   */
   trialStartedAt?: string | null;
   /** RevenueCat's answer: is an entitlement active right now? */
   subscribed: boolean;
@@ -88,9 +99,20 @@ export function decideAccess({
 
   if (created < Date.parse(GRANDFATHERED_BEFORE)) return { state: 'grandfathered' };
 
-  const startedRaw = trialStartedAt === null || trialStartedAt === undefined
-    ? created
-    : Date.parse(trialStartedAt);
+  // No stamp means no free days of ours were ever granted, and that is now
+  // the normal case. New accounts get their three days from Apple instead, as
+  // an introductory offer on the subscription itself — which means a card is
+  // on file before the days start, and nobody is hard-locked out of their own
+  // habits three days later with no way back in.
+  //
+  // The stamp survives for the people who already had one when this changed.
+  // Cutting those trials short to tidy up the rule would have been taking
+  // something back that they had already been given.
+  if (trialStartedAt === null || trialStartedAt === undefined) return { state: 'locked' };
+
+  // A stamp that will not parse belongs to somebody who *was* granted the
+  // days, so they keep them: our bad row should not cost them the trial.
+  const startedRaw = Date.parse(trialStartedAt);
   const started = Number.isNaN(startedRaw) ? created : startedRaw;
 
   const elapsed = Math.floor((now.getTime() - started) / DAY);

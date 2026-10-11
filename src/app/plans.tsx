@@ -7,6 +7,7 @@ import { PLANS_OFFERED } from '@/components/FirstRunPlans';
 import { Paywall } from '@/components/Paywall';
 import { copy } from '@/copy';
 import { useAccess, useOffering, useTrialOffer } from '@/lib/access';
+import { hasAccess } from '@/lib/entitlement';
 import { usePaywallActions } from '@/lib/paywallActions';
 
 /**
@@ -45,17 +46,30 @@ export default function PlansScreen() {
       trial={trial.annual}
       onRestore={() => void bringBack()}
       onDeleteAccount={() => router.push('/delete-account')}
-      dismissLabel={first === '1' ? copy.paywall.notNow : copy.paywall.back}
+      /**
+       * No way out for somebody who is locked, because there is nowhere to go:
+       * the tabs behind this are wrapped in the same paywall, so a "Not now"
+       * would dismiss one wall straight into another. It is an offer only for
+       * the people who can still use the app — anyone grandfathered, anyone
+       * inside a trial that was already running, anyone already paying.
+       */
+      dismissLabel={
+        !hasAccess(access) ? undefined : first === '1' ? copy.paywall.notNow : copy.paywall.back
+      }
       /**
        * At the end of setting up there is nothing behind this to go back to —
        * it replaced the last step — so dismissing goes on to wherever
        * onboarding was heading. Opened from You it is a screen you came to
        * look at, and goBack is right.
        */
-      onDismiss={() => {
-        if (first === '1') router.replace((then as '/crews' | undefined) ?? '/');
-        else goBack();
-      }}
+      onDismiss={
+        !hasAccess(access)
+          ? undefined
+          : () => {
+              if (first === '1') router.replace((then as '/crews' | undefined) ?? '/');
+              else goBack();
+            }
+      }
     />
   );
 }

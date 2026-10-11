@@ -59,13 +59,19 @@ describe('the people who were here first', () => {
 
   it('does not extend that to someone who arrived a second after the cutoff', () => {
     const justAfter = new Date(Date.parse(GRANDFATHERED_BEFORE) + 1000).toISOString();
-    const a = decideAccess({ accountCreatedAt: justAfter, subscribed: false, now: at(justAfter) });
+    const a = decideAccess({
+      accountCreatedAt: justAfter,
+      trialStartedAt: justAfter,
+      subscribed: false,
+      now: at(justAfter),
+    });
     assert.equal(a.state, 'trial');
   });
 
   it('treats the cutoff itself as too late, so the boundary is not ambiguous', () => {
     const a = decideAccess({
       accountCreatedAt: GRANDFATHERED_BEFORE,
+      trialStartedAt: GRANDFATHERED_BEFORE,
       subscribed: false,
       now: at(GRANDFATHERED_BEFORE),
     });
@@ -75,24 +81,24 @@ describe('the people who were here first', () => {
 
 describe('the trial clock', () => {
   it('gives the full run on the day someone signs up', () => {
-    assert.deepEqual(decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at(AFTER) }), {
+    assert.deepEqual(decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: at(AFTER) }), {
       state: 'trial',
       daysLeft: TRIAL_DAYS,
     });
   });
 
   it('counts down a day at a time', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS - 1) });
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS - 1) });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
   it('still has a day left with minutes to spare on the last day', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS, -1) });
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS, -1) });
     assert.deepEqual(a, { state: 'trial', daysLeft: 1 });
   });
 
   it('locks the moment the last day is up, not a day later', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS) });
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: after(TRIAL_DAYS) });
     assert.deepEqual(a, { state: 'locked' });
   });
 
@@ -106,6 +112,43 @@ describe('the trial clock', () => {
       now: after(TRIAL_DAYS),
     });
     assert.deepEqual(a, { state: 'trial', daysLeft: 2 });
+  });
+});
+
+describe('who is granted free days at all', () => {
+  // The change that removed the double clock. A new account used to be handed
+  // three days by us and then hard-locked with no card on file; now the free
+  // days are Apple's introductory offer, bought up front.
+  it('locks a new account that was never granted days of ours', () => {
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: null, subscribed: false, now: at(AFTER) });
+    assert.deepEqual(a, { state: 'locked' });
+  });
+
+  it('leaves a trial that was already running alone', () => {
+    const a = decideAccess({
+      accountCreatedAt: AFTER,
+      trialStartedAt: AFTER,
+      subscribed: false,
+      now: after(1),
+    });
+    assert.deepEqual(a, { state: 'trial', daysLeft: 2 });
+  });
+
+  // Paying and grandfathering both sit above this rule, so neither can be
+  // locked out by it.
+  it('does not lock somebody who is paying', () => {
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: null, subscribed: true, now: at(AFTER) });
+    assert.deepEqual(a, { state: 'subscribed' });
+  });
+
+  it('does not lock somebody grandfathered in', () => {
+    const a = decideAccess({
+      accountCreatedAt: '2026-09-25T09:00:00.000Z',
+      trialStartedAt: null,
+      subscribed: false,
+      now: at(AFTER),
+    });
+    assert.deepEqual(a, { state: 'grandfathered' });
   });
 });
 
@@ -126,14 +169,14 @@ describe('clocks and data that cannot be trusted', () => {
   });
 
   it('does not punish a device whose clock is set in the past', () => {
-    const a = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-10T09:00:00.000Z') });
+    const a = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: at('2026-11-10T09:00:00.000Z') });
     assert.deepEqual(a, { state: 'trial', daysLeft: TRIAL_DAYS });
   });
 });
 
 describe('what a lapsed member does to their crew', () => {
   it('stops owing the crew a check-in once locked out', () => {
-    const locked = decideAccess({ accountCreatedAt: AFTER, subscribed: false, now: at('2026-11-30T09:00:00.000Z') });
+    const locked = decideAccess({ accountCreatedAt: AFTER, trialStartedAt: AFTER, subscribed: false, now: at('2026-11-30T09:00:00.000Z') });
     assert.equal(locked.state, 'locked');
     assert.equal(countsAsDue(locked), false);
   });
