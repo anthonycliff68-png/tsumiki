@@ -42,6 +42,12 @@ rule.
 > · the end of onboarding dismissed one paywall straight into another
 > · the wall said "your free days are up" to people who never had any
 >
+> And then the part I nearly shipped without doing: counting who the new rule
+> actually locks. Twelve accounts. People who had set up a routine, five to
+> nine moments each, who'd open the next build and find a paywall where three
+> free days used to be. Moved the grandfather line to cover them. They turned
+> up before there was any reason to.
+>
 > The streak one was the scary one. A locked member stops counting as due. Get
 > that backwards and one person who never subscribed resets a streak four other
 > people are keeping alive.

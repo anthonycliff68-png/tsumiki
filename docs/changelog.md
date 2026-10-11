@@ -48,7 +48,7 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ## 11 October 2026
 
-### Two trials were running at once — `5004905`
+### Two trials were running at once — `5004905`, `cb097f2`
 
 Apple's introductory offer gives a new person three free days with a card
 already on file. Alongside it the app kept a clock of its own: open the app with
@@ -88,6 +88,22 @@ build with this change and no working introductory offer charges $29.99 behind
 a button that says free. Verified on TestFlight build 12: StoreKit returned
 eligible, the purchase recorded as a trial, Total Spent $0, and Apple's
 server-to-server notification reached RevenueCat a minute later.
+
+Then counting who the new rule actually locks, which should have been the first
+thing done rather than the last: twelve accounts, most with five to nine moments
+on their routine, sitting between the two rules. They had been granted three
+free days on open; the next time they opened the app they would have met a
+paywall instead. They are the TestFlight testers the grandfather clause was
+written for, so the line moved to 12 October to cover them rather than leaving
+them on the wrong side of a rule that changed under them. All seventeen existing
+accounts are grandfathered now; none is locked.
+
+With that date in the future nothing can reach `locked` until it passes, which
+is the trap the constant's own comment warns about — the wall cannot be shown to
+anybody, App Review included. `/plans` is reachable from You, so the
+subscription can still be seen and bought without it. It also means the clip
+owed below cannot be recorded until after midnight UTC: there is no locked
+account anywhere to record it with.
 
 **Content:** drafted — [content.md](content.md#11-october-2026--two-trials-were-running-at-once).
 
