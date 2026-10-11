@@ -42,3 +42,5 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-10 · `3604d18` — Say what the trial actually is, or do not say trial
 - 2026-10-10 · `7a3f77d` — Log the day's commits
 - 2026-10-10 · `76015f1` — Write up 1.2, and the trial that was not one
+- 2026-10-11 · `5004905` — Stop running a trial clock of our own
+- 2026-10-11 · `02c2305` — Write up the two trials

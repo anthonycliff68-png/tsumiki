@@ -47,6 +47,15 @@ export const TRIAL_DAYS = 3;
  * nothing on the App Store, the only accounts that exist are the TestFlight
  * testers', and those are the people this is for.
  *
+ * Moved to 12 October when the self-managed trial clock was removed. Until
+ * then, opening the app granted three free days to anybody who had none; after
+ * it, a missing stamp means locked. Twelve accounts sat between those two
+ * rules — people who had set up a routine, most with five to nine moments on
+ * it, who would have opened the next build and met a paywall where three free
+ * days used to be. They are the same TestFlight testers the line above is
+ * about, so the line moved to cover them rather than leaving them on the wrong
+ * side of a rule that changed under them.
+ *
  * It was 1 November, then 20 October, and both were wrong for a reason worth
  * writing down: while this date is in the future, no account can ever reach
  * 'locked', so the paywall cannot be shown to anybody — including App Review,
@@ -56,7 +65,7 @@ export const TRIAL_DAYS = 3;
  * The mirror of this constant lives in supabase/functions/_shared/access.ts
  * and must move at the same time.
  */
-export const GRANDFATHERED_BEFORE = '2026-10-06T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-10-12T00:00:00.000Z';
 
 export type Access =
   | { state: 'subscribed' }
