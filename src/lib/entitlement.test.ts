@@ -9,6 +9,7 @@ import { describe, it } from 'node:test';
 import {
   countsAsDue,
   decideAccess,
+  expiryToMirror,
   GRANDFATHERED_BEFORE,
   hasAccess,
   TRIAL_DAYS,
@@ -189,5 +190,44 @@ describe('what a lapsed member does to their crew', () => {
     ]) {
       assert.equal(countsAsDue(a), true, a.state);
     }
+  });
+});
+
+/**
+ * What the nightly job is told about a subscription.
+ *
+ * The lifetime case is the one that matters. RevenueCat reports a granted
+ * entitlement with no expirationDate, which is the same null it reports for no
+ * entitlement at all, and the job reads that null as locked out — which stops
+ * the person counting as due and leaves their crew's streak alive on days
+ * nobody turned up.
+ */
+describe('what the server is told about a subscription', () => {
+  it('writes nothing when there is no entitlement', () => {
+    assert.equal(expiryToMirror(undefined), null);
+  });
+
+  it('passes a real expiry straight through', () => {
+    assert.equal(
+      expiryToMirror({ expirationDate: '2027-01-01T00:00:00.000Z' }),
+      '2027-01-01T00:00:00.000Z',
+    );
+  });
+
+  it('turns a lifetime grant into a date rather than a null', () => {
+    const mirrored = expiryToMirror({ expirationDate: null });
+    assert.notEqual(mirrored, null);
+    assert.ok(Date.parse(mirrored as string) > Date.now());
+  });
+
+  it('treats a missing expirationDate the same as an explicit null', () => {
+    assert.equal(expiryToMirror({}), expiryToMirror({ expirationDate: null }));
+  });
+
+  it('is read as not locked by the rule it is written for', () => {
+    // The point of the whole helper: whatever it writes must survive the
+    // round trip through the Edge Function's comparison against now().
+    const mirrored = expiryToMirror({ expirationDate: null }) as string;
+    assert.ok(Date.parse(mirrored) > Date.now());
   });
 });

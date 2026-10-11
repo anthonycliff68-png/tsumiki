@@ -76,6 +76,35 @@ export const TRIAL_DAYS = 3;
  */
 export const GRANDFATHERED_BEFORE = '2026-10-09T14:48:00.000Z';
 
+/**
+ * An entitlement that is active and never runs out.
+ *
+ * RevenueCat gives a lifetime entitlement no `expirationDate`, which is the
+ * same `null` it gives somebody with no entitlement at all.
+ */
+const NEVER_EXPIRES = '9999-12-31T00:00:00.000Z';
+
+/**
+ * What to mirror onto `profiles.subscribed_until` for an entitlement.
+ *
+ * The nightly streak job runs in Postgres and cannot ask RevenueCat anything,
+ * so the expiry is copied onto the profile for it to read. A lifetime grant
+ * arrives with no expiry, and writing that null through would tell the job the
+ * person is locked out — which stops them counting as due, which leaves their
+ * crew's streak alive on days nobody turned up. A streak that holds for the
+ * wrong reason is the one outcome the rules here exist to prevent.
+ *
+ * It lives in this file rather than next to the SDK call because this one has
+ * no imports, and anything that reaches into react-native-purchases cannot be
+ * loaded by a test.
+ */
+export function expiryToMirror(
+  active: { expirationDate?: string | null } | undefined,
+): string | null {
+  if (active === undefined) return null;
+  return active.expirationDate ?? NEVER_EXPIRES;
+}
+
 export type Access =
   | { state: 'subscribed' }
   | { state: 'grandfathered' }

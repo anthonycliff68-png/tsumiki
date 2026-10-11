@@ -1,5 +1,7 @@
 import Constants from 'expo-constants';
 
+import { expiryToMirror } from '@/lib/entitlement';
+
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 /**
@@ -98,8 +100,7 @@ export async function subscriptionExpiry(): Promise<string | null> {
   if (!p) return null;
   try {
     const info = await p.getCustomerInfo();
-    const active = info.entitlements.active[ENTITLEMENT];
-    return active?.expirationDate ?? null;
+    return expiryToMirror(info.entitlements.active[ENTITLEMENT]);
   } catch {
     return null;
   }
