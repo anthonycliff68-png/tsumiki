@@ -47,14 +47,23 @@ export const TRIAL_DAYS = 3;
  * nothing on the App Store, the only accounts that exist are the TestFlight
  * testers', and those are the people this is for.
  *
- * Moved to 12 October when the self-managed trial clock was removed. Until
- * then, opening the app granted three free days to anybody who had none; after
- * it, a missing stamp means locked. Twelve accounts sat between those two
- * rules — people who had set up a routine, most with five to nine moments on
- * it, who would have opened the next build and met a paywall where three free
- * days used to be. They are the same TestFlight testers the line above is
- * about, so the line moved to cover them rather than leaving them on the wrong
- * side of a rule that changed under them.
+ * Moved when the self-managed trial clock was removed. Until then, opening the
+ * app granted three free days to anybody who had none; after it, a missing
+ * stamp means locked, and twelve accounts sat between those two rules — people
+ * with a routine already set up who would have opened the next build and found
+ * a paywall where three free days used to be.
+ *
+ * It is set to the minute 1.1.0 became downloadable: 9 October 2026, 10:48
+ * EDT. That is the first moment anybody could get the app without being
+ * invited, and it is the line the sentence above is really drawing. Everyone
+ * before it installed through TestFlight, with no paywall in the build at all.
+ * Everyone after it found a paid app on the App Store and downloaded it
+ * knowing the price — 1.1.0 shipped with the paywall in it. Grandfathering
+ * them too would not be keeping faith with early users, it would be giving the
+ * app away to people who had already agreed to pay for it.
+ *
+ * The minute matters rather than the day: an account made at 13:00 UTC that
+ * day is a tester, and one made at 15:34 UTC is not.
  *
  * It was 1 November, then 20 October, and both were wrong for a reason worth
  * writing down: while this date is in the future, no account can ever reach
@@ -65,7 +74,7 @@ export const TRIAL_DAYS = 3;
  * The mirror of this constant lives in supabase/functions/_shared/access.ts
  * and must move at the same time.
  */
-export const GRANDFATHERED_BEFORE = '2026-10-12T00:00:00.000Z';
+export const GRANDFATHERED_BEFORE = '2026-10-09T14:48:00.000Z';
 
 export type Access =
   | { state: 'subscribed' }

@@ -45,3 +45,4 @@ One line per commit, written by a git hook. Raw material for posts.
 - 2026-10-11 · `5004905` — Stop running a trial clock of our own
 - 2026-10-11 · `02c2305` — Write up the two trials
 - 2026-10-11 · `cb097f2` — Move the line so nobody falls the wrong side of it
+- 2026-10-11 · `8a6bd03` — Fold the moved line into the same write-up
