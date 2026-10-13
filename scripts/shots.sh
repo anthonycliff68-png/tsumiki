@@ -45,6 +45,8 @@ SCREENS=(
   "/plans|06-plans|Plans — the paywall, opened on purpose"
   "/new-habit|07-new-habit|New habit — name, when, days, colour, solo or crew"
   "/schedule|08-schedule|Schedule — the moments of your day"
+  "/account|11-account|Account — change your email or your password (1.2)"
+  "/feedback|12-feedback|Feedback — write in without leaving the app (1.2)"
 )
 
 # Needs a real crew, so it is only captured when one is named.
