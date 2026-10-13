@@ -1,0 +1,11 @@
+screens
+Tsumiki
+1
+v 1.2
+Six things added.
+Eleven fixed.
+--
+01|Feedback|Write in from inside the app.
+02|Light or dark|Pick one. Light mode was washed out.
+--
+Available now on the App Store
