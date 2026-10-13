@@ -23,7 +23,11 @@ import { BATCH, buildDigest, type FeedbackRow } from '../_shared/digest.ts';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const TO = Deno.env.get('FEEDBACK_TO') ?? 'tsumikihabittracker@gmail.com';
-const FROM = Deno.env.get('FEEDBACK_FROM') ?? 'Tsumiki <feedback@tsumiki.day>';
+// mail.tsumiki.day, not tsumiki.day: the DKIM record Resend verifies against
+// lives at resend._domainkey.mail.tsumiki.day, and the apex has none. Sending
+// from the apex is refused, so the wrong default here would have meant a digest
+// that 502s on every run and feedback that still never arrives.
+const FROM = Deno.env.get('FEEDBACK_FROM') ?? 'Tsumiki <feedback@mail.tsumiki.day>';
 
 Deno.serve(async () => {
   const supabase = createClient(
