@@ -21,11 +21,7 @@
       },
       "config": {
         "usesNonExemptEncryption": false
-      },
-      "associatedDomains": [
-        "applinks:tsumiki.day",
-        "applinks:www.tsumiki.day"
-      ]
+      }
     },
     "android": {
       "package": "com.tsumiki.app",
@@ -34,24 +30,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "tsumiki.day",
-              "pathPrefix": "/j"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
