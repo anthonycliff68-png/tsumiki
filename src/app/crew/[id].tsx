@@ -9,6 +9,7 @@ import { Bleed } from '@/components/Bleed';
 import { TextButton } from '@/components/Button';
 import { CheckIcon, FlameIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
+import { RemoveMemberSheet } from '@/components/RemoveMemberSheet';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import {
@@ -52,6 +53,7 @@ export default function CrewScreen() {
   const [draftName, setDraftName] = useState('');
   const [nudging, setNudging] = useState<CrewMemberState | null>(null);
   const [reporting, setReporting] = useState<CrewMemberState | null>(null);
+  const [removing, setRemoving] = useState<CrewMemberState | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -207,6 +209,8 @@ export default function CrewScreen() {
               alreadyNudged={nudgedToday.includes(member.userId)}
               onNudge={() => setNudging(member)}
               onReport={() => setReporting(member)}
+              canRemove={isOwner && member.userId !== userId}
+              onRemove={() => setRemoving(member)}
               onToggle={() => {
                 if (member.userId !== userId) return;
                 if (member.checkedIn) undo.mutate({ habitId: crew.habitId });
@@ -244,6 +248,13 @@ export default function CrewScreen() {
         onClose={() => setReporting(null)}
         onBlocked={() => void refetch()}
       />
+      <RemoveMemberSheet
+        visible={removing !== null}
+        crewId={id}
+        personId={removing?.userId ?? ''}
+        personName={removing?.displayName ?? ''}
+        onClose={() => setRemoving(null)}
+      />
 
       <NudgeSheet
         visible={nudging !== null}
@@ -273,6 +284,8 @@ function MemberTile({
   alreadyNudged,
   onNudge,
   onReport,
+  canRemove,
+  onRemove,
   onToggle,
 }: {
   member: CrewMemberState;
@@ -282,6 +295,9 @@ function MemberTile({
   alreadyNudged: boolean;
   onNudge: () => void;
   onReport: () => void;
+  /** Only the creator may, and never on themselves. */
+  canRemove: boolean;
+  onRemove: () => void;
   onToggle: () => void;
 }) {
   const colors = useTheme();
@@ -380,15 +396,26 @@ function MemberTile({
           reaches for it in the normal course of a day; it only has to be
           findable when they do. */}
       {!isMe && (
-        <Text accessibilityRole="button" onPress={onReport} style={styles.reportLink}>
-          {copy.safety.report}
-        </Text>
+        <View style={styles.quietLinks}>
+          <Text accessibilityRole="button" onPress={onReport} style={styles.reportLink}>
+            {copy.safety.report}
+          </Text>
+          {/* Same weight as Report, and for the same reason: nobody reaches
+              for it in the normal course of a day, it only has to be findable
+              when they do. */}
+          {canRemove && (
+            <Text accessibilityRole="button" onPress={onRemove} style={styles.reportLink}>
+              {copy.crews.remove}
+            </Text>
+          )}
+        </View>
       )}
     </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
+  quietLinks: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   renameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   renameField: {
     flexGrow: 1,

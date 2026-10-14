@@ -375,6 +375,18 @@ export const copy = {
     checkIn: 'Check in',
     checkedIn: 'Checked in',
     graceUsed: 'One miss, back tomorrow keeps it alive',
+    // Removing somebody is dated rather than immediate: the database sets
+    // left_on to tomorrow in their time zone. So today still counts for them,
+    // which is what stops a crew rescuing its streak by removing whoever just
+    // broke it. The spot, though, frees up at once. All three are said here
+    // because people expect "removed" to mean one instant thing.
+    remove: 'Remove',
+    removeTitle: (name: string) => `Remove ${name}?`,
+    removeBody:
+      'Today still counts for them. From tomorrow they are out of the streak, and the spot opens up now.',
+    removeConfirm: 'Remove them',
+    removeKeep: 'Keep them',
+    removeFailed: 'Could not remove them. Try again.',
     leave: 'Leave this crew',
     back: 'Back',
     invite: 'Invite',
