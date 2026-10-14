@@ -1,0 +1,4 @@
+# Every invite code is its own URL, and there is one page behind all of them.
+# 200 rather than 301: the browser must keep /j/<code> in the address bar,
+# because that is the only place the code exists.
+/j/*  /j/index.html  200
