@@ -1,0 +1,5 @@
+# Apple fetches this file and refuses it unless it is served as JSON. It has no
+# extension, so nothing infers the type and it has to be stated here.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600

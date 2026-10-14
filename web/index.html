@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tsumiki</title>
+<meta name="description" content="Someone invited you to keep a habit going together.">
+
+<!-- An invite is nearly always opened from a message, so the preview card is
+     the first thing anyone sees of this app. -->
+<meta property="og:title" content="Join a crew on Tsumiki">
+<meta property="og:description" content="Same habit, your own time. One streak between you.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0B0B0C">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0B0B0C; --surface: #1C1C1F; --text: #F4F1EC;
+    --muted: #BDB7AD; --faint: #9D978D; --border: rgba(255,255,255,0.14);
+    --accent: #E8552B;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    min-height: 100svh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+    text-align: center; position: relative; overflow-x: hidden;
+  }
+  /* The same two blurred circles every screen in the app puts behind its
+     content, tinted with the crew's habit colour once we know it. */
+  .bleed { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+           transition: background 400ms ease; }
+  main { position: relative; z-index: 1; width: 100%; max-width: 420px; }
+
+  .mark { font-family: 'DM Sans'; font-weight: 700; font-size: 13px;
+          letter-spacing: 0.36em; color: var(--muted); margin-bottom: 40px; }
+  h1 { font-family: 'Archivo', sans-serif; font-weight: 900; font-size: clamp(38px, 11vw, 54px);
+       line-height: 0.96; letter-spacing: -0.02em; margin: 0 0 14px; text-transform: uppercase;
+       text-wrap: balance; }
+  .sub { color: var(--muted); font-size: 17px; line-height: 1.5; margin: 0 0 32px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: 22px; padding: 24px 22px; margin-bottom: 28px; text-align: left; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .row + .row { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .label { color: var(--faint); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .value { font-weight: 700; font-size: 17px; text-align: right; }
+  .habit { display: flex; align-items: center; gap: 10px; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); flex: none; }
+
+  a.btn, button.btn {
+    display: block; width: 100%; border: 0; border-radius: 999px; cursor: pointer;
+    padding: 18px 20px; font-family: inherit; font-size: 17px; font-weight: 700;
+    text-decoration: none; background: var(--text); color: #121212;
+  }
+  a.ghost { background: transparent; color: var(--text); border: 1px solid var(--border);
+            margin-top: 12px; }
+  .note { color: var(--faint); font-size: 14px; line-height: 1.5; margin-top: 22px; }
+  .code { font-variant-numeric: tabular-nums; letter-spacing: 0.22em; text-transform: uppercase;
+          color: var(--muted); font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bleed" id="bleed"></div>
+
+<main>
+  <div class="mark">TSUMIKI</div>
+
+  <div id="loading">
+    <h1>One moment</h1>
+    <p class="sub">Looking up your invite.</p>
+  </div>
+
+  <div id="invite" hidden>
+    <h1 id="title">You're invited</h1>
+    <p class="sub" id="pitch">Same habit, your own time. One streak between you.</p>
+
+    <div class="card">
+      <div class="row">
+        <span class="label">Habit</span>
+        <span class="value habit"><span class="dot" id="dot"></span><span id="habit"></span></span>
+      </div>
+      <div class="row">
+        <span class="label">Crew</span>
+        <span class="value" id="crew"></span>
+      </div>
+      <div class="row">
+        <span class="label">Streak</span>
+        <span class="value" id="streak"></span>
+      </div>
+    </div>
+
+    <a class="btn" id="open" href="#">Open in Tsumiki</a>
+    <a class="btn ghost" id="store" href="#">Get Tsumiki</a>
+    <p class="note">
+      Already have the app? The first button opens it.<br>
+      Your code is <span class="code" id="codeText"></span> — it works from
+      Crews → Join if the link does not.
+    </p>
+  </div>
+
+  <div id="problem" hidden>
+    <h1 id="problemTitle">That link has expired</h1>
+    <p class="sub" id="problemBody">Ask whoever sent it for a fresh one. Invites last seven days.</p>
+    <a class="btn ghost" id="storeAlt" href="#">Get Tsumiki anyway</a>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const SUPABASE_URL = 'https://zteejputfuvtriahpksr.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZWVqcHV0ZnV2dHJpYWhwa3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMTk3NTYsImV4cCI6MjEwNTU5NTc1Nn0.TqjxGTFOxdF0ol8aYULbo0OwXP0aU6MxPOqapXrkpxQ';
+  const STORE_URL = 'https://apps.apple.com/app/id6815775979';
+
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => { $(id).hidden = false; };
+  const hide = (id) => { $(id).hidden = true; };
+
+  // The code is the last segment of the path. Hosting rewrites every /j/<code>
+  // to this one file, so the URL is the only place the code survives.
+  const code = decodeURIComponent(
+    (location.pathname.replace(/\/+$/, '').split('/').pop() || '')
+  ).toLowerCase().trim();
+
+  $('store').href = STORE_URL;
+  $('storeAlt').href = STORE_URL;
+
+  function problem(title, body) {
+    hide('loading'); hide('invite');
+    $('problemTitle').textContent = title;
+    $('problemBody').textContent = body;
+    show('problem');
+  }
+
+  function paintBleed(colour) {
+    $('bleed').style.background =
+      `radial-gradient(60% 50% at 18% 28%, ${colour}44, transparent 70%),` +
+      `radial-gradient(55% 45% at 85% 78%, ${colour}2E, transparent 70%)`;
+  }
+
+  if (!/^[a-z0-9]{4,12}$/.test(code)) {
+    problem('Tsumiki', 'Build habits with your people, one stack at a time. Open an invite link to join a crew.');
+    return;
+  }
+
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/get_invite`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    },
+    body: JSON.stringify({ p_code: code }),
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error('rpc ' + r.status))))
+    .then((rows) => {
+      const i = Array.isArray(rows) ? rows[0] : rows;
+      if (!i) {
+        problem('We cannot find that invite', 'It may have been used up or expired. Ask for a new one.');
+        return;
+      }
+      if (i.expired) {
+        problem('That invite has expired', 'Invites last seven days. Ask whoever sent it for a fresh one.');
+        return;
+      }
+      if (i.is_full) {
+        problem('That crew is full', 'A crew holds five people. Ask them to start another one.');
+        return;
+      }
+
+      const colour = i.habit_color || '#E8552B';
+      paintBleed(colour);
+      $('dot').style.background = colour;
+      $('habit').textContent = i.habit_name;
+      $('crew').textContent = i.crew_name;
+      $('streak').textContent =
+        i.streak_current > 0 ? `${i.streak_current} days` : 'Just getting going';
+      $('title').textContent = `Join ${i.crew_name}`;
+      $('codeText').textContent = code;
+      // The custom scheme, not the https link: tapping an https link to the
+      // page you are already on does nothing. This one hands over to the app.
+      $('open').href = `tsumiki://j/${encodeURIComponent(code)}`;
+
+      hide('loading');
+      show('invite');
+    })
+    .catch(() => {
+      // A crew's details are a nicety; the code is the thing that matters, and
+      // it is in the URL either way. Never dead-end on a failed lookup.
+      $('codeText').textContent = code;
+      $('open').href = `tsumiki://j/${encodeURIComponent(code)}`;
+      $('title').textContent = "You're invited";
+      hide('loading');
+      show('invite');
+    });
+})();
+</script>
+</body>
+</html>
