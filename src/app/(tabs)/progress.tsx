@@ -47,16 +47,7 @@ const VIEWS: { key: ProgressView; label: string }[] = [
 
 /**
  * How many habits can be named before the list stops being a picture.
- *
- * Under this, every habit gets a row and the screen still answers "how am I
- * doing" at a glance. Over it, the rows fill the screen and answer nothing — so
- * the spread is drawn instead and only the ones worth acting on are named.
  */
-const NAME_LIMIT = 8;
-/** Below this a habit is slipping. */
-const SLIPPING = 0.25;
-/** Above this it is fine. Only used to describe the spread in a sentence. */
-const FINE = 0.5;
 
 function asUtc(date: string): Date {
   const [y, m, d] = date.split('-').map(Number);
@@ -178,13 +169,14 @@ export default function ProgressScreen() {
   );
 
   const overall = useMemo(() => overallOf(stats), [stats]);
-  const rated = stats.filter((habit) => habit.rate !== null);
-  const slipping = rated.filter((habit) => (habit.rate ?? 0) < SLIPPING);
-  const fine = rated.filter((habit) => (habit.rate ?? 0) >= FINE);
-  const crowded = rated.length > NAME_LIMIT;
-
-  /** Under the limit every habit is named; over it, only the ones to act on. */
-  const named = crowded ? slipping : rated;
+  /**
+   * Every habit, every time. There used to be a limit: past eight habits the
+   * rows were replaced by a spread of ticks and only the slipping ones were
+   * named, with a line underneath admitting how many had been left out. The
+   * person it was protecting is exactly the person who most needs to see the
+   * whole list — somebody with twelve habits cannot be told about four.
+   */
+  const named = stats;
   const accent = stats[0]?.color ?? habitColors[0];
 
   const placements = useMemo(
@@ -407,41 +399,11 @@ export default function ProgressScreen() {
 
         {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
 
-        {/* Past the naming limit the rows would fill the screen and stop being a
-            picture, so the spread is drawn instead: one tick a habit, low to
-            high. It answers "where does everything sit" without asking anyone
-            to read thirty names. */}
-        {crowded && (
-          <View style={styles.section}>
-            <View style={styles.sectionHead}>
-              <Text style={styles.label}>{copy.stats.allOf(rated.length)}</Text>
-              <Text style={styles.labelQuiet}>{copy.stats.lowToHigh}</Text>
-            </View>
-            <View style={styles.spread}>
-              {rated.map((habit) => (
-                <View
-                  key={habit.habitId}
-                  style={[
-                    styles.tick,
-                    {
-                      height: `${Math.max(Math.round((habit.rate ?? 0) * 100), 4)}%`,
-                      backgroundColor: habit.color,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-            <Text style={styles.labelQuiet}>{copy.stats.spread(slipping.length, fine.length)}</Text>
-          </View>
-        )}
-
         {named.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHead}>
-              <Text style={[styles.label, crowded && { color: slipping[0]?.color }]}>
-                {crowded ? copy.stats.slipping(slipping.length) : copy.stats.eachHabit}
-              </Text>
-              {!crowded && <Text style={styles.labelQuiet}>{copy.stats.weakestFirst}</Text>}
+              <Text style={styles.label}>{copy.stats.eachHabit}</Text>
+              <Text style={styles.labelQuiet}>{copy.stats.weakestFirst}</Text>
             </View>
             {window === 'month' ? (
               <View style={styles.cards}>{named.map(card)}</View>
@@ -460,12 +422,7 @@ export default function ProgressScreen() {
             {/* Four treatments nobody can guess at, so they are named — the
                 same legend the habit screen uses, for the same cells. */}
             {window !== 'day' && <CalendarLegend color={accent} />}
-            {crowded && <Text style={styles.seeAll}>{copy.stats.seeAll(rated.length)}</Text>}
           </View>
-        )}
-
-        {crowded && slipping.length === 0 && (
-          <Text style={styles.empty}>{copy.stats.allFine}</Text>
         )}
 
           </>
