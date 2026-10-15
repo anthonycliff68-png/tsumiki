@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { EVERY_DAY } from '@/data/defaults';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
 import type { Enums } from '@/lib/database.types';
+import { dayComplete } from '@/lib/crewWeek';
 import { copy } from '@/copy';
 import { personName } from '@/lib/models';
 import type { Anchor, CrewRole, Habit, ReactionKind, ScheduleMode } from '@/lib/models';
@@ -518,11 +519,13 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
       const habit = (crew as unknown as { habits: { name: string; color: string } | null }).habits;
 
       const [memberRows, profileRows, scheduleRows, checkinRows, everCheckedIn] = await Promise.all([
+        // Everybody, including those who have left. The tiles use the ones
+        // still in; the week needs the ones who were in on each day, which is
+        // not the same list and was the whole bug.
         supabase
           .from('crew_members')
-          .select('user_id, role, grace_used')
-          .eq('crew_id', crewId ?? '')
-          .is('left_on', null),
+          .select('user_id, role, grace_used, joined_at, left_on')
+          .eq('crew_id', crewId ?? ''),
         supabase.from('crew_profiles').select('id, display_name, avatar_color, avatar_emoji'),
         supabase.from('habit_schedules').select('user_id, mode, at_time, anchors(label)').eq('habit_id', crew.habit_id),
         supabase
@@ -558,7 +561,19 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
         checkins.filter((c) => c.local_date === localDate).map((c) => c.user_id),
       );
 
-      const members: CrewMemberState[] = (memberRows.data ?? []).map((member) => {
+      const everyone = (memberRows.data ?? []) as unknown as {
+        user_id: string;
+        role: CrewMemberState['role'];
+        grace_used: boolean;
+        joined_at: string;
+        left_on: string | null;
+      }[];
+
+      // The tiles are the crew as it stands. Somebody who has left is not on
+      // the screen, they only still count toward the days they were there for.
+      const members: CrewMemberState[] = everyone
+        .filter((m) => m.left_on === null)
+        .map((member) => {
         const schedule = schedules.get(member.user_id);
         return {
           userId: member.user_id,
@@ -574,7 +589,14 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
         };
       });
 
-      // A day counts only when everyone got through it.
+      // Judged against who was in the crew on each day, not against who is in
+      // it now. See lib/crewWeek.ts for why that distinction has teeth.
+      const weekMembers = everyone.map((m) => ({
+        userId: m.user_id,
+        joinedAt: m.joined_at,
+        leftOn: m.left_on,
+      }));
+
       const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
         const day = localDateString(addDays(date, index - 6));
         const inOnThatDay = new Set(
@@ -582,7 +604,7 @@ export function useCrew(crewId: string | undefined, date: Date = new Date()) {
         );
         return {
           date: day,
-          complete: members.length > 0 && members.every((m) => inOnThatDay.has(m.userId)),
+          complete: dayComplete(weekMembers, day, inOnThatDay),
           isToday: day === localDate,
         };
       });
