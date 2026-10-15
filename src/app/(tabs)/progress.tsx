@@ -409,7 +409,15 @@ export default function ProgressScreen() {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
 
-  windows: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.lg },
+  // Padding under as well as over: the ring is a big round shape and it sat
+  // almost against the pills, so the two read as one block rather than a
+  // control and the thing it controls.
+  windows: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
   window: {
     flex: 1,
     minHeight: 44,
