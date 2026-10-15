@@ -34,42 +34,59 @@ export default function PlansScreen() {
   const trial = useTrialOffer();
   const { busy, error, subscribe, bringBack } = usePaywallActions();
 
+  /**
+   * Where the screen goes when it is finished with, whether that is because
+   * somebody paid or because they backed out. At the end of setting up there
+   * is nothing behind this to go back to — it replaced the last step — so it
+   * goes on to wherever onboarding was heading.
+   */
+  const leave = () => {
+    if (first === '1') router.replace((then as '/crews' | undefined) ?? '/');
+    else goBack();
+  };
+
   return (
     <Paywall
       access={access}
       offering={offering.data}
       busy={busy}
       error={error}
-      onSubscribe={(pkg) => void subscribe(pkg)}
+      /**
+       * Leaving on success is the whole point. /plans is pushed on top of the
+       * app, so a purchase that only flips the entitlement leaves somebody
+       * sitting on the paywall they just paid to clear, with nothing to do but
+       * find the way out themselves.
+       */
+      onSubscribe={(pkg) => {
+        void subscribe(pkg).then((done) => {
+          if (done) leave();
+        });
+      }}
       // The annual plan is what the screen opens on. The paywall swaps this
       // itself when somebody switches to monthly.
       trial={trial.annual}
-      onRestore={() => void bringBack()}
+      onRestore={() => {
+        void bringBack().then((found) => {
+          if (found) leave();
+        });
+      }}
       onDeleteAccount={() => router.push('/delete-account')}
       /**
        * No way out for somebody who is locked, because there is nowhere to go:
-       * the tabs behind this are wrapped in the same paywall, so a "Not now"
-       * would dismiss one wall straight into another. It is an offer only for
-       * the people who can still use the app — anyone grandfathered, anyone
-       * inside a trial that was already running, anyone already paying.
+       * the tabs behind this are wrapped in the same paywall, so dismissing
+       * would clear one wall straight into another. It is offered only to the
+       * people who can still use the app — anyone grandfathered, anyone inside
+       * a trial that was already running, anyone already paying.
+       *
+       * One label, and it is "Back". There used to be a second, "Not now",
+       * shown at the end of setting up — but a locked person never sees any
+       * dismiss, so the only people it ever reached were people who already
+       * had access, including anyone who had just that second paid. Offering
+       * somebody a way to decline immediately after they bought it is nonsense
+       * dressed as a choice.
        */
-      dismissLabel={
-        !hasAccess(access) ? undefined : first === '1' ? copy.paywall.notNow : copy.paywall.back
-      }
-      /**
-       * At the end of setting up there is nothing behind this to go back to —
-       * it replaced the last step — so dismissing goes on to wherever
-       * onboarding was heading. Opened from You it is a screen you came to
-       * look at, and goBack is right.
-       */
-      onDismiss={
-        !hasAccess(access)
-          ? undefined
-          : () => {
-              if (first === '1') router.replace((then as '/crews' | undefined) ?? '/');
-              else goBack();
-            }
-      }
+      dismissLabel={hasAccess(access) ? copy.paywall.back : undefined}
+      onDismiss={hasAccess(access) ? leave : undefined}
     />
   );
 }

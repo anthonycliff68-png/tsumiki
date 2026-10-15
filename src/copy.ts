@@ -577,17 +577,19 @@ export const copy = {
     subscribing: 'One moment\u2026',
     seeMonthly: 'See monthly',
     seeAnnual: 'See annual',
-    // Says what happens next rather than "Not now", which reads like a refusal
-    // and hides the fact that the free days start either way. The number comes
-    // from TRIAL_DAYS so it cannot drift from the rule that enforces it.
-    // Was "Start my free 3 days", which was the whole problem: it took no
-    // payment, started no trial with Apple, and only set a clock of our own
-    // that locked the app three days later with no card on file. The real
-    // trial is on the button above this one now, where it is actually bought.
-    notNow: 'Not now',
-    // Opened on purpose from You, the way out is just the way out. Offering to
-    // start a free week to somebody who is grandfathered, already paying, or
-    // three days into their days is nonsense dressed as a button.
+    /**
+     * The only way out of the paywall, and only for somebody who has access
+     * already.
+     *
+     * There were two before. "Not now" sat at the end of setting up, and
+     * before that it read "Start my free 3 days" and was the button that took
+     * no payment and started a clock of our own. Both are gone. A locked
+     * person is never offered a dismiss at all, so the only people "Not now"
+     * ever reached were people who already had access — including anyone who
+     * had just that second paid, who was shown a button inviting them to
+     * decline the thing they had bought and left on the screen until they
+     * pressed it.
+     */
     back: 'Back',
     restore: 'Restore purchases',
     restoredNone: 'No earlier purchase found on this Apple ID.',

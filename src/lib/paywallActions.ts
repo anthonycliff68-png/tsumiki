@@ -19,34 +19,42 @@ export function usePaywallActions() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const subscribe = async (pkg: PurchasesPackage | null) => {
+  /**
+   * Returns true once the purchase has gone through *and* the entitlement has
+   * been read back, so a caller can leave the screen knowing the app behind it
+   * will let them in. Returning before the refetch would land them on a wall
+   * they had just paid to remove.
+   */
+  const subscribe = async (pkg: PurchasesPackage | null): Promise<boolean> => {
     if (!purchasesAvailable || !pkg) {
       setError(copy.paywall.unavailable);
-      return;
+      return false;
     }
     setBusy(true);
     setError(null);
     const result = await purchase(pkg);
     setBusy(false);
     // A cancelled sheet is a decision, not a failure, and gets no red text.
-    if (result === 'cancelled') return;
+    if (result === 'cancelled') return false;
     if (result === 'failed') {
       setError(copy.paywall.failed);
-      return;
+      return false;
     }
     await queryClient.invalidateQueries({ queryKey: ['subscribed'] });
+    return true;
   };
 
-  const bringBack = async () => {
+  const bringBack = async (): Promise<boolean> => {
     setBusy(true);
     setError(null);
     const found = await restore();
     setBusy(false);
     if (!found) {
       setError(copy.paywall.restoredNone);
-      return;
+      return false;
     }
     await queryClient.invalidateQueries({ queryKey: ['subscribed'] });
+    return true;
   };
 
   return { busy, error, subscribe, bringBack };

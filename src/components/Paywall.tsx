@@ -163,7 +163,7 @@ export function Paywall({
 
         {onDismiss && (
           <TextButton
-            label={dismissLabel ?? copy.paywall.notNow}
+            label={dismissLabel ?? copy.paywall.back}
             onPress={onDismiss}
             disabled={busy}
           />
