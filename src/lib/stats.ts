@@ -291,3 +291,84 @@ export function weakestWeekdays(
     ? { weekdays: atLowest.map((day) => day.weekday), rate: lowest }
     : null;
 }
+
+export type AllTime = {
+  /** Every time a habit was scheduled, across every habit, since the start. */
+  timesDue: number;
+  /** How many of those were actually checked in. */
+  timesDone: number;
+  /** timesDone / timesDue, or null before anything has been due. */
+  rate: number | null;
+  /** Every check-in ever, including days nothing was scheduled. */
+  checkins: number;
+  /** Days where everything scheduled got done. */
+  perfectDays: number;
+  /** Days where anything was scheduled at all. The denominator for the above. */
+  daysTracked: number;
+  /** The first day anything was due or done, or null when there is nothing. */
+  firstDay: string | null;
+};
+
+/** Ten years. A guard against a bad date sending the loop to the heat death. */
+const MAX_DAYS = 3650;
+
+/**
+ * The whole record, in the four numbers worth putting on a screen.
+ *
+ * A day only counts as tracked when something was scheduled for it. A rest day
+ * is neither perfect nor a miss, so a weekday-only habit cannot quietly earn
+ * two free perfect days every weekend — and somebody who takes a fortnight off
+ * does not come back to a number that climbed while they were away.
+ *
+ * The rate and the check-in count deliberately have different denominators.
+ * The rate asks how often you did the thing when it was asked of you; the
+ * count is every check-in there has ever been, including ones on days nothing
+ * was scheduled. Both are true, and the labels have to say which is which.
+ */
+export function allTimeStats(habits: readonly HabitInput[], today: string): AllTime {
+  const empty: AllTime = {
+    timesDue: 0, timesDone: 0, rate: null, checkins: 0,
+    perfectDays: 0, daysTracked: 0, firstDay: null,
+  };
+  if (habits.length === 0) return empty;
+
+  // Looked up per day, so the cost does not climb with the length of history.
+  const done = habits.map((h) => new Set(h.checkedOn));
+  const checkins = habits.reduce((sum, h) => sum + h.checkedOn.length, 0);
+
+  let start: string | null = null;
+  for (const habit of habits) {
+    const first = habit.checkedOn[0];
+    const began = first !== undefined && first < habit.createdOn ? first : habit.createdOn;
+    if (start === null || began < start) start = began;
+  }
+  if (start === null || start > today) return { ...empty, checkins };
+
+  let timesDue = 0, timesDone = 0, perfectDays = 0, daysTracked = 0;
+  let day = start;
+  for (let guard = 0; day <= today && guard < MAX_DAYS; guard += 1) {
+    let dueToday = 0, doneToday = 0;
+    habits.forEach((habit, index) => {
+      if (!isDue(habit, day, today)) return;
+      dueToday += 1;
+      if (done[index]?.has(day)) doneToday += 1;
+    });
+    if (dueToday > 0) {
+      daysTracked += 1;
+      timesDue += dueToday;
+      timesDone += doneToday;
+      if (doneToday === dueToday) perfectDays += 1;
+    }
+    day = shiftDate(day, 1);
+  }
+
+  return {
+    timesDue,
+    timesDone,
+    rate: timesDue > 0 ? timesDone / timesDue : null,
+    checkins,
+    perfectDays,
+    daysTracked,
+    firstDay: start,
+  };
+}

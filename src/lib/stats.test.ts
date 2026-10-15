@@ -5,20 +5,21 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  allTimeStats,
   bestRun,
   calendarFor,
   currentRun,
   datesBetween,
   endOfMonth,
-  lifetimeTotals,
   isDue,
+  lifetimeTotals,
   overallOf,
   periodRange,
   startOfWeek,
-  weakestWeekdays,
   statsFor,
-  weekdayOf,
   type HabitInput,
+  weakestWeekdays,
+  weekdayOf,
 } from './stats.ts';
 
 const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
@@ -417,5 +418,96 @@ describe('the weekdays a habit dies on', () => {
 
   it('ignores weekdays the habit is never scheduled for', () => {
     assert.deepEqual(weakestWeekdays(week(null, 1, 1, 0, 1, null, null))?.weekdays, [3]);
+  });
+});
+
+describe('the whole record', () => {
+  const habit = (over: Partial<HabitInput> = {}): HabitInput => ({
+    habitId: 'a',
+    name: 'Walk',
+    color: '#000',
+    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+    createdOn: '2026-10-01',
+    archivedOn: null,
+    checkedOn: [],
+    ...over,
+  });
+
+  it('has nothing to say about nothing', () => {
+    const t = allTimeStats([], '2026-10-05');
+    assert.equal(t.rate, null);
+    assert.equal(t.perfectDays, 0);
+    assert.equal(t.firstDay, null);
+  });
+
+  it('counts every day a habit was due', () => {
+    // 1st to 5th inclusive is five days, two of them done.
+    const t = allTimeStats([habit({ checkedOn: ['2026-10-01', '2026-10-03'] })], '2026-10-05');
+    assert.equal(t.timesDue, 5);
+    assert.equal(t.timesDone, 2);
+    assert.equal(t.rate, 2 / 5);
+  });
+
+  it('counts a day perfect only when everything due got done', () => {
+    const t = allTimeStats(
+      [
+        habit({ habitId: 'a', checkedOn: ['2026-10-01', '2026-10-02'] }),
+        habit({ habitId: 'b', checkedOn: ['2026-10-01'] }),
+      ],
+      '2026-10-02',
+    );
+    // The 1st: both done. The 2nd: only one.
+    assert.equal(t.perfectDays, 1);
+    assert.equal(t.daysTracked, 2);
+  });
+
+  it('does not count a day nothing was scheduled for', () => {
+    // Mondays only. 2026-10-05 is a Monday; the 6th and 7th are not.
+    const t = allTimeStats(
+      [habit({ daysOfWeek: [1], createdOn: '2026-10-05', checkedOn: ['2026-10-05'] })],
+      '2026-10-07',
+    );
+    assert.equal(t.daysTracked, 1);
+    assert.equal(t.perfectDays, 1);
+    assert.equal(t.timesDue, 1);
+  });
+
+  it('does not let a rest day inflate the perfect count', () => {
+    // Two free weekend days would otherwise be two free perfect days a week.
+    const weekdays = habit({ daysOfWeek: [1, 2, 3, 4, 5], createdOn: '2026-10-05' });
+    const t = allTimeStats([weekdays], '2026-10-11');
+    assert.equal(t.daysTracked, 5);
+    assert.equal(t.perfectDays, 0);
+  });
+
+  it('counts check-ins separately from times due', () => {
+    // A check-in on a day the habit was not scheduled is still a check-in, but
+    // it is not a day that was due, so the two numbers part company.
+    const t = allTimeStats(
+      [habit({ daysOfWeek: [1], createdOn: '2026-10-05', checkedOn: ['2026-10-05', '2026-10-06'] })],
+      '2026-10-07',
+    );
+    assert.equal(t.checkins, 2);
+    assert.equal(t.timesDue, 1);
+  });
+
+  it('stops counting an archived habit', () => {
+    const t = allTimeStats(
+      [habit({ createdOn: '2026-10-01', archivedOn: '2026-10-03', checkedOn: ['2026-10-01'] })],
+      '2026-10-10',
+    );
+    // The 1st and 2nd only: archivedOn is the first day it no longer counts.
+    assert.equal(t.timesDue, 2);
+  });
+
+  it('starts from a backfilled day before the habit existed', () => {
+    const t = allTimeStats(
+      [habit({ createdOn: '2026-10-05', checkedOn: ['2026-10-03'] })],
+      '2026-10-05',
+    );
+    assert.equal(t.firstDay, '2026-10-03');
+    // The 3rd counts because it was logged; the 4th was never due.
+    assert.equal(t.timesDue, 2);
+    assert.equal(t.timesDone, 1);
   });
 });

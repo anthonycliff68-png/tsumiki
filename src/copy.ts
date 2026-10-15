@@ -640,6 +640,17 @@ export const copy = {
   },
 
   stats: {
+    // The card at the top of Progress. "Habits done" and the ring deliberately
+    // count different things — every check-in ever, against the share of times
+    // a habit was due that it got done — so the labels have to carry the
+    // difference the figures cannot.
+    allTimeTitle: 'Overall habits done',
+    allTimeOf: (due: number) => `Of ${due} time${due === 1 ? '' : 's'} a habit was due`,
+    allTimeEmpty: 'Nothing has been due yet',
+    allTimeDone: 'Habits done',
+    allTimePerfect: 'Perfect days',
+    allTimeTracked: 'Days tracked',
+
     needsWork: 'Needs work',
     goingWell: 'Going well',
     basedOn: (days: number) => `From the last ${days} days`,

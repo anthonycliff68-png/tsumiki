@@ -8,6 +8,7 @@ import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
+import { AllTimeCard } from '@/components/AllTimeCard';
 import { MonthGrid, WeekCells, WeekdayHeader, CalendarLegend } from '@/components/HabitCalendar';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
 import { Display } from '@/components/Screen';
@@ -15,7 +16,15 @@ import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
 import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
-import { calendarFor, overallOf, periodRange, statsFor, type HabitStats, type StatsWindow } from '@/lib/stats';
+import {
+  allTimeStats,
+  calendarFor,
+  overallOf,
+  periodRange,
+  statsFor,
+  type HabitStats,
+  type StatsWindow,
+} from '@/lib/stats';
 import { usePull } from '@/lib/pull';
 import { alpha, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
 
@@ -140,6 +149,9 @@ export default function ProgressScreen() {
   );
 
   const { from, to } = useMemo(() => periodRange(window, today, offset), [window, today, offset]);
+
+  /** The whole record, which no stepper and no window applies to. */
+  const allTime = useMemo(() => allTimeStats(history, today), [history, today]);
   const canGoBack = from > earliest;
   const canGoForward = offset > 0;
 
@@ -323,19 +335,10 @@ export default function ProgressScreen() {
 
         {view === 'overall' ? (
           <>
-            {/* No stepper: there is no stretch to step through. */}
-            <View style={styles.headline}>
-              <Display size={72} line={62}>
-                {overallView.rate.rate === null
-                  ? '—'
-                  : `${Math.round(overallView.rate.rate * 100)}%`}
-              </Display>
-              <Text style={styles.headlineSub}>
-                {overallView.rate.rate === null
-                  ? copy.stats.noneDue
-                  : `${copy.stats.doneOfDue(overallView.rate.done, overallView.rate.due)} \u00b7 ${copy.stats.lastDays(ADVICE_DAYS)}`}
-              </Text>
-            </View>
+            {/* No stepper: there is no stretch to step through. The ring is
+                all time, not a rolling month — "how am I doing" is not a
+                question about a stretch you navigated to. */}
+            <AllTimeCard stats={allTime} color={accent} />
 
             {stats.length === 0 ? (
               <Text style={styles.empty}>{copy.stats.empty}</Text>
