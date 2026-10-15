@@ -7,7 +7,6 @@ import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { AdviceList, WeekAdviceBanner, type AdviceTab } from '@/components/AdviceList';
 import { AllTimeCard } from '@/components/AllTimeCard';
 import { MonthGrid, WeekCells, WeekdayHeader, CalendarLegend } from '@/components/HabitCalendar';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
@@ -15,7 +14,6 @@ import { Display } from '@/components/Screen';
 import { useHabitHistory, useResetHistory } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { localDateString } from '@/lib/dates';
-import { ADVICE_DAYS, adviceRange, adviseWeek, splitVerdicts, type Placement } from '@/lib/advice';
 import {
   allTimeStats,
   calendarFor,
@@ -36,11 +34,13 @@ import { alpha, fonts, habitColors, ink, radii, spacing, type Palette } from '@/
  * the question you open the tab with — and it is the only one that names which
  * habits to do something about rather than leaving you to read it off a list.
  */
-type ProgressView = 'overall' | StatsWindow;
+/** Day is deliberately absent: Today already lists today's habits in due
+ *  order with a way to check them off, so a Day tab here was a worse copy of a
+ *  screen one tap away — and the only reason the list ever had to be cut short. */
+type ProgressView = 'overall' | 'week' | 'month';
 
 const VIEWS: { key: ProgressView; label: string }[] = [
   { key: 'overall', label: copy.stats.overall },
-  { key: 'day', label: copy.stats.day },
   { key: 'week', label: copy.stats.week },
   { key: 'month', label: copy.stats.month },
 ];
@@ -116,7 +116,6 @@ export default function ProgressScreen() {
   const resetHistory = useResetHistory(userId);
 
   const [view, setView] = useState<ProgressView>('overall');
-  const [adviceTab, setAdviceTab] = useState<AdviceTab>('needs-work');
   const [offset, setOffset] = useState(0);
   // Overall has no period of its own; the calendars below still want one.
   const window: StatsWindow = view === 'overall' ? 'month' : view;
@@ -178,40 +177,6 @@ export default function ProgressScreen() {
    */
   const named = stats;
   const accent = stats[0]?.color ?? habitColors[0];
-
-  const placements = useMemo(
-    () =>
-      new Map<string, Placement>(
-        history.map((habit) => [
-          habit.habitId,
-          { mode: habit.mode, anchorLabel: habit.anchorLabel, anchorLoad: habit.anchorLoad },
-        ]),
-      ),
-    [history],
-  );
-
-  const advice = useMemo(() => {
-    const span = adviceRange(to);
-    const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
-    return { ...splitVerdicts(over, placements), week: adviseWeek(over) };
-  }, [history, placements, to, today]);
-
-  /**
-   * The same verdicts, but always the last thirty days ending today.
-   *
-   * The banner above follows whatever period you have stepped to, because it is
-   * commentary on that period. "How am I doing" is not a question about a
-   * stretch you navigated to, so this one ignores the stepper entirely.
-   */
-  const overallView = useMemo(() => {
-    const span = adviceRange(today);
-    const over = history.map((habit) => statsFor(habit, span.from, span.to, today));
-    return {
-      ...splitVerdicts(over, placements),
-      week: adviseWeek(over),
-      rate: overallOf(over),
-    };
-  }, [history, placements, today]);
 
   const bar = (habit: HabitStats) => (
     <Pressable
@@ -332,30 +297,7 @@ export default function ProgressScreen() {
                 question about a stretch you navigated to. */}
             <AllTimeCard stats={allTime} color={accent} />
 
-            {stats.length === 0 ? (
-              <Text style={styles.empty}>{copy.stats.empty}</Text>
-            ) : (
-              <View style={styles.section}>
-                {/* Built months ago and never put on a screen: the two lists,
-                    each row carrying the one thing to do about that habit. */}
-                <AdviceList
-                  tab={adviceTab}
-                  onTab={setAdviceTab}
-                  needsWork={overallView.needsWork}
-                  goingWell={overallView.goingWell}
-                  onOpen={(habitId) =>
-                    router.push({ pathname: '/habit/[id]', params: { id: habitId, period: 'month' } })
-                  }
-                  windowDays={ADVICE_DAYS}
-                />
-              </View>
-            )}
-
-            {stats.length > 0 && (
-              <View style={styles.section}>
-                <WeekAdviceBanner advice={overallView.week} />
-              </View>
-            )}
+            {stats.length === 0 && <Text style={styles.empty}>{copy.stats.empty}</Text>}
           </>
         ) : (
           <>
@@ -421,7 +363,7 @@ export default function ProgressScreen() {
             )}
             {/* Four treatments nobody can guess at, so they are named — the
                 same legend the habit screen uses, for the same cells. */}
-            {window !== 'day' && <CalendarLegend color={accent} />}
+            <CalendarLegend color={accent} />
           </View>
         )}
 
@@ -431,7 +373,6 @@ export default function ProgressScreen() {
         {stats.length > 0 && (
           <View style={styles.section}>
             <FirstTimeHint id="progress-views">{copy.hints.progressViews}</FirstTimeHint>
-            <WeekAdviceBanner advice={advice.week} />
           </View>
         )}
 

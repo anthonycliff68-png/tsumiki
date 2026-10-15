@@ -463,7 +463,8 @@ export const copy = {
     streakRule:
       'Tomorrow, at the moment you picked, Tsumiki will nudge you. Miss a day and you get it back \u2014 miss two in a row and the streak starts again.',
     /** The reviewer's exact complaint: rings, a wall and a line, unexplained. */
-    progressViews: 'Day shows what is due today. Week is every habit against every day, so gaps are obvious. Month is the shape over time.',
+    progressViews:
+      'Week is every habit against every day, so a gap is obvious. Month is the shape over time. Overall is the whole record.',
   },
 
   habitStats: {
