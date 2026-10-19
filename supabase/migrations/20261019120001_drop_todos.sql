@@ -1,0 +1,23 @@
+-- To-dos, removed.
+--
+-- Built on 15 October and taken out again four days later. The table went in
+-- first as the cheap, reversible half of the idea — a to-do was a title and a
+-- day, nothing else — and the whole point of keeping it additive was that
+-- ending the experiment would cost one statement. This is that statement.
+--
+-- What it turned out to be: a day screen that already does a lot, with a
+-- second list of things above it, competing with the thing the app is
+-- actually for. The hour grid is the only part of Tsumiki that is purely
+-- about when something happens, and a to-do has no when. Every layout that
+-- tried to give it one either invented a time nobody chose or pushed the
+-- habits down the screen to make room.
+--
+-- The two migrations this reverses are kept rather than deleted. They were
+-- applied to the live database and Supabase records that; removing the files
+-- would leave the history claiming something that did happen never did. A
+-- feature that was tried and dropped is part of the record.
+--
+-- Nothing else referenced this table — no foreign keys into it, nothing in
+-- the streak job, the dock or the reminders — which is why it can go in one
+-- line with no further clean-up.
+drop table if exists public.todos;
