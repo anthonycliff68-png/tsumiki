@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { TextButton } from '@/components/Button';
 import { ProfileCard } from '@/components/ProfileCard';
 import { Reveal } from '@/components/Reveal';
@@ -65,6 +66,8 @@ export default function YouScreen() {
 
   return (
     <Screen color={habitColors[3]}>
+      <BrandHeader />
+
       <Title size={64}>{copy.you.profile}</Title>
 
       <Reveal index={0}>

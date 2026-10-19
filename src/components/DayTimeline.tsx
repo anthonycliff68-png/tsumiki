@@ -9,6 +9,7 @@ import { copy } from '@/copy';
 import { describeDays, formatTimeGutter } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import type { Anchor } from '@/lib/models';
+import { placementOf } from '@/lib/today';
 import { alpha, display, fonts, habitColors, momentColor, radii, spacing, type Palette } from '@/theme';
 
 const GUTTER = 58;
@@ -113,7 +114,8 @@ const CREST_BACK =
 
 export type DropTarget =
   | { kind: 'anchor'; anchorId: string; label: string }
-  | { kind: 'hour'; hour: number };
+  | { kind: 'hour'; hour: number }
+  | { kind: 'any' };
 
 /** One line of the day: a bare hour, a moment, a timed habit, or the now line. */
 type Line =
@@ -162,6 +164,15 @@ export function DayTimeline({
     () => buildHours(anchors, habits, nowMinutes),
     [anchors, habits, nowMinutes],
   );
+
+  // Everything with no moment to sit at. Kept out of the hour grid on purpose:
+  // these have no time, and parking them at one — 8pm, say, where their
+  // reminder fires — would show a time nobody chose.
+  const anytime = useMemo(
+    () => habits.filter((habit) => placementOf(habit) === 'anytime'),
+    [habits],
+  );
+
 
   // The rail column is the same width on every row, or rows holding a block
   // would sit indented and the timeline would step in and out.
@@ -352,6 +363,20 @@ export function DayTimeline({
           ))}
         </View>
       ))}
+
+      {anytime.length > 0 && (
+        <View
+          ref={registerTarget('anytime', { kind: 'any' })}
+          style={[styles.anytimeRow, hoveredKey === 'anytime' && styles.hovered]}
+        >
+          <Text style={styles.gutter} />
+          <View style={[styles.railCell, { width: railWidth + RAIL_GAP * 2 }]} />
+          <View style={styles.lineBody}>
+            <Text style={styles.anytimeLabel}>{copy.myDay.anytime}</Text>
+            {anytime.map(cardFor)}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -779,7 +804,7 @@ function label(minutes: number): string {
 
 /** One row per hour; inside it, a line per thing, each with its own time. */
 function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number): HourRow[] {
-  const timed = habits.filter((habit) => habit.mode === 'at' && habit.time);
+  const timed = habits.filter((habit) => placementOf(habit) === 'hour');
   const blocks = anchors
     .filter((anchor) => anchor.ends_at !== null)
     .map((anchor) => ({
@@ -827,7 +852,9 @@ function buildHours(anchors: Anchor[], habits: TodayHabit[], nowMinutes: number)
         kind: 'moment',
         time: label(minutesOf(anchor.usual_time)),
         anchor,
-        habits: habits.filter((habit) => habit.anchorId === anchor.id),
+        habits: habits.filter(
+          (habit) => placementOf(habit) === 'moment' && habit.anchorId === anchor.id,
+        ),
       });
     }
     for (const habit of loose) {
@@ -907,6 +934,16 @@ const makeStyles = (colors: Palette) => ({
   lineBody: { flex: 1, gap: 6, justifyContent: 'center' },
   momentGroup: { gap: 6, borderRadius: radii.card },
   momentLabel: { ...display(19, 21), color: colors.text },
+  // Separated from the last hour by its own rule, because it is not an hour
+  // and should not read as one more empty slot at the end of the evening.
+  anytimeRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.hairline,
+    paddingTop: spacing.md,
+    paddingBottom: 6,
+  },
+  anytimeLabel: { ...display(19, 21), color: colors.textFaint, paddingBottom: 4 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

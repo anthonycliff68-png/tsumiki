@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
@@ -187,6 +188,8 @@ export default function TodayScreen() {
           <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
+        <BrandHeader />
+
         <View style={styles.days}>
           <Pressable
             accessibilityRole="button"

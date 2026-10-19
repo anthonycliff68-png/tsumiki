@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { useDockClearance } from '@/components/Dock';
@@ -72,6 +73,8 @@ export default function CrewsScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <BrandHeader />
+
         <Display size={64} line={58}>{copy.crews.title}</Display>
 
         {crews.map((crew) => (

@@ -4,6 +4,37 @@
  * Kept apart from the screen because the rule matters more than the pixels.
  */
 
+/** Where a habit sits on My Day. */
+export type Placement = 'moment' | 'hour' | 'anytime';
+
+export type Placeable = {
+  mode: 'after' | 'at' | 'any';
+  anchorId: string | null;
+  time: string | null;
+};
+
+/**
+ * Which of the three places on My Day a habit belongs to.
+ *
+ * Written as one total function because the bug it replaces was the absence
+ * of a third branch: the grid collected habits twice, once per anchor and
+ * once per hour, and anything matching neither filter was simply never drawn.
+ * An "anytime" habit matched neither, so the header counted it, the dock
+ * counted it, the New Habit screen promised it would "land on My Day", and
+ * the day it landed on had no row for it.
+ *
+ * The two half-states fall the same way, and for the same reason: a habit set
+ * to a moment that no longer exists, or to a time that never got saved, has
+ * nothing to sort on. "Anytime" is the honest answer for all three — it is
+ * where the app already sends their reminder, and it is the one place that
+ * cannot claim a time the person did not pick.
+ */
+export function placementOf(habit: Placeable): Placement {
+  if (habit.mode === 'after' && habit.anchorId !== null) return 'moment';
+  if (habit.mode === 'at' && habit.time !== null) return 'hour';
+  return 'anytime';
+}
+
 export type Ordered = {
   id: string;
   name: string;

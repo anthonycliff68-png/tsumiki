@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { Bleed } from '@/components/Bleed';
 import { DayTimeline, type DropTarget } from '@/components/DayTimeline';
 import { useDockClearance } from '@/components/Dock';
@@ -18,6 +19,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePull } from '@/lib/pull';
+import { placementOf } from '@/lib/today';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
 
@@ -49,8 +51,11 @@ export default function MyDayScreen() {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const stacked = habits.filter((habit) => habit.mode === 'after').length;
-  const timed = habits.filter((habit) => habit.mode === 'at').length;
+  // Counted the same way the timeline draws them, so the breakdown can never
+  // describe a day the grid is not showing.
+  const stacked = habits.filter((habit) => placementOf(habit) === 'moment').length;
+  const timed = habits.filter((habit) => placementOf(habit) === 'hour').length;
+  const anytime = habits.filter((habit) => placementOf(habit) === 'anytime').length;
   const heroColor = habits.find((habit) => !habit.checkedIn)?.color ?? habitColors[0];
 
   const toggle = (habit: TodayHabit) =>
@@ -60,14 +65,18 @@ export default function MyDayScreen() {
 
   const move = (habit: TodayHabit, target: DropTarget) => {
     setError(null);
+    // Dropping into Anytime has to be possible, or dragging a habit out of it
+    // is a one-way door and the only way back is the edit screen.
     const input =
       target.kind === 'anchor'
         ? { habitId: habit.id, mode: 'after' as const, anchorId: target.anchorId }
-        : {
-            habitId: habit.id,
-            mode: 'at' as const,
-            atTime: `${String(target.hour).padStart(2, '0')}:00`,
-          };
+        : target.kind === 'any'
+          ? { habitId: habit.id, mode: 'any' as const }
+          : {
+              habitId: habit.id,
+              mode: 'at' as const,
+              atTime: `${String(target.hour).padStart(2, '0')}:00`,
+            };
     moveHabit.mutate(input, { onError: () => setError(copy.myDay.moveFailed) });
   };
 
@@ -87,6 +96,8 @@ export default function MyDayScreen() {
           <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
+        <BrandHeader />
+
         <View style={styles.topRow}>
           <View style={styles.pill}>
             <Text style={styles.pillText}>
@@ -108,7 +119,9 @@ export default function MyDayScreen() {
             <Text style={[display(24, 24), { color: colors.textMuted }]}>
               {copy.myDay.habitCount(habits.length)}
             </Text>
-            <Text style={styles.countsSub}>{copy.myDay.breakdown(stacked, timed)}</Text>
+            <Text style={styles.countsSub}>
+              {copy.myDay.breakdown(stacked, timed, anytime)}
+            </Text>
           </View>
         </View>
 
@@ -137,6 +150,8 @@ export default function MyDayScreen() {
         >
           + {copy.myDay.newHabit}
         </Text>
+
+
       </ScrollView>
     </View>
   );

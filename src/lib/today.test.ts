@@ -5,7 +5,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { openFocus, orderForDay, type Ordered } from './today.ts';
+import {
+  openFocus,
+  orderForDay,
+  placementOf,
+  type Ordered,
+  type Placeable,
+} from './today.ts';
 
 const ANYTIME = Number.MAX_SAFE_INTEGER;
 
@@ -126,5 +132,56 @@ describe('where the day opens', () => {
 
   it('returns a usable index for an empty day', () => {
     assert.equal(openFocus([]), 0);
+  });
+});
+
+describe('where a habit sits on My Day', () => {
+  const placeable = (over: Partial<Placeable>): Placeable => ({
+    mode: 'any',
+    anchorId: null,
+    time: null,
+    ...over,
+  });
+
+  it('puts a stacked habit under its moment', () => {
+    assert.equal(
+      placementOf(placeable({ mode: 'after', anchorId: 'lunch', time: '12:30' })),
+      'moment',
+    );
+  });
+
+  it('puts a timed habit at its hour', () => {
+    assert.equal(placementOf(placeable({ mode: 'at', time: '07:30' })), 'hour');
+  });
+
+  it('puts an anytime habit in Anytime', () => {
+    // The reported bug. This used to match neither of the grid's two filters,
+    // so it was counted in the header and drawn nowhere.
+    assert.equal(placementOf(placeable({ mode: 'any' })), 'anytime');
+  });
+
+  it('puts a habit whose moment is gone in Anytime rather than nowhere', () => {
+    assert.equal(placementOf(placeable({ mode: 'after', anchorId: null })), 'anytime');
+  });
+
+  it('puts a timed habit with no time in Anytime rather than nowhere', () => {
+    assert.equal(placementOf(placeable({ mode: 'at', time: null })), 'anytime');
+  });
+
+  it('places every mode somewhere', () => {
+    // The point of the function: it is total. Every habit the app can make
+    // has a row, whatever state its schedule is in.
+    const modes = ['after', 'at', 'any'] as const;
+    for (const mode of modes) {
+      for (const anchorId of [null, 'lunch']) {
+        for (const time of [null, '09:00']) {
+          const where = placementOf(placeable({ mode, anchorId, time }));
+          assert.ok(
+            where === 'moment' || where === 'hour' || where === 'anytime',
+            `${mode}/${anchorId}/${time} fell through`,
+          );
+        }
+      }
+    }
   });
 });

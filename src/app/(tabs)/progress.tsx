@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { Bleed } from '@/components/Bleed';
 import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -260,12 +261,15 @@ export default function ProgressScreen() {
           paddingTop: insets.top + spacing.xxl,
           paddingBottom: clearance,
           paddingHorizontal: spacing.xl,
+          gap: spacing.lg,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
+        <BrandHeader />
+
         <Display size={56} line={50}>{copy.stats.title}</Display>
 
         <View style={styles.windows}>

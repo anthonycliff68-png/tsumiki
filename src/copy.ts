@@ -772,8 +772,18 @@ export const copy = {
     title: 'My day',
     editRoutine: 'Edit routine',
     habitCount: (count: number) => `${count} habit${count === 1 ? '' : 's'}`,
-    breakdown: (stacked: number, solo: number) =>
-      `${stacked} stacked \u00b7 ${solo} timed`,
+    // Only the kinds you actually have. The parts have to add up to the habit
+    // count above them \u2014 they used to leave out "anytime" entirely, so a day
+    // with one read "12 habits \u00b7 1 stacked \u00b7 10 timed" and invited you to go
+    // looking for the twelfth.
+    breakdown: (stacked: number, timed: number, anytime: number) =>
+      [
+        stacked > 0 && `${stacked} stacked`,
+        timed > 0 && `${timed} timed`,
+        anytime > 0 && `${anytime} anytime`,
+      ]
+        .filter(Boolean)
+        .join(' \u00b7 '),
     now: 'Now',
     anytime: 'Anytime today',
     freeHours: (hours: number) => `${hours} free hour${hours === 1 ? '' : 's'}`,
