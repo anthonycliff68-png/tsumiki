@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { useTheme } from '@/lib/appearance';
 import { alpha, companionColor } from '@/theme';
@@ -22,6 +22,28 @@ const CROSSFADE_MS = 400;
  * on a ground that was no longer the near-white they were chosen against.
  */
 const LIGHT_STRENGTH = 0.3;
+
+/**
+ * What the glows come down to now there is a photograph behind them.
+ *
+ * The four circles were invented to give a flat black screen some weather —
+ * depth, a light source, somewhere for the eye to rest. A photograph does all
+ * of that already and does it better, so running both at full strength is two
+ * atmospheres stacked: the glows tint the sky, the sky tints back, and the
+ * result is the purple murk that made the mountain look like a smudge rather
+ * than a mountain.
+ *
+ * They are not removed, because they are also the only thing on screen
+ * carrying the colour of the habit you are looking at — that is a signal, not
+ * decoration, and it is what makes Crews feel like a different place from
+ * Today. Dropped this far they still tint, but the photograph stays the thing
+ * you see.
+ */
+const GLOW_OVER_BACKDROP = 0.26;
+
+/** The photograph's own opacity, and the scrim that flattens it to a ground. */
+const BACKDROP_OPACITY = { dark: 0.52, light: 0.16 };
+const SCRIM_ALPHA = { dark: 0.5, light: 0.82 };
 
 type CircleSpec = {
   top?: number;
@@ -79,7 +101,7 @@ export function Bleed({ color }: { color: string }) {
   const { width } = useWindowDimensions();
   const colors = useTheme();
   const scale = width / DESIGN_WIDTH;
-  const strength = colors.dark ? 1 : LIGHT_STRENGTH;
+  const strength = (colors.dark ? 1 : LIGHT_STRENGTH) * GLOW_OVER_BACKDROP;
 
   const nextKey = useRef(1);
   const currentColor = useRef(color);
@@ -107,6 +129,43 @@ export function Bleed({ color }: { color: string }) {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" accessibilityElementsHidden>
+      {/* The photograph, under everything.
+       *
+       * It goes here rather than on each screen because Bleed is already the
+       * one thing behind all of them, and a backdrop that only some screens
+       * had would read as a bug.
+       *
+       * The scrim over it is doing the real work. A photograph is the wrong
+       * shape for an interface: it has its own light and dark, in places the
+       * layout knows nothing about, so text over the raw image is legible in
+       * the top half and gone in the bottom. The scrim flattens it back to a
+       * ground with a predictable value, and the image survives as texture
+       * rather than as a picture.
+       *
+       * Light needs a far heavier scrim than dark, and that is not a taste
+       * call: the palette's text is near-black, so every pale part of the
+       * photograph — sky, snow — is competing with it directly. Dark text on
+       * a mountain is the one combination that cannot be rescued by nudging
+       * opacity, so on light the image is pushed almost to a watermark. */}
+      <Image
+        source={require('../../assets/backdrop.jpg')}
+        style={[
+          StyleSheet.absoluteFill,
+          { opacity: colors.dark ? BACKDROP_OPACITY.dark : BACKDROP_OPACITY.light },
+        ]}
+        resizeMode="cover"
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: alpha(
+              colors.bg,
+              colors.dark ? SCRIM_ALPHA.dark : SCRIM_ALPHA.light,
+            ),
+          },
+        ]}
+      />
       {layers.map((layer) => (
         <Animated.View
           key={layer.key}

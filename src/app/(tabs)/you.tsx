@@ -12,16 +12,10 @@ import { SettingsGroup, SettingsRow } from '@/components/SettingsRow';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import { useBlocked, useDeleteAccount, useMyProfile } from '@/lib/api';
-import { useAppearance, useStyles } from '@/lib/appearance';
+import { useStyles } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
 import { registerForPush, type PushRegistration } from '@/lib/push';
 import { fonts, habitColors, spacing, type Palette } from '@/theme';
-
-const THEME_LABEL = {
-  light: copy.you.themeLight,
-  dark: copy.you.themeDark,
-  system: copy.you.themeSystem,
-} as const;
 
 /**
  * You.
@@ -36,7 +30,6 @@ const THEME_LABEL = {
  * itself.
  */
 export default function YouScreen() {
-  const { choice } = useAppearance();
   const styles = useStyles(makeStyles);
   const { session, signOut } = useAuth();
   const userId = session?.user.id;
@@ -89,11 +82,6 @@ export default function YouScreen() {
           label={copy.you.notifications}
           value={pushValue}
           onPress={() => router.push('/notifications')}
-        />
-        <SettingsRow
-          label={copy.you.appearance}
-          value={THEME_LABEL[choice]}
-          onPress={() => router.push('/appearance')}
         />
         </SettingsGroup>
       </Reveal>

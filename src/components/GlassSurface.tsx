@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { GlassContainer, GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useAppearance } from '@/lib/appearance';
 
@@ -77,6 +77,18 @@ export function GlassSurface({ style, tint, blurFallback = false, variant = 'reg
   if (blurFallback) {
     return (
       <BlurView intensity={24} tint={theme === 'dark' ? 'dark' : 'light'} style={style}>
+        {/* The tint, which the real glass takes as a prop and the blur has no
+            equivalent for. It used to be dropped here without a word, so a
+            caller passing a habit colour got coloured glass on iOS 26 and an
+            uncoloured blur everywhere else — over a dark photograph that is
+            indistinguishable from black. A wash laid over the blur is not
+            the same material, but it carries the same information. */}
+        {tint !== undefined && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: tint }]}
+          />
+        )}
         {children}
       </BlurView>
     );

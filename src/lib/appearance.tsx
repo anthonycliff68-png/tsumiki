@@ -79,8 +79,19 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
 
-  // 'system' tracks the OS live: useColorScheme re-renders when it changes.
-  const theme: ThemeName = choice === 'system' ? (system === 'light' ? 'light' : 'dark') : choice;
+  // Dark, always. The light palette was provisional from the day it went in,
+  // and the photograph behind every screen settled it: near-black text over
+  // snow and sky cannot be made readable without pushing the mountain down to
+  // a faint print, at which point light mode is just the dark app with the
+  // atmosphere taken out. app.json has said userInterfaceStyle "dark" all
+  // along, so this brings the JavaScript into line with what iOS was already
+  // told.
+  //
+  // The choice is still read and stored, so a phone that had Light saved
+  // comes back to it untouched if this is ever reversed — nobody loses a
+  // setting because of a decision they did not make.
+  void system;
+  const theme: ThemeName = 'dark';
 
   const value = useMemo<Appearance>(
     () => ({ theme, choice, colors: palettes[theme], setChoice, ready }),

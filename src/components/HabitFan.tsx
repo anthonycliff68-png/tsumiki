@@ -20,7 +20,7 @@ import { describeDays, formatTime } from '@/data/defaults';
 import type { TodayHabit } from '@/lib/api';
 import { alpha, display, fonts, radii, shade, spacing, tint, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
-import { GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
+import { GlassSurface } from '@/components/GlassSurface';
 
 /** Cards either side of the front one that stay mounted — one spare, so a card
     slides in rather than appearing. */
@@ -808,36 +808,48 @@ function FanCard({
         }}
         style={[
           style,
-          // The front card gives up its fill so the glass behind it can do the
-          // work. The ones behind stay opaque — four stacked panes of glass is
-          // the mush the time picker taught us about.
-          isFront && LIQUID_GLASS && { backgroundColor: 'transparent' },
+          // Every card gives up its fill so the glass can do the work.
+          //
+          // This used to be the front card only — four stacked panes of glass
+          // was the mush the time picker taught us about, and over a flat
+          // black ground the cards behind had nothing to show anyway, so
+          // keeping them opaque cost nothing. The photograph changed that:
+          // opaque cards behind a glass one read as black holes punched in
+          // the mountain. The fan is only ever three or four cards deep and
+          // they overlap at the edges, not across their faces, which is not
+          // the same thing as the time picker's full stack.
+          { backgroundColor: 'transparent' },
           { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] },
         ]}
       >
         {/* First child, so everything else sits on top of it. Tinted with the
             habit's own colour, which is the only thing telling you whose card
-            this is once the fill is gone. */}
-        {isFront && (
-          // Fading on the same curve as the name, rather than appearing the
-          // instant the card becomes the front one. Front-ness arrives over
-          // the length of a slide now, so anything that switches on it has to
-          // arrive that way too or it is the one thing that still pops.
-          <Animated.View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, { opacity: nameIn }]}
-          >
-            <GlassSurface
-              variant="clear"
-              style={StyleSheet.absoluteFill as ViewStyle}
-              tint={alpha(habit.color, 0.2)}
-            />
-          </Animated.View>
-        )}
+            this is once the fill is gone.
+
+            On every card now, and always on rather than fading in with the
+            name. The fade existed because only the front card had glass, so
+            becoming the front card switched it on mid-slide and had to be
+            eased or it popped. When every card already has it, nothing
+            switches, so there is nothing to ease.
+
+            Not gated on LIQUID_GLASS any more. Below iOS 26 there is no real
+            glass, and gating on it left those phones with solid black cards
+            punched into the photograph — which is every iPhone XS and XR,
+            since iOS 26 does not run on them. blurFallback gives them the
+            frosted version the dock already uses: not refractive, but the
+            mountain shows through, which is the part that matters. */}
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <GlassSurface
+            blurFallback
+            variant="clear"
+            style={StyleSheet.absoluteFill as ViewStyle}
+            tint={alpha(habit.color, 0.2)}
+          />
+        </View>
         {/* Glass has whatever is behind it, and what is behind it moves. The
             name needs its own ground or it is legible on some days and not
             others. Under the check-in floor, so the floor still reads. */}
-        {isFront && LIQUID_GLASS && (
+        {isFront && (
           <Animated.View
             pointerEvents="none"
             style={[styles.nameShade, { opacity: nameIn }]}
@@ -1000,7 +1012,8 @@ const makeStyles = (colors: Palette) => ({
   card: {
     width: '100%',
     height: '100%',
-    // The card is always opaque, or the cards behind show through the fan.
+    // Opaque where there is no real glass, or the cards behind show through
+    // the fan. On iOS 26 every card is cleared at the call site instead.
     backgroundColor: colors.bg,
     borderRadius: 26,
     padding: spacing.lg,
