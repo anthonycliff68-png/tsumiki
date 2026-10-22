@@ -46,6 +46,30 @@ each end and writes an mp4, and `scripts/stage.sh` lays it all out in
 
 ---
 
+## 22 October 2026
+
+### A mountain behind every screen, and glass cards over it — `9a7b0a4`
+
+The app sat on flat black with a coloured glow behind each screen. Now a
+photograph sits behind all of it: a snowy forest valley, full bleed, under a
+dark scrim, with the glows turned down so the two stop fighting. It goes in
+through the one component every screen already draws first, so nothing else had
+to change.
+
+The habit fan was the screen that needed it most. Its cards were solid black,
+and over a photo they read as holes. Every card is glass now: Apple's own
+material on iOS 26, and a tinted frost on older iPhones. Testing the older path
+found the fan would have stayed black there twice over: the glass only applied
+where the real thing existed, and the fallback dropped the habit colour on the
+floor. Both are fixed.
+
+Light mode went with it. It was never designed, and the photo was made for
+dark. JavaScript only, so it shipped over the air.
+
+[Clip: the fan as glass](demos/2026-10-21-glass-fan.mp4)
+
+**Content:** drafted — [content.md](content.md#22-october-2026--a-mountain-behind-every-screen).
+
 ## 11 October 2026
 
 ### Two trials were running at once — `5004905`, `cb097f2`, `809896f`

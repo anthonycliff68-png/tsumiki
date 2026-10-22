@@ -12,6 +12,28 @@ Status is `todo`, `ready`, or `posted`.
 
 ---
 
+## 22 October 2026 · A mountain behind every screen
+
+**Status:** ready
+
+**Assets** — [demos/2026-10-21-glass-fan.mp4](demos/2026-10-21-glass-fan.mp4).
+Marketing stills of every screen are in `marketing/screenshots/`.
+
+**X / Twitter**
+
+> Gave my habit app a background.
+>
+> It was flat black. Now there's a snowy mountain behind every screen and the
+> habit cards are glass, so you see the photo through them as you flick
+> through your day.
+>
+> The fun part: on older iPhones there's no real glass, and testing that path
+> showed every card would've stayed solid black. Two bugs deep. Fixed both.
+>
+> Shipped over the air, no App Store review.
+
+---
+
 ## 11 October 2026 · Two trials were running at once
 
 **Status:** todo
