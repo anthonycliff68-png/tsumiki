@@ -1,6 +1,7 @@
 // The pieces Home and My Day share: header buttons and icons, a habit's
 // status, crew faces, the to-do row, and the instant check-in.
-import { Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Avatar } from '@/components/Avatar';
@@ -160,34 +161,58 @@ export function TodoRow({
   height?: number;
 }) {
   const carried = carriedLabel(todo.day, shown);
+  // Ticking fills the circle and draws the line through the words, the same
+  // short strike a habit gets; unticking runs it back.
+  const done = useRef(new Animated.Value(todo.done ? 1 : 0)).current;
+  const [textW, setTextW] = useState(0);
+  useEffect(() => {
+    Animated.timing(done, { toValue: todo.done ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+  }, [todo.done, done]);
   const circle = (
-    <View
-      style={{
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: todo.done ? colors.text : colors.textFaint,
-        backgroundColor: todo.done ? colors.text : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {todo.done && <CheckIcon size={12} color={colors.bg} strokeWidth={3.4} />}
+    <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.textFaint }}>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: -1.5,
+          left: -1.5,
+          right: -1.5,
+          bottom: -1.5,
+          borderRadius: 10,
+          backgroundColor: colors.text,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: done,
+          transform: [{ scale: done.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+        }}
+      >
+        <CheckIcon size={12} color={colors.bg} strokeWidth={3.4} />
+      </Animated.View>
     </View>
   );
   const words = (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Text
-        numberOfLines={1}
-        style={[
-          { flexShrink: 1, fontFamily: fonts.body, fontSize: 15, color: colors.text },
-          textStyle,
-          todo.done && { color: colors.textFaint, textDecorationLine: 'line-through' },
-        ]}
-      >
-        {todo.title}
-      </Text>
+      <View style={{ flexShrink: 1, justifyContent: 'center' }}>
+        <Text
+          numberOfLines={1}
+          onLayout={(e) => setTextW(e.nativeEvent.layout.width)}
+          style={[
+            { fontFamily: fonts.body, fontSize: 15, color: colors.text },
+            textStyle,
+            todo.done && { color: colors.textFaint },
+          ]}
+        >
+          {todo.title}
+        </Text>
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: 0,
+            height: 1,
+            backgroundColor: colors.textFaint,
+            width: done.interpolate({ inputRange: [0, 1], outputRange: [0, textW] }),
+          }}
+        />
+      </View>
       {carried && !todo.done && (
         <View style={{ paddingHorizontal: 7, height: 20, borderRadius: 10, justifyContent: 'center', backgroundColor: colors.raised }}>
           <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 11, color: colors.textMuted }}>{carried}</Text>
