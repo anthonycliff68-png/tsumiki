@@ -209,7 +209,7 @@ function Nudge({ color, dock }: { color: string; dock: boolean }) {
         </View>
       </View>
 
-      <Head small="From Marcus · 6:04 pm" big="YOU’RE THE LAST ONE" />
+      <Head small="From Marcus · 6:04 PM" big="YOU’RE THE LAST ONE" />
       <View style={s.body}>
         <View style={[s.quote, { borderLeftColor: color }]}>
           <Text style={s.quoteText}>“Walk time!”</Text>

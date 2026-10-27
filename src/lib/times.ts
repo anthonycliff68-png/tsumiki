@@ -7,12 +7,12 @@
  * night. Nothing about that was visible until someone said so.
  */
 
-/** "22:30" or "22:30:00" → "10:30 pm", the canvas's format. */
+/** "22:30" or "22:30:00" → "10:30 PM", the canvas's format. */
 export function formatTime(value: string): string {
   const parts = value.split(':');
   const hours = Number(parts[0] ?? 0);
   const minutes = parts[1] ?? '00';
-  const suffix = hours >= 12 ? 'pm' : 'am';
+  const suffix = hours >= 12 ? 'PM' : 'AM';
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
   return `${hour12}:${minutes} ${suffix}`;
 }
@@ -33,14 +33,14 @@ export function fromTimeString(value: string): Date {
 }
 
 /**
- * The compact form: "1 pm" on the hour, "1:30 pm" otherwise. Used where the
+ * The compact form: "1 PM" on the hour, "1:30 PM" otherwise. Used where the
  * time is a label beside something else rather than the thing being read.
  */
 export function formatTimeGutter(value: string): string {
   const parts = value.split(':');
   const hours = Number(parts[0] ?? 0);
   const minutes = parts[1] ?? '00';
-  const suffix = hours >= 12 ? 'pm' : 'am';
+  const suffix = hours >= 12 ? 'PM' : 'AM';
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
   return minutes === '00' ? `${hour12} ${suffix}` : `${hour12}:${minutes} ${suffix}`;
 }

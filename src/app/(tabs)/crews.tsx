@@ -13,7 +13,6 @@ import { copy } from '@/copy';
 import { useCreateCrew, useCrews, useHabits } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
-import { Display } from '@/components/Screen';
 
 /** Crews. Artboards: GroupDark, CrewWalk. */
 export default function CrewsScreen() {
@@ -75,7 +74,7 @@ export default function CrewsScreen() {
       >
         <BrandHeader />
 
-        <Display size={64} line={58}>{copy.crews.title}</Display>
+        <Text style={styles.pageTitle}>{copy.crews.title}</Text>
 
         {crews.map((crew) => (
           <Pressable
@@ -172,6 +171,15 @@ export default function CrewsScreen() {
 
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
+
+  // The same centred title as Home and My Day.
+  pageTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 22,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 44,
+  },
   crewCard: { gap: 6, padding: spacing.xl, borderRadius: radii.hero },
   crewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   crewHabit: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.white, opacity: 0.85 },

@@ -147,6 +147,13 @@ type Props = {
   /** Where to open the hand: the first habit still to do. */
   initialFocus?: number;
   busy: boolean;
+  /**
+   * "hand" is Today. "home" is the Home mock: the same cards and spacing laid
+   * straight instead of arced, the name centred on the card, and no caption or
+   * Check in button underneath — the card is the button, and the card already
+   * says what the caption did.
+   */
+  variant?: 'hand' | 'home';
 };
 
 /**
@@ -190,7 +197,9 @@ export function HabitFan({
   onFocus,
   initialFocus = 0,
   busy,
+  variant = 'hand',
 }: Props) {
+  const home = variant === 'home';
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const { width } = useWindowDimensions();
@@ -275,7 +284,18 @@ export function HabitFan({
     focusRef.current = start;
     settled.current = start;
     setFocus(start);
-    position.setValue(start);
+    // Glide, on the same spring the cards use to reach their new slots. Every
+    // card is drawn relative to this, so jumping it while the cards were still
+    // springing threw the whole hand sideways by the distance of the move —
+    // an undone card travels from the back of the hand to its time, often
+    // most of the way across — and then dragged it back. Moving together, the
+    // card you are following stays in front and the rest shuffle past it.
+    Animated.spring(position, {
+      toValue: start,
+      speed: 11,
+      bounciness: 7,
+      useNativeDriver: true,
+    }).start();
   }, [habits, position]);
 
   // The hand can also shrink from under the fan.
@@ -405,7 +425,7 @@ export function HabitFan({
   return (
     <View>
       <GestureDetector gesture={pan}>
-        <View style={styles.stage}>
+        <View style={[styles.stage, home && { height: CARD_H + 16 }]}>
           {habits.map((habit, index) =>
             Math.abs(index - focus) > MOUNTED ? null : (
               <FanSlot
@@ -420,6 +440,7 @@ export function HabitFan({
                 onToggle={onToggle}
                 onEdit={onEdit}
                 onLand={land}
+                flat={home}
               />
             ),
           )}
@@ -441,18 +462,21 @@ export function HabitFan({
           ))}
         </View>
       ) : (
-        <Text style={[styles.counter, { color: current.color }]}>
+        <Text style={[styles.counter, home && styles.counterHome, { color: current.color }]}>
           {copy.today.cardOf(focus + 1, habits.length)}
         </Text>
       )}
 
+      {!home && (
       <View style={styles.caption}>
         <Display size={30} line={28} numberOfLines={2}>
           {current.name}
         </Display>
         <Text style={styles.captionSub}>{whenLongOf(current)}</Text>
       </View>
+      )}
 
+      {!home && (
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ checked: current.checkedIn }}
@@ -473,6 +497,7 @@ export function HabitFan({
           {current.checkedIn ? copy.today.undoCheckIn : copy.today.checkIn}
         </Text>
       </Pressable>
+      )}
     </View>
   );
 }
@@ -509,6 +534,7 @@ function FanSlot({
   onToggle,
   onEdit,
   onLand,
+  flat,
 }: {
   habit: TodayHabit;
   index: number;
@@ -520,6 +546,7 @@ function FanSlot({
   onToggle: (habit: TodayHabit) => void;
   onEdit: (habit: TodayHabit) => void;
   onLand: (index: number) => void;
+  flat: boolean;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
@@ -561,10 +588,13 @@ function FanSlot({
   // a slot. Everything below reads off it.
   const away = Animated.subtract(position, at);
   const slide = away.interpolate({ inputRange: [-3, 3], outputRange: [3 * SPREAD, -3 * SPREAD] });
-  const drop = away.interpolate({ inputRange: [-3, 0, 3], outputRange: [3 * DROP, 0, 3 * DROP] });
+  const drop = away.interpolate({
+    inputRange: [-3, 0, 3],
+    outputRange: flat ? [0, 0, 0] : [3 * DROP, 0, 3 * DROP],
+  });
   const lean = away.interpolate({
     inputRange: [-3, 3],
-    outputRange: [`${3 * LEAN}deg`, `${-3 * LEAN}deg`],
+    outputRange: flat ? ['0deg', '0deg'] : [`${3 * LEAN}deg`, `${-3 * LEAN}deg`],
   });
   const scale = Animated.multiply(
     away.interpolate({ inputRange: [-2, 0, 2], outputRange: [0.86, 1, 0.86], extrapolate: 'clamp' }),
@@ -613,6 +643,7 @@ function FanSlot({
         busy={busy}
         behind={behind}
         nameIn={nameIn}
+        centred={flat}
         onPress={() => (isFront ? onToggle(habit) : onLand(index))}
         onEdit={() => onEdit(habit)}
         style={[
@@ -634,6 +665,7 @@ function FanCard({
   busy,
   behind,
   nameIn,
+  centred,
   onPress,
   onEdit,
   style,
@@ -644,6 +676,7 @@ function FanCard({
   busy: boolean;
   behind: Animated.AnimatedInterpolation<string | number>;
   nameIn: Animated.AnimatedInterpolation<string | number>;
+  centred: boolean;
   onPress: () => void;
   onEdit: () => void;
   style: StyleProp<ViewStyle>;
@@ -980,11 +1013,11 @@ function FanCard({
           </View>
         </Animated.View>
 
-        <Animated.View style={{ opacity: nameIn }}>
-          <Display size={30} line={27} numberOfLines={3}>
+        <Animated.View style={[{ opacity: nameIn }, centred && styles.nameCentred]}>
+          <Display size={30} line={27} numberOfLines={3} style={centred && { textAlign: 'center' }}>
             {habit.name}
           </Display>
-          <Text style={styles.cardSub} numberOfLines={1}>
+          <Text style={[styles.cardSub, centred && { textAlign: 'center' }]} numberOfLines={1}>
             {describeDays(habit.daysOfWeek)}
             {habit.checkedIn ? ` \u00b7 ${copy.today.doneTag}` : ''}
           </Text>
@@ -1083,6 +1116,9 @@ const makeStyles = (colors: Palette) => ({
     marginTop: spacing.md,
   },
 
+  counterHome: { fontFamily: fonts.bodyBold, fontSize: 16, fontWeight: undefined },
+  // Home's card: the name in the middle of the card rather than its foot.
+  nameCentred: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   caption: { alignItems: 'center', paddingHorizontal: spacing.xl, marginTop: spacing.sm },
   captionSub: {
     fontFamily: fonts.body,

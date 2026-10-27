@@ -122,7 +122,7 @@ export default function NudgeScreen() {
               </View>
             )}
 
-            <PrimaryButton label={copy.myDay.title} onPress={() => router.replace('/')} />
+            <PrimaryButton label={copy.dock.tabs.today} onPress={() => router.replace('/')} />
           </>
         ) : (
           <>

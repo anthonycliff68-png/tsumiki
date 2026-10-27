@@ -63,7 +63,7 @@ export const fakeRestOfDay: UpNextHabit[] = [
     name: 'Log workout',
     color: habitColors[3],
     mode: 'at',
-    atTime: '6:30 pm',
+    atTime: '6:30 PM',
     crewName: null,
     checkedIn: false,
   },

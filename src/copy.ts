@@ -27,7 +27,7 @@ export const copy = {
     checkInLabel: (habit: string) => `Check in: ${habit}`,
     checkedInLabel: (habit: string) => `Checked in: ${habit}`,
     tabs: {
-      today: 'Today',
+      today: 'Home',
       myDay: 'My Day',
       crews: 'Crews',
       progress: 'Progress',
@@ -60,7 +60,7 @@ export const copy = {
     showDone: 'Show them',
     hideDone: 'Hide them',
     fanHint: 'Swipe either way through the day',
-    cardOf: (index: number, total: number) => `${index} of ${total}`,
+    cardOf: (index: number, total: number) => `${index} / ${total}`,
     missed: 'Missed',
     later: 'Later',
     doneTag: 'Done',
@@ -769,7 +769,7 @@ export const copy = {
   },
 
   myDay: {
-    title: 'My day',
+    title: 'My Day',
     editRoutine: 'Edit routine',
     habitCount: (count: number) => `${count} habit${count === 1 ? '' : 's'}`,
     // Only the kinds you actually have. The parts have to add up to the habit
@@ -798,6 +798,7 @@ export const copy = {
     everyDay: 'every day',
     empty: 'Set your routine first and the day will fill in around it.',
     dragHint: 'Hold a habit to move it to another moment.',
+    dropAnytime: 'Drop here for anytime',
     dropOnMoment: (label: string) => `after ${label.toLowerCase()}`,
     dropAtHour: (hour: string) => `at ${hour}`,
     moveFailed: 'Could not move it. Try again.',

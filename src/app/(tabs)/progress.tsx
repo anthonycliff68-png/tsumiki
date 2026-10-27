@@ -56,7 +56,7 @@ function asUtc(date: string): Date {
 }
 
 function longDate(date: string): string {
-  return asUtc(date).toLocaleDateString('en-GB', {
+  return asUtc(date).toLocaleDateString('en-US', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -65,7 +65,7 @@ function longDate(date: string): string {
 }
 
 function monthLabel(date: string): string {
-  return asUtc(date).toLocaleDateString('en-GB', {
+  return asUtc(date).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
@@ -73,7 +73,7 @@ function monthLabel(date: string): string {
 }
 
 function shortDate(date: string): string {
-  return asUtc(date).toLocaleDateString('en-GB', {
+  return asUtc(date).toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
@@ -258,7 +258,7 @@ export default function ProgressScreen() {
       <Bleed color={accent} />
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + spacing.xxl,
+          paddingTop: insets.top + spacing.xl,
           paddingBottom: clearance,
           paddingHorizontal: spacing.xl,
           gap: spacing.lg,
@@ -270,7 +270,7 @@ export default function ProgressScreen() {
       >
         <BrandHeader />
 
-        <Display size={56} line={50}>{copy.stats.title}</Display>
+        <Text style={styles.pageTitle}>{copy.stats.title}</Text>
 
         <View style={styles.windows}>
           {VIEWS.map((option) => {
@@ -413,26 +413,37 @@ export default function ProgressScreen() {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
 
-  // Padding under as well as over: the ring is a big round shape and it sat
-  // almost against the pills, so the two read as one block rather than a
-  // control and the thing it controls.
+  // The same centred title as Home and My Day.
+  pageTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 22,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 44,
+  },
+
+  // Margin under as well as over: the ring is a big round shape and it sat
+  // almost against the switch, so the two read as one block rather than a
+  // control and the thing it controls. Same track as My Day's Day/Week/Month.
   windows: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    padding: 4,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: radii.chip,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardEdge,
   },
   window: {
     flex: 1,
-    minHeight: 44,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.chip,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  windowActive: { backgroundColor: colors.text, borderColor: colors.text },
-  windowText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
+  windowActive: { backgroundColor: colors.text },
+  windowText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
   windowTextActive: { color: colors.bg },
 
   stepper: {

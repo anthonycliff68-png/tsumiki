@@ -13,6 +13,10 @@ export type Palette = {
   surface: string;
   surfaceRaised: string;
   glass: string;
+  /** Home and My Day's soft cards, their edge, and one step up (selected, round buttons). */
+  card: string;
+  cardEdge: string;
+  raised: string;
   text: string;
   textMuted: string;
   textFaint: string;
@@ -33,6 +37,9 @@ export const darkPalette: Palette = {
   surface: '#1C1C1F',
   surfaceRaised: '#2A2A2E',
   glass: 'rgba(24,24,27,0.72)',
+  card: 'rgba(40,40,44,0.70)',
+  cardEdge: 'rgba(255,255,255,0.09)',
+  raised: 'rgba(255,255,255,0.10)',
   text: '#F4F1EC',
   textMuted: '#BDB7AD',
   textFaint: '#9D978D',
@@ -56,6 +63,9 @@ export const lightPalette: Palette = {
   surface: '#FFFFFF',
   surfaceRaised: '#FFFFFF',
   glass: 'rgba(255,255,255,0.78)',
+  card: 'rgba(255,255,255,0.78)',
+  cardEdge: 'rgba(22,22,26,0.09)',
+  raised: 'rgba(22,22,26,0.06)',
   text: '#16161A',
   textMuted: '#4B4740',
   textFaint: '#7A746B',

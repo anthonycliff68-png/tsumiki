@@ -802,6 +802,50 @@ export type Database = {
           },
         ]
       }
+      todos: {
+        Row: {
+          anchor_id: string | null
+          at_time: string | null
+          created_at: string
+          day: string
+          done_on: string | null
+          id: string
+          moment_mode: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          anchor_id?: string | null
+          at_time?: string | null
+          created_at?: string
+          day: string
+          done_on?: string | null
+          id?: string
+          moment_mode?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          anchor_id?: string | null
+          at_time?: string | null
+          created_at?: string
+          day?: string
+          done_on?: string | null
+          id?: string
+          moment_mode?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todos_anchor_id_fkey"
+            columns: ["anchor_id"]
+            isOneToOne: false
+            referencedRelation: "anchors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       crew_profiles: {

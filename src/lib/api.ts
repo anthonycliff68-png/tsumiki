@@ -398,6 +398,140 @@ export function useArchiveHabit(userId: string | undefined) {
   });
 }
 
+// --- to-dos ----------------------------------------------------------------
+
+export type Todo = {
+  id: string;
+  title: string;
+  /** Done on the day being shown. */
+  done: boolean;
+  /** Hangs off this moment, or null. */
+  anchorId: string | null;
+  /** Or a set "HH:MM:SS". Neither means any time that day. */
+  at: string | null;
+  /** The day it was written for; earlier than the day shown means carried over. */
+  day: string;
+};
+
+type TodoRow = {
+  id: string;
+  title: string;
+  day: string;
+  done_on: string | null;
+  moment_mode: string;
+  anchor_id: string | null;
+  at_time: string | null;
+};
+
+const asTodo = (row: TodoRow, shown: string): Todo => ({
+  id: row.id,
+  title: row.title,
+  done: row.done_on === shown,
+  anchorId: row.moment_mode === 'after' ? row.anchor_id : null,
+  at: row.moment_mode === 'at' ? row.at_time : null,
+  day: row.day,
+});
+
+/**
+ * The to-dos for a local date: written that day, or earlier and still open on
+ * it. Carrying over is this query, not a job that moves rows.
+ */
+export function useTodos(userId: string | undefined, date: Date = new Date()) {
+  const shown = localDateString(date);
+  return useQuery({
+    queryKey: ['todos', userId, shown],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<Todo[]> => {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('id, title, day, done_on, moment_mode, anchor_id, at_time')
+        .eq('user_id', userId ?? '')
+        .lte('day', shown)
+        .or(`done_on.is.null,done_on.gte.${shown}`)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data.map((row) => asTodo(row, shown));
+    },
+  });
+}
+
+/** Postgres takes the id we choose, so a new to-do never has to change its key. */
+const newId = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+
+export type TodoPlace = { anchorId: string } | { at: string } | 'any';
+
+/**
+ * Every to-do change, answered on screen at once: the cache is written first
+ * and the server follows. A refusal re-reads the truth.
+ */
+export function useTodoActions(userId: string | undefined, date: Date = new Date()) {
+  const queryClient = useQueryClient();
+  const shown = localDateString(date);
+  const key = ['todos', userId, shown];
+
+  const apply = (
+    change: (list: Todo[]) => Todo[],
+    write: () => PromiseLike<{ error: unknown }>,
+  ) => {
+    void queryClient.cancelQueries({ queryKey: key });
+    queryClient.setQueryData<Todo[]>(key, (old) => change(old ?? []));
+    void Promise.resolve(write()).then(({ error }) => {
+      // Other days show the same rows, so they re-read either way.
+      void queryClient.invalidateQueries({
+        queryKey: ['todos', userId],
+        predicate: (q) => error !== null || q.queryKey[2] !== shown,
+      });
+    });
+  };
+
+  return {
+    add: (title: string, place: TodoPlace = 'any') => {
+      if (!userId) return;
+      const id = newId();
+      const placement = {
+        moment_mode: place === 'any' ? 'any' : 'anchorId' in place ? 'after' : 'at',
+        anchor_id: place !== 'any' && 'anchorId' in place ? place.anchorId : null,
+        at_time: place !== 'any' && 'at' in place ? place.at : null,
+      };
+      apply(
+        (list) => [...list, asTodo({ id, title, day: shown, done_on: null, ...placement }, shown)],
+        () => supabase.from('todos').insert({ id, user_id: userId, title, day: shown, ...placement }),
+      );
+    },
+    toggle: (todo: Todo) =>
+      apply(
+        (list) => list.map((t) => (t.id === todo.id ? { ...t, done: !todo.done } : t)),
+        () => supabase.from('todos').update({ done_on: todo.done ? null : shown }).eq('id', todo.id),
+      ),
+    rename: (todo: Todo, title: string) =>
+      apply(
+        (list) => list.map((t) => (t.id === todo.id ? { ...t, title } : t)),
+        () => supabase.from('todos').update({ title }).eq('id', todo.id),
+      ),
+    remove: (todo: Todo) =>
+      apply(
+        (list) => list.filter((t) => t.id !== todo.id),
+        () => supabase.from('todos').delete().eq('id', todo.id),
+      ),
+    move: (todo: Todo, place: TodoPlace) => {
+      const anchorId = place !== 'any' && 'anchorId' in place ? place.anchorId : null;
+      const at = place !== 'any' && 'at' in place ? place.at : null;
+      apply(
+        (list) => list.map((t) => (t.id === todo.id ? { ...t, anchorId, at } : t)),
+        () =>
+          supabase
+            .from('todos')
+            .update({ moment_mode: anchorId ? 'after' : at ? 'at' : 'any', anchor_id: anchorId, at_time: at })
+            .eq('id', todo.id),
+      );
+    },
+  };
+}
+
 // --- crews -----------------------------------------------------------------
 
 export type CrewSummary = {
@@ -1217,7 +1351,30 @@ export function useMoveHabit(userId: string | undefined) {
         .eq('user_id', userId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    // Moved on screen at once, so a dropped card lands where it was dropped
+    // instead of springing home and jumping a beat later. The server follows.
+    onMutate: ({ habitId, mode, anchorId, atTime }) => {
+      const anchor = queryClient
+        .getQueryData<Anchor[]>(['anchors', userId])
+        ?.find((a) => a.id === anchorId);
+      const time = mode === 'after' ? (anchor?.usual_time ?? null) : mode === 'at' ? (atTime ?? null) : null;
+      void queryClient.cancelQueries({ queryKey: ['today', userId] });
+      queryClient.setQueriesData<TodayHabit[]>({ queryKey: ['today', userId] }, (old) =>
+        old?.map((h) =>
+          h.id === habitId
+            ? {
+                ...h,
+                mode,
+                anchorId: mode === 'after' ? (anchorId ?? null) : null,
+                anchorLabel: mode === 'after' ? (anchor?.label ?? null) : null,
+                time,
+                sortKey: minutesOfDay(time),
+              }
+            : h,
+        ),
+      );
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['today'] });
       void queryClient.invalidateQueries({ queryKey: ['habits'] });
     },

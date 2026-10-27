@@ -1,27 +1,47 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AppState, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { AppState, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandHeader } from '@/components/BrandHeader';
 import { Bleed } from '@/components/Bleed';
 import { PrimaryButton } from '@/components/Button';
+import { BellIcon, CalendarIcon, RoundButton, TodoRow, anchorFor } from '@/components/DayParts';
 import { useDockClearance } from '@/components/Dock';
-import { DayList } from '@/components/DayList';
-import { FILL_MS, HabitFan } from '@/components/HabitFan';
-import { useStyles, useTheme } from '@/lib/appearance';
-import { copy } from '@/copy';
-import { useCheckIn, useNudgesForMe, useToday, useUndoCheckIn } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import { addDays, formatDayName, formatFullDate, formatWeekday, localDateString } from '@/lib/dates';
-import { openFocus, orderForDay } from '@/lib/today';
-import { usePull } from '@/lib/pull';
-import { alpha, display, fonts, habitColors, ink, radii, spacing, type Palette } from '@/theme';
-import { Display } from '@/components/Screen';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
+import { FILL_MS, HabitFan } from '@/components/HabitFan';
+import { CheckIcon, CloseIcon } from '@/components/icons';
+import { ProgressRing } from '@/components/ProgressRing';
+import { copy } from '@/copy';
+import {
+  useAnchors,
+  useCheckIn,
+  useHabitHistory,
+  useMyProfile,
+  useNudgesForMe,
+  useToday,
+  useTodoActions,
+  useTodos,
+  useUndoCheckIn,
+  type Todo,
+} from '@/lib/api';
+import { useStyles, useTheme } from '@/lib/appearance';
+import { useAuth } from '@/lib/auth';
+import { localDateString } from '@/lib/dates';
+import { usePull } from '@/lib/pull';
+import { isDue, shiftDate, startOfMonth, startOfWeek } from '@/lib/stats';
+import { formatTime } from '@/lib/times';
+import { openFocus, orderForDay } from '@/lib/today';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
-/** Today. Artboard: TodayDark. */
-export default function TodayScreen() {
+const RINGS = [
+  { key: 'Today', color: habitColors[1], size: 112 },
+  { key: 'Week', color: habitColors[2], size: 86 },
+  { key: 'Month', color: habitColors[0], size: 60 },
+] as const;
+
+/** Home: today's to-dos, the habit fan, and how the day, week and month are going. */
+export default function HomeScreen() {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const insets = useSafeAreaInsets();
@@ -29,31 +49,16 @@ export default function TodayScreen() {
   const { session } = useAuth();
   const userId = session?.user.id;
 
-  // 0 is today; going back fills in a day that was missed.
-  const [dayOffset, setDayOffset] = useState(0);
-  const [showingDone, setShowingDone] = useState(false);
-  // The habit under your finger in the fan, so the glow behind the screen
-  // tracks the card you are looking at rather than the one that was next.
-  const [fanColor, setFanColor] = useState<string | null>(null);
   /**
-   * Today, re-asked rather than remembered.
-   *
-   * This was worked out once and then kept, so an app left open across
-   * midnight went on showing yesterday with "Today" above it and yesterday's
-   * check-ins still ticked — while the dock, which asks the clock itself, said
-   * nothing had been done. One screen disagreeing with itself about what day it
-   * is, and the half that was wrong is the half telling you that you are
-   * finished.
-   *
-   * Re-asked when the app comes back and when the screen does, which is how a
-   * phone that was asleep overnight arrives at this screen. An app held awake
-   * and in the foreground through midnight is the one case left; it corrects
-   * itself the moment anything is tapped.
+   * Today, re-asked rather than remembered: an app left open across midnight
+   * otherwise goes on showing yesterday, ticks and all. Re-asked when the app
+   * comes back and when the screen does, which is how a phone that was asleep
+   * overnight arrives here.
    */
-  const [todayKey, setTodayKey] = useState(() => localDateString(new Date()));
+  const [today, setToday] = useState(() => localDateString(new Date()));
   const readClock = useCallback(() => {
     const now = localDateString(new Date());
-    setTodayKey((current) => (current === now ? current : now));
+    setToday((current) => (current === now ? current : now));
   }, []);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -61,31 +66,25 @@ export default function TodayScreen() {
     });
     return () => sub.remove();
   }, [readClock]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- today is the clock
+  const date = useMemo(() => new Date(), [today]);
 
-  const viewedDate = useMemo(
-    () => addDays(new Date(), dayOffset),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- todayKey is the clock
-    [dayOffset, todayKey],
-  );
-  const isToday = dayOffset === 0;
-
-  const {
-    data: habits = [],
-    isPending,
-    isError,
-    refetch,
-  } = useToday(userId, viewedDate);
+  const { data: profile } = useMyProfile(userId);
+  const { data: anchors = [] } = useAnchors(userId);
+  const { data: habits = [], isPending, isError, refetch } = useToday(userId, date);
+  const { data: history = [] } = useHabitHistory(userId);
   const { data: nudges = [], refetch: refetchNudges } = useNudgesForMe(userId);
-  const pull = usePull(refetch, refetchNudges);
+  const { data: todos = [], refetch: refetchTodos } = useTodos(userId, date);
+  const todo = useTodoActions(userId, date);
+  const pull = usePull(refetch, refetchNudges, refetchTodos);
+  // Server-first: the fan's fill is built per render, so an instant write
+  // would re-render it mid-fill.
   const checkIn = useCheckIn(userId);
   const undo = useUndoCheckIn(userId);
+  const busy = checkIn.isPending || undo.isPending;
 
-  // Whatever wrote while we were away, pick it up on the way back in.
-  //
-  // Nudges too, and that is the point of the second line: they are written by
-  // somebody else, so this screen is the only thing that ever goes looking for
-  // them. Without it a nudge sat unread until the app was killed and reopened —
-  // which is the one way nobody uses an app they are already holding.
+  // Nudges are written by somebody else, so this screen is the only thing that
+  // ever goes looking for them.
   useFocusEffect(
     useCallback(() => {
       readClock();
@@ -94,290 +93,303 @@ export default function TodayScreen() {
     }, [readClock, refetch, refetchNudges]),
   );
 
-  const today = new Date();
-  const done = habits.filter((habit) => habit.checkedIn).length;
+  const [fanColor, setFanColor] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const [editing, setEditing] = useState<{ todo: Todo; text: string } | null>(null);
+  const addDraft = () => {
+    if (draft.trim()) todo.add(draft.trim());
+    setDraft('');
+  };
+  const saveEdit = () => {
+    if (!editing) return;
+    const text = editing.text.trim();
+    if (!text) todo.remove(editing.todo);
+    else if (text !== editing.todo.title) todo.rename(editing.todo, text);
+    setEditing(null);
+  };
 
-  const nowMinutes = today.getHours() * 60 + today.getMinutes();
-
-  // The hero is the next one still to come. A habit whose moment has already
-  // passed is not "up next" — it goes to Missed, where it can still be done.
-  const open = useMemo(() => habits.filter((habit) => !habit.checkedIn), [habits]);
-  const missed = useMemo(
-    () => (isToday ? open.filter((habit) => habit.sortKey < nowMinutes) : []),
-    [open, isToday, nowMinutes],
-  );
-  const upcoming = useMemo(
-    () => open.filter((habit) => !missed.includes(habit)),
-    [open, missed],
-  );
-  const hero = useMemo(
-    () => upcoming[0] ?? missed[0] ?? habits[habits.length - 1],
-    [upcoming, missed, habits],
-  );
-  const finished = useMemo(() => habits.filter((habit) => habit.checkedIn), [habits]);
-  const openCount = open.length;
-
-  // Both rules live in lib/today, under test. This screen had drifted its own
-  // copy of each, which is how the order and the tests covering it came to
-  // disagree without anything failing.
-  const wanted = useMemo(() => orderForDay(habits), [habits]);
-
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
   /**
-   * The order lags the data by one animation.
-   *
-   * Checking in floods the card with colour, and the same check-in sends it to
-   * the back of the hand. Done on the tap those fight: the card left the front
-   * before it had filled, so you watched it slide away rather than fill. The
-   * habits themselves stay live — that is what makes the card start filling
-   * the instant you tap it — and only the order waits for the fill to land
-   * before dealing the card away.
-   *
-   * A habit arriving or leaving is not a check-in and lands at once, or the
-   * first load, every new habit and every change of day would each spend half
-   * a second showing the wrong hand.
+   * The order lags the data by one animation: checking in fills the card and
+   * also sends it to the back of the hand, and done together you watch it
+   * slide away instead of fill. A habit arriving or leaving lands at once.
    */
+  const wanted = useMemo(() => orderForDay(habits), [habits]);
   const [order, setOrder] = useState<readonly string[]>(() => wanted.map((h) => h.id));
   useEffect(() => {
-    const next = wanted.map((habit) => habit.id);
+    const next = wanted.map((h) => h.id);
     if (next.length === order.length && next.every((id, at) => id === order[at])) return;
-    const sameHabits = next.length === order.length && next.every((id) => order.includes(id));
-    if (!sameHabits) {
+    const same = next.length === order.length && next.every((id) => order.includes(id));
+    if (!same) {
       setOrder(next);
       return;
     }
     const timer = setTimeout(() => setOrder(next), FILL_MS);
     return () => clearTimeout(timer);
   }, [wanted, order]);
-
   const inHand = useMemo(() => {
     const slot = new Map(order.map((id, at) => [id, at]));
-    // A habit the held order has not seen yet sits at the end for the one
-    // render it takes the effect above to catch up.
-    return [...wanted].sort(
-      (a, b) => (slot.get(a.id) ?? order.length) - (slot.get(b.id) ?? order.length),
-    );
+    return [...wanted].sort((a, b) => (slot.get(a.id) ?? order.length) - (slot.get(b.id) ?? order.length));
   }, [wanted, order]);
-
   const initialFocus = useMemo(() => openFocus(inHand), [inHand]);
+  const first = (profile?.display_name ?? '').trim().split(/\s+/)[0] ?? '';
+  const color = fanColor ?? habits.find((h) => !h.checkedIn)?.color ?? habitColors[0];
+  const done = habits.filter((h) => h.checkedIn).length;
+  const openCount = habits.length - done;
 
-  // A new day is a new hand: remount so the focus rule runs again.
-  const dayKey = viewedDate.toDateString();
-  const onFanFocus = useCallback(
-    (habit: { color: string }) => setFanColor(habit.color),
-    [],
-  );
+  // Done over due, summed across every day in the window; today is live.
+  const rateSince = (from: string) => {
+    let due = habits.length;
+    let doneIn = done;
+    for (let d = from; d < today; d = shiftDate(d, 1)) {
+      for (const h of history) {
+        if (!isDue(h, d, today)) continue;
+        due += 1;
+        if (h.checkedOn.includes(d)) doneIn += 1;
+      }
+    }
+    return due ? doneIn / due : 0;
+  };
+  const rates = { Today: rateSince(today), Week: rateSince(startOfWeek(today)), Month: rateSince(startOfMonth(today)) };
+  const pct = (r: number) => `${Math.round(r * 100)}%`;
 
-  const toggle = (habit: { id: string; checkedIn: boolean }) =>
-    habit.checkedIn
-      ? undo.mutate({ habitId: habit.id, date: viewedDate })
-      : checkIn.mutate({ habitId: habit.id, date: viewedDate });
+  const whenOf = (t: Todo) => {
+    const anchor = anchorFor(t, anchors);
+    if (anchor) return `After ${anchor.label.toLowerCase()}`;
+    return t.at ? formatTime(t.at) : 'Anytime';
+  };
+  const openTodos = todos.filter((t) => !t.done).length;
 
-  const bleedColor = fanColor ?? hero?.color ?? habitColors[0];
+  const toggle = (h: { id: string; checkedIn: boolean }) =>
+    h.checkedIn ? undo.mutate({ habitId: h.id, date }) : checkIn.mutate({ habitId: h.id, date });
+
+  const openMyDay = () =>
+    router.navigate({ pathname: '/my-day', params: { view: 'Day', opened: String(Date.now()) } });
 
   return (
     <View style={styles.root}>
-      <Bleed color={bleedColor} />
+      <Bleed color={color} />
       <ScrollView
-        contentContainerStyle={{
-          paddingTop: insets.top + spacing.xl,
-          paddingBottom: clearance,
-          gap: spacing.lg,
-        }}
+        contentContainerStyle={{ paddingTop: insets.top + spacing.xl, paddingBottom: clearance, gap: 20 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl {...pull} tintColor={colors.textMuted} />
-        }
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl {...pull} tintColor={colors.textMuted} />}
       >
         <BrandHeader />
 
-        <View style={styles.days}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${formatDayName(addDays(viewedDate, -1))}, the day before`}
-            onPress={() => setDayOffset((offset) => offset - 1)}
-            style={styles.dayButton}
-          >
-            <Text style={styles.dayMuted}>{formatDayName(addDays(viewedDate, -1))}</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={isToday ? copy.dock.tabs.today : copy.today.backToToday}
-            disabled={isToday}
-            onPress={() => setDayOffset(0)}
-            style={styles.dayActive}
-          >
-            <Text style={styles.dayActiveText}>
-              {isToday ? copy.dock.tabs.today : formatDayName(viewedDate)}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${formatDayName(addDays(viewedDate, 1))}, the day after`}
-            disabled={isToday}
-            onPress={() => setDayOffset((offset) => Math.min(0, offset + 1))}
-            style={styles.dayButton}
-          >
-            <Text style={[styles.dayMuted, isToday && styles.dayDisabled]}>
-              {formatDayName(addDays(viewedDate, 1))}
-            </Text>
-          </Pressable>
+        <View style={[styles.padded, styles.welcome]}>
+          <Text style={styles.hello} numberOfLines={1}>
+            {first ? `Welcome, ${first}` : 'Welcome'}
+          </Text>
+          <RoundButton label="Notifications" onPress={() => router.push('/notifications')}>
+            <BellIcon color={colors.text} />
+          </RoundButton>
+          <RoundButton label={copy.myDay.title} onPress={openMyDay}>
+            <CalendarIcon color={colors.text} />
+          </RoundButton>
         </View>
 
-        <View style={styles.header}>
-          <View style={styles.dateBlock}>
-            <Display size={56} line={48}>{formatWeekday(viewedDate)}</Display>
-            <Text style={styles.dateFull}>{formatFullDate(viewedDate)}</Text>
-          </View>
-          <View style={styles.count}>
-            <Text style={[display(30, 30), { color: ink(bleedColor, colors) }]}>
-              {done}/{habits.length}
+        {isError && <Text style={[styles.padded, styles.notice]}>{copy.today.loadFailed}</Text>}
+
+        {nudges
+          .filter((nudge) => !nudge.checkedIn)
+          .map((nudge) => (
+            <Pressable
+              key={nudge.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${copy.nudge.from(nudge.fromName)}: ${nudge.message}`}
+              onPress={() => router.push({ pathname: '/nudge/[id]', params: { id: nudge.id } })}
+              style={({ pressed }) => [styles.card, styles.nudge, pressed && { opacity: 0.9 }]}
+            >
+              <View style={[styles.nudgeAvatar, { backgroundColor: nudge.fromColor }]}>
+                <Text style={styles.nudgeInitials}>{nudge.fromName.slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.nudgeFrom}>{copy.nudge.from(nudge.fromName)}</Text>
+                <Text style={styles.nudgeMessage} numberOfLines={2}>
+                  “{nudge.message}”
+                </Text>
+              </View>
+              <View style={[styles.dot, { backgroundColor: nudge.habitColor }]} />
+            </Pressable>
+          ))}
+
+        <View style={[styles.padded, { gap: 10 }]}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.section}>Today’s to-dos</Text>
+            <Text style={styles.seeAll} onPress={openMyDay} accessibilityRole="button">
+              {openTodos > 0 ? `${openTodos} left · See all` : 'See all'}
             </Text>
-            <Text style={styles.countLabel}>{copy.today.doneCount}</Text>
+          </View>
+          <View style={styles.card}>
+            {todos.map((t, i) => (
+              <View key={t.id} style={[styles.todoLine, i > 0 && styles.divider]}>
+                {editing?.todo.id === t.id ? (
+                  <View style={styles.addLine}>
+                    {/* Holds the circle's place, so the words stay where they were. */}
+                    <View style={{ width: 20 }} />
+                    <TextInput
+                      maxLength={120}
+                      autoFocus
+                      value={editing.text}
+                      onChangeText={(text) => setEditing({ todo: t, text })}
+                      returnKeyType="done"
+                      onSubmitEditing={saveEdit}
+                      style={styles.addInput}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${t.title}`}
+                      onPress={() => {
+                        todo.remove(t);
+                        setEditing(null);
+                      }}
+                      hitSlop={5}
+                      style={styles.iconBtn}
+                    >
+                      <CloseIcon size={18} color={colors.textMuted} />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Save"
+                      onPress={saveEdit}
+                      hitSlop={5}
+                      style={[styles.iconBtn, styles.confirm]}
+                    >
+                      <CheckIcon size={16} color={colors.bg} strokeWidth={3} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <TodoRow
+                    todo={t}
+                    when={whenOf(t)}
+                    shown={today}
+                    onToggle={() => todo.toggle(t)}
+                    onEdit={() => setEditing({ todo: t, text: t.title })}
+                    colors={colors}
+                    height={46}
+                  />
+                )}
+              </View>
+            ))}
+            <View style={[styles.todoLine, todos.length > 0 && styles.divider, styles.addLine]}>
+              <Text style={styles.plus}>+</Text>
+              <TextInput
+                maxLength={120}
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Add a to-do"
+                placeholderTextColor={colors.textFaint}
+                returnKeyType="done"
+                onSubmitEditing={addDraft}
+                style={styles.addInput}
+              />
+              {draft.trim().length > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Add to-do"
+                  onPress={addDraft}
+                  hitSlop={5}
+                  style={[styles.iconBtn, styles.confirm]}
+                >
+                  <CheckIcon size={16} color={colors.bg} strokeWidth={3} />
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
 
-        {isError && <Text style={styles.notice}>{copy.today.loadFailed}</Text>}
-
-        {!isToday && <Text style={styles.notice}>{copy.today.viewingPast}</Text>}
-
-        {isToday && nudges.filter((nudge) => !nudge.checkedIn).map((nudge) => (
-          <Pressable
-            key={nudge.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${copy.nudge.from(nudge.fromName)}: ${nudge.message}`}
-            onPress={() => router.push({ pathname: '/nudge/[id]', params: { id: nudge.id } })}
-            style={({ pressed }) => [
-              styles.nudgeBanner,
-              { borderColor: nudge.habitColor },
-              pressed && { opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.nudgeAvatar, { backgroundColor: nudge.fromColor }]}>
-              <Text style={styles.nudgeInitials}>{nudge.fromName.slice(0, 2).toUpperCase()}</Text>
-            </View>
-            <View style={styles.nudgeText}>
-              <Text style={styles.nudgeFrom}>{copy.nudge.from(nudge.fromName)}</Text>
-              <Text style={styles.nudgeMessage} numberOfLines={2}>
-                “{nudge.message}”
-              </Text>
-            </View>
-          </Pressable>
-        ))}
+        <Text style={[styles.padded, styles.habitsTitle]}>Your habits</Text>
 
         {!isPending && habits.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{copy.today.emptyTitle}</Text>
-            <Text style={styles.emptyBody}>{copy.today.emptyBody}</Text>
-            <PrimaryButton label={copy.today.addHabit} onPress={() => router.push('/new-habit')} />
+          <View style={[styles.padded, { gap: spacing.md }]}>
+            <View style={[styles.card, styles.empty]}>
+              <Text style={styles.emptyTitle}>{copy.today.emptyTitle}</Text>
+              <Text style={styles.emptyBody}>{copy.today.emptyBody}</Text>
+              <PrimaryButton label={copy.today.addHabit} onPress={() => router.push('/new-habit')} />
+            </View>
           </View>
         )}
 
         {inHand.length > 0 && (
           <HabitFan
-            key={dayKey}
+            key={today}
             habits={inHand}
             initialFocus={initialFocus}
-            nowMinutes={isToday ? nowMinutes : null}
-            busy={checkIn.isPending}
+            nowMinutes={nowMinutes}
+            busy={busy}
             onToggle={toggle}
-            onEdit={(habit) => router.push({ pathname: '/new-habit', params: { id: habit.id } })}
-            onFocus={onFanFocus}
+            onEdit={(h) => router.push({ pathname: '/new-habit', params: { id: h.id } })}
+            onFocus={(h) => setFanColor(h.color)}
+            variant="home"
           />
         )}
 
         {habits.length > 0 && (
-          <View style={styles.padded}>
-            {/* Finishing the day used to add a block here, so the page grew by
-                its height on the check-in that finished it and shrank again on
-                the undo — everything below jumped, and if you were scrolled at
-                all the fan moved under your thumb. One line replacing another
-                says the same thing and leaves the page exactly as tall. */}
-            {/* Above the hint, not below it. The row was the last thing on the
-                screen and sat under the floating dock at rest, so the only way
-                to add a habit was to scroll to reach it. */}
-            <View style={styles.chips}>
-              {finished.length > 0 && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: showingDone }}
-                  accessibilityLabel={
-                    showingDone ? copy.today.hideDone : copy.today.foldedAway(finished.length)
-                  }
-                  onPress={() => setShowingDone((open) => !open)}
-                  style={({ pressed }) => [styles.chip, pressed && { opacity: 0.85 }]}
-                >
-                  <Text style={styles.chipText}>
-                    {copy.today.foldedAway(finished.length)} ·{' '}
-                    {showingDone ? copy.today.hideDone : copy.today.showDone}
-                  </Text>
-                </Pressable>
-              )}
-
-              {/* A count, not a control. It was the only filled chip in the row
-                  while being the one thing in it that cannot be tapped, which
-                  taught the loudest thing here is the thing to press. It is
-                  quiet now, and the button below took the fill. */}
-              {openCount > 0 && (
-                <View style={[styles.chip, { borderColor: colors.border }]}>
-                  <Text style={[styles.chipText, { color: colors.textMuted }]}>
-                    {copy.today.leftToday(openCount)}
-                  </Text>
-                </View>
-              )}
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={copy.today.newHabit}
-                onPress={() => router.push('/new-habit')}
-                // Filled, and in the habit colour the screen is already tinted
-                // with: the one action in the row should look like the one
-                // action in the row.
-                style={({ pressed }) => [
-                  styles.chip,
-                  styles.chipAction,
-                  { backgroundColor: bleedColor, borderColor: bleedColor },
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <Text style={[styles.chipText, styles.chipActionText, { color: colors.bg }]}>
-                  + {copy.today.newHabit}
-                </Text>
-              </Pressable>
-            </View>
-
+          <View style={[styles.padded, styles.under]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/new-habit')}
+              style={({ pressed }) => [styles.newHabit, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.newHabitText}>+ {copy.today.newHabit}</Text>
+            </Pressable>
             <Text style={styles.fanHint} numberOfLines={1}>
               {openCount === 0 ? copy.today.allDone : copy.today.fanHint}
             </Text>
-
-            {/* The end of setting up, moved onto the screen it is about.
-                Before the first check-in it points at the orb; after it, it
-                explains the rule that check-in just started. Each shows once
-                and only when it is true. */}
-            {done === 0 && (
-              <FirstTimeHint id="first-check-in">{copy.hints.firstCheckIn}</FirstTimeHint>
-            )}
-            {done > 0 && (
-              <FirstTimeHint id="streak-rule">{copy.hints.streakRule}</FirstTimeHint>
-            )}
-
+            {/* Each shows once, and only when it is true. */}
+            {done === 0 && <FirstTimeHint id="first-check-in">{copy.hints.firstCheckIn}</FirstTimeHint>}
+            {done > 0 && <FirstTimeHint id="streak-rule">{copy.hints.streakRule}</FirstTimeHint>}
             <FirstTimeHint id="dock-pips">{copy.hints.dockPips}</FirstTimeHint>
-
-            {showingDone && (
-              <View style={styles.listBlock}>
-                <DayList
-                  habits={finished}
-                  nowMinutes={isToday ? nowMinutes : null}
-                  onToggle={toggle}
-                  onEdit={(habit) =>
-                    router.push({ pathname: '/new-habit', params: { id: habit.id } })
-                  }
-                />
-              </View>
-            )}
           </View>
         )}
+
+        <View style={styles.padded}>
+          <View style={[styles.card, styles.perf]}>
+            <View style={styles.perfLeft}>
+              <Text style={styles.big}>{pct(rates.Today)}</Text>
+              <View style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: RINGS[0].color }]} />
+                <Text style={styles.bigLabel}>of today done</Text>
+              </View>
+              <View style={styles.legend}>
+                {RINGS.slice(1).map((r) => (
+                  <View key={r.key} style={styles.legendItem}>
+                    <View style={[styles.dot, { backgroundColor: r.color }]} />
+                    <Text style={styles.legendText}>
+                      {r.key} <Text style={{ color: colors.text }}>{pct(rates[r.key])}</Text>
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.navigate('/progress')}
+                style={({ pressed }) => [styles.checkNow, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.checkNowText}>See progress</Text>
+              </Pressable>
+            </View>
+            <View
+              style={styles.rings}
+              accessible
+              accessibilityLabel={`Today ${pct(rates.Today)}, week ${pct(rates.Week)}, month ${pct(rates.Month)}`}
+            >
+              {RINGS.map((r) => (
+                <View key={r.key} style={styles.ring}>
+                  <ProgressRing
+                    size={r.size}
+                    strokeWidth={11}
+                    progress={rates[r.key]}
+                    color={r.color}
+                    trackColor={alpha(r.color, 0.2)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -386,156 +398,64 @@ export default function TodayScreen() {
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   padded: { paddingHorizontal: spacing.xl },
-  fanHint: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.textFaint,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  chip: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: radii.chip,
+  welcome: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hello: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 28, letterSpacing: -0.4, color: colors.text },
+  notice: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  habitsTitle: { fontFamily: fonts.bodyBold, fontSize: 24, textAlign: 'center', color: colors.text, marginBottom: -6 },
+  section: { fontFamily: fonts.bodyMedium, fontSize: 20, color: colors.text },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  seeAll: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, paddingVertical: 10, paddingLeft: 12 },
+  card: {
+    borderRadius: 20,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.cardEdge,
   },
-  chipText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.text,
-  },
-  chipAction: { paddingHorizontal: 22 },
-  chipActionText: { fontSize: 15 },
-  days: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dayButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  dayMuted: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.textFaint,
-  },
-  dayDisabled: { opacity: 0.35 },
-  dayActive: {
-    minHeight: 36,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
+  nudge: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginHorizontal: spacing.xl, padding: 14 },
+  nudgeAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  nudgeInitials: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.white },
+  nudgeFrom: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
+  nudgeMessage: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  todoLine: { paddingHorizontal: 16 },
+  divider: { borderTopWidth: 1, borderTopColor: colors.hairline },
+  addLine: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 46 },
+  plus: { width: 20, textAlign: 'center', fontFamily: fonts.bodyMedium, fontSize: 20, color: colors.textFaint },
+  iconBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginVertical: 5 },
+  confirm: { backgroundColor: colors.text },
+  addInput: { flex: 1, fontFamily: fonts.body, fontSize: 15, color: colors.text, paddingVertical: 10 },
+  empty: { gap: spacing.md, padding: spacing.xl },
+  emptyTitle: { fontFamily: fonts.bodyMedium, fontSize: 22, color: colors.text },
+  emptyBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.textMuted },
+  under: { alignItems: 'center', gap: spacing.sm },
+  newHabit: {
+    height: 40,
+    paddingHorizontal: 18,
     borderRadius: radii.chip,
+    justifyContent: 'center',
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.cardEdge,
+  },
+  newHabitText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
+  fanHint: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint, textAlign: 'center' },
+  perf: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18 },
+  perfLeft: { gap: 2 },
+  big: { fontFamily: fonts.bodyMedium, fontSize: 40, lineHeight: 44, letterSpacing: -0.8, color: colors.text },
+  bigLabel: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  legend: { gap: 4, marginTop: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
+  checkNow: {
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    height: 34,
+    paddingHorizontal: 15,
+    borderRadius: radii.chip,
+    justifyContent: 'center',
     backgroundColor: colors.text,
   },
-  dayActiveText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-  },
-  dateBlock: { flexShrink: 1 },
-  dateFull: {
-    fontFamily: fonts.body,
-    fontSize: 17,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  count: { alignItems: 'flex-end', gap: 2, paddingBottom: 4 },
-  countLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    color: colors.textFaint,
-    textTransform: 'uppercase',
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
-  sectionLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: ink(habitColors[0], colors) },
-  listBlock: { gap: spacing.md },
-  addRow: {
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  notice: {
-    marginHorizontal: spacing.xl,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  empty: {
-    marginHorizontal: spacing.xl,
-    gap: spacing.md,
-    padding: spacing.xl,
-    borderRadius: radii.bigCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: alpha(colors.overlay, 0.04),
-  },
-  emptyTitle: { ...display(30, 30), color: colors.text },
-  emptyBody: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textMuted,
-  },
-  addLabel: { fontFamily: fonts.bodyBold, fontSize: 15 },
-  missedBlock: { gap: spacing.sm },
-  missedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 52,
-    paddingHorizontal: 14,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    backgroundColor: alpha(colors.overlay, 0.05),
-  },
-  missedDot: { width: 10, height: 10, borderRadius: 5 },
-  missedName: { flex: 1, ...display(20, 20), color: colors.text },
-  missedWhen: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.textFaint },
-  nudgeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginHorizontal: spacing.xl,
-    padding: 14,
-    borderRadius: radii.bigCard,
-    borderWidth: 1,
-    backgroundColor: alpha(colors.overlay, 0.06),
-  },
-  nudgeAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nudgeInitials: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.white },
-  nudgeText: { flex: 1, gap: 2 },
-  nudgeFrom: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.text },
-  nudgeMessage: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  checkNowText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.bg },
+  rings: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  ring: { position: 'absolute' },
 }) as const;
