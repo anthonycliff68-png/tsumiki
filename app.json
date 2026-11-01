@@ -15,6 +15,7 @@
       "bundleIdentifier": "com.tsumiki.app",
       "usesAppleSignIn": true,
       "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Tsumiki doesn't use your photos. Apple asks every app that includes Expo's file tools to say so.",
         "UIBackgroundModes": [
           "remote-notification"
         ]
