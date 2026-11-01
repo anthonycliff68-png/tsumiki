@@ -22,3 +22,6 @@ export function useIsPro(): boolean {
 
 /** Every limit leads here, and says nothing else. The paywall explains. */
 export const showUpgrade = () => router.push('/plans');
+
+/** ✦ and the ＋ menu's brain dump: Pro opens it, Free sees what Pro is. */
+export const openBrainDump = (isPro: boolean) => (isPro ? router.push('/brain-dump') : showUpgrade());

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { BrandHeader } from '@/components/BrandHeader';
 import { Field } from '@/components/Field';
 import { NoteRow } from '@/components/NoteRow';
 import { Reveal } from '@/components/Reveal';
@@ -37,6 +38,7 @@ export default function NotesScreen() {
 
   return (
     <Screen color={habitColors[2]}>
+      <BrandHeader />
       <Title size={64}>{copy.notes.title}</Title>
 
       <Field

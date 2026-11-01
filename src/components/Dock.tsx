@@ -3,31 +3,22 @@ import { Animated, PanResponder, Pressable, Text, View, type LayoutChangeEvent }
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  CrewsIcon,
-  MyDayIcon,
-  ProgressIcon,
-  TodayIcon,
-  YouIcon,
-  type IconProps,
-} from '@/components/icons';
-import { CheckInOrb } from '@/components/CheckInOrb';
-import { GlassGroup, GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
+import { CrewsIcon, MyDayIcon, NotesIcon, YouIcon, type IconProps } from '@/components/icons';
+import { GlassSurface, LIQUID_GLASS } from '@/components/GlassSurface';
+import { PlusBlocks } from '@/components/PlusBlocks';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { formatTime } from '@/data/defaults';
-import { useCheckIn, useToday, useUndoCheckIn } from '@/lib/api';
+import { useToday } from '@/lib/api';
 import { orderForDay } from '@/lib/today';
 import { useAuth } from '@/lib/auth';
-import { alpha, display, fonts, ink, radii, type Palette } from '@/theme';
+import { alpha, fonts, ink, radii, type Palette } from '@/theme';
 
 /**
- * The orb's overhang, the pip row, the now row and the tabs. Only a starting
- * guess — the dock reports its real height once it has laid out, because a long
- * habit name, a larger text size or a day with no habits at all all change it,
- * and a guess that runs short leaves the last row of every list under the glass.
+ * The tab row. Only a starting guess — the dock reports its real height once it
+ * has laid out, because a larger text size changes it, and a guess that runs
+ * short leaves the last row of every list under the glass.
  */
-export const DOCK_HEIGHT = 6 + 34 + 72 + 58;
+export const DOCK_HEIGHT = 58;
 /** How far the dock floats off the bottom of the screen on a home-indicator phone. */
 const DOCK_EDGE = 12;
 /** Breathing room between the dock's top edge and the end of a list. */
@@ -43,29 +34,12 @@ const TAB_MIN_HEIGHT = 44;
 /** Movement past which a touch is a drag across the tabs rather than a tap on one. */
 const DRAG_SLOP = 4;
 
-/** The glass shell around the orb. Wider than the orb so there is a rim to merge with. */
-const ORB_SHELL = 78;
-/**
- * Room above the bar for the orb's glow, and the distance at which the orb and
- * the bar start reaching for each other. Not an overhang any more: the orb
- * centres on the bar's head instead of straddling its top edge, which read as
- * stuck on rather than part of it.
- */
-const ORB_LIFT = 6;
-/** Room kept clear on the right of the bar so the text never runs under the orb. */
-const ORB_CLEARANCE = ORB_SHELL + 14;
-/** A pip in the day's timeline: one per habit, the current one wider. */
-const PIP_WIDTH = 16;
-const PIP_WIDTH_CURRENT = 34;
-const PIP_HEIGHT = 6;
-
 type TabIcon = (props: IconProps) => React.ReactElement;
 
 const TABS: Record<string, { label: string; Icon: TabIcon }> = {
-  index: { label: copy.dock.tabs.today, Icon: TodayIcon },
   'my-day': { label: copy.dock.tabs.myDay, Icon: MyDayIcon },
+  notes: { label: copy.dock.tabs.notes, Icon: NotesIcon },
   crews: { label: copy.dock.tabs.crews, Icon: CrewsIcon },
-  progress: { label: copy.dock.tabs.progress, Icon: ProgressIcon },
   you: { label: copy.dock.tabs.you, Icon: YouIcon },
 };
 
@@ -104,128 +78,81 @@ function dockBottom(safeBottom: number): number {
 }
 
 /**
- * The floating glass dock: an up-next row with the check-in orb on top of the
- * four tabs. Artboard: NavAB.
+ * The floating glass dock: My Day, Notes, the ＋ blocks, Crews, You. The
+ * up-next bar and the check-in orb that sat on top have gone — My Day's
+ * timeline does the checking in now.
  */
 export function Dock({ state, navigation }: BottomTabBarProps) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const userId = session?.user.id;
+  const { data: habits = [] } = useToday(session?.user.id);
 
-  const { data: habits = [] } = useToday(userId);
-  const checkIn = useCheckIn(userId);
-  const undo = useUndoCheckIn(userId);
-
-  const done = habits.filter((h) => h.checkedIn).length;
-  const total = habits.length;
-
-  // Up next is the next one still to come, so the dock agrees with the card at
-  // the front of the fan on Today. A habit whose moment has passed is not "up
-  // next"; it falls in behind. On a finished day the dock keeps showing the
-  // last one so the row does not collapse.
-  const upNext = useMemo(() => {
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const open = habits.filter((h) => !h.checkedIn);
-    return (
-      open.find((h) => h.sortKey >= nowMinutes) ?? open[0] ?? habits[habits.length - 1]
-    );
-  }, [habits]);
-
-  /** The day in order, for the pips. Never reshuffled by what is done. */
+  /** The day in order: the next open habit lights the dock, and the ＋ is
+   *  built from the day's own colours. */
   const ordered = useMemo(() => orderForDay(habits), [habits]);
-
-  /**
-   * A pip you tapped, if you tapped one. The dock is about the next thing by
-   * default; picking a pip points it — and the orb — at that habit instead, so
-   * anything in the day can be checked in without leaving the screen.
-   */
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const habit = ordered.find((h) => h.id === pickedId) ?? upNext;
-
-  const accent = habit ? ink(habit.color, colors) : ink(colors.textMuted, colors);
-
-  /** Only the genuine next thing gets called that; a pick is just its moment. */
-  const isUpNext = habit?.id === upNext?.id;
-  const whenLabel = !habit
-    ? ''
-    : habit.mode === 'after' && habit.anchorLabel
-      ? isUpNext
-        ? copy.dock.upNextAnchor(habit.anchorLabel)
-        : copy.dock.pickedAnchor(habit.anchorLabel)
-      : habit.mode === 'at' && habit.time
-        ? isUpNext
-          ? copy.dock.upNextTime(formatTime(habit.time))
-          : copy.dock.pickedTime(formatTime(habit.time))
-        : isUpNext
-          ? copy.dock.upNextAnytime
-          : copy.dock.pickedAnytime;
-
-  const statusLabel =
-    done === total && total > 0 ? copy.dock.allDone : copy.dock.soloProgress(done, total);
+  const next = ordered.find((h) => !h.checkedIn) ?? ordered[ordered.length - 1];
+  const accent = ink(next?.color ?? colors.textMuted, colors);
+  const blocks = useMemo(() => [...new Set(ordered.map((h) => h.color))].slice(0, 3), [ordered]);
 
   const { measure } = useContext(MeasuredDock);
 
-  // --- the sliding pill ----------------------------------------------------
+  // --- the sliding glow ------------------------------------------------------
   //
-  // The tab row has no indicator of its own, so this is it: a capsule that
-  // springs between tabs on a tap, and follows your thumb if you drag across
-  // them. Dragging only previews — the release decides — because navigating as
-  // the thumb passes would mount every screen it crosses and fire off their
-  // queries for nothing.
+  // A halo that springs between tabs on a tap, and follows your thumb if you
+  // drag across them. Dragging only previews — the release decides — because
+  // navigating as the thumb passes would mount every screen it crosses and
+  // fire off their queries for nothing. The ＋ holds the middle slot, so tab i
+  // sits in slot slotOf(i) and the glow never lands on it.
 
   const tabRoutes = useMemo(() => state.routes.filter((route) => TABS[route.name]), [state.routes]);
   // Through the filter rather than straight from state.index, so a route that
-  // is not a tab cannot slide the pill onto the wrong one.
+  // is not a tab cannot slide the glow onto the wrong one.
   const tabIndex = Math.max(
     0,
     tabRoutes.findIndex((route) => route.key === state.routes[state.index]?.key),
   );
+  const slots = tabRoutes.length + 1;
+  const middle = Math.floor(tabRoutes.length / 2);
+  const slotOf = (i: number) => (i < middle ? i : i + 1);
 
   const [rowWidth, setRowWidth] = useState(0);
   /** The tab the thumb is currently over mid-drag; null when not dragging. */
   const [hover, setHover] = useState<number | null>(null);
   const shown = hover ?? tabIndex;
 
-  const slot = tabRoutes.length > 0 && rowWidth > 0 ? (rowWidth - TAB_ROW_PADDING * 2) / tabRoutes.length : 0;
+  const slot = tabRoutes.length > 0 && rowWidth > 0 ? (rowWidth - TAB_ROW_PADDING * 2) / slots : 0;
 
   const slide = useRef(new Animated.Value(0)).current;
-  /** Where the pill sat when the finger went down. */
+  /** Where the glow sat when the finger went down. */
   const dragFrom = useRef(0);
   /** The tab a release would commit to. A ref as well as state: the responder
    *  is built once per layout and would otherwise read a stale hover. */
   const dragTo = useRef(0);
-
-  /**
-   * The height of the bar's head — the pips and the name. The orb centres on
-   * that rather than on the whole bar, because the tab row underneath is a
-   * different thing and centring across both left the orb riding high, looking
-   * stuck to the dock's top edge rather than sitting in it.
-   */
-  const [headHeight, setHeadHeight] = useState(0);
-  const measureHead = useCallback((event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.height;
-    setHeadHeight((current) => (Math.abs(current - next) > 0.5 ? next : current));
-  }, []);
 
   const measureRow = useCallback((event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
     setRowWidth((current) => (Math.abs(current - next) > 0.5 ? next : current));
   }, []);
 
+  const settle = useCallback(
+    () =>
+      Animated.spring(slide, {
+        toValue: slotOf(tabIndex) * slot,
+        useNativeDriver: true,
+        speed: 18,
+        bounciness: 6,
+      }).start(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- slotOf only reads middle
+    [slide, tabIndex, slot, middle],
+  );
+
   // Follow the real selection whenever it changes — by tap, by drag, or by
   // something else navigating — and settle after a layout change.
   useEffect(() => {
-    if (slot <= 0) return;
-    Animated.spring(slide, {
-      toValue: tabIndex * slot,
-      useNativeDriver: true,
-      speed: 18,
-      bounciness: 6,
-    }).start();
-  }, [tabIndex, slot, slide]);
+    if (slot > 0) settle();
+  }, [slot, settle]);
 
   const drag = useMemo(
     () =>
@@ -235,159 +162,92 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
         onMoveShouldSetPanResponder: (_event, gesture) =>
           slot > 0 && Math.abs(gesture.dx) > DRAG_SLOP && Math.abs(gesture.dx) > Math.abs(gesture.dy),
         onPanResponderGrant: () => {
-          dragFrom.current = tabIndex * slot;
+          dragFrom.current = slotOf(tabIndex) * slot;
           dragTo.current = tabIndex;
         },
         onPanResponderMove: (_event, gesture) => {
           if (slot <= 0) return;
-          const furthest = slot * (tabRoutes.length - 1);
-          const at = Math.min(Math.max(dragFrom.current + gesture.dx, 0), furthest);
+          const at = Math.min(Math.max(dragFrom.current + gesture.dx, 0), slot * (slots - 1));
           slide.setValue(at);
           const over = Math.round(at / slot);
-          if (over !== dragTo.current) {
-            dragTo.current = over;
-            setHover(over);
+          // Over the ＋ is still whichever tab it last passed.
+          const tab = over === middle ? dragTo.current : over < middle ? over : over - 1;
+          if (tab !== dragTo.current) {
+            dragTo.current = tab;
+            setHover(tab);
           }
         },
         onPanResponderRelease: () => {
           const landed = dragTo.current;
           setHover(null);
           const route = tabRoutes[landed];
-          if (route && landed !== tabIndex) {
-            navigation.navigate(route.name, route.params);
-            // The effect above springs the pill once the selection catches up.
-          } else {
-            Animated.spring(slide, {
-              toValue: tabIndex * slot,
-              useNativeDriver: true,
-              speed: 18,
-              bounciness: 6,
-            }).start();
-          }
+          // The effect above springs the glow once the selection catches up.
+          if (route && landed !== tabIndex) navigation.navigate(route.name, route.params);
+          else settle();
         },
         onPanResponderTerminate: () => {
           setHover(null);
-          Animated.spring(slide, {
-            toValue: tabIndex * slot,
-            useNativeDriver: true,
-            speed: 18,
-            bounciness: 6,
-          }).start();
+          settle();
         },
       }),
-    [slot, tabIndex, tabRoutes, navigation, slide],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- slotOf only reads middle
+    [slot, slots, middle, tabIndex, tabRoutes, navigation, slide, settle],
   );
+
+  const tabButton = (route: (typeof tabRoutes)[number], index: number) => {
+    const tab = TABS[route.name];
+    if (!tab) return null;
+
+    // What the glow is under right now, which during a drag is wherever the
+    // thumb has reached rather than where the app actually is.
+    const lit = index === shown;
+    // Where the app actually is. A screen reader should hear the truth, not
+    // the preview.
+    const selected = index === tabIndex;
+    // colors.text, not colors.white: the tab row sits on the dock, which is
+    // pale on a light ground, and white on pale is not a label.
+    const color = lit ? accent : colors.textInactive;
+
+    const onPress = () => {
+      const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+      if (!selected && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+    };
+
+    return (
+      <Pressable
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={tab.label}
+        onPress={onPress}
+        style={styles.tab}
+      >
+        <tab.Icon size={20} color={color} />
+        <Text style={[styles.tabLabel, { color }]}>{tab.label}</Text>
+      </Pressable>
+    );
+  };
 
   return (
     <View onLayout={measure} style={[styles.wrap, { bottom: dockBottom(insets.bottom) }]}>
-      {/* The bar and the orb are siblings inside the group, which is what lets
-          them reach for each other and fuse as the orb settles against the
-          bar. Nesting the orb inside the bar's glass would stack two panes
-          instead, and stacked glass is mush. */}
-      <GlassGroup spacing={ORB_SHELL / 2} style={styles.group}>
-        {/* Clear, not the everyday material.
-            "regular" carries its own dimming, which is what chrome usually
-            wants — but the dock sits over the bleed, and dimming the one thing
-            the screen is coloured by turned the whole bar into a brown panel.
-            Clear lets it through, so the dock reads as a window onto the
-            screen's own colour rather than a slab laid over it. The tint goes
-            with it: the colour is already behind the glass. */}
-        <GlassSurface
-          blurFallback
-          variant="clear"
-          style={[
-            styles.bar,
-            {
-              borderColor: alpha(accent, 0.28),
-              backgroundColor: LIQUID_GLASS ? 'transparent' : colors.glass,
-            },
-          ]}
-        >
-          <View onLayout={measureHead}>
-          {ordered.length > 0 && (
-            <View style={styles.pipRow}>
-              {ordered.map((entry) => {
-                const current = entry.id === habit?.id;
-                return (
-                  <Pressable
-                    key={entry.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: current }}
-                    accessibilityLabel={
-                      entry.checkedIn
-                        ? copy.dock.checkedInLabel(entry.name)
-                        : copy.dock.checkInLabel(entry.name)
-                    }
-                    hitSlop={10}
-                    onPress={() => setPickedId(entry.id)}
-                    style={styles.pipTap}
-                  >
-                    <View
-                      style={[
-                        styles.pip,
-                        {
-                          width: current ? PIP_WIDTH_CURRENT : PIP_WIDTH,
-                          backgroundColor: entry.checkedIn
-                            ? entry.color
-                            : alpha(entry.color, current ? 0.55 : 0.28),
-                        },
-                      ]}
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-
-          {habit && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${whenLabel}: ${habit.name}. ${statusLabel}`}
-              onPress={() => navigation.navigate('crews')}
-              style={styles.nowRow}
-            >
-              <Text style={[styles.upNextLabel, { color: accent }]} numberOfLines={1}>
-                {whenLabel}
-              </Text>
-              <Text style={styles.upNextName} numberOfLines={1}>
-                {habit.name}
-              </Text>
-              <Text style={styles.upNextStatus} numberOfLines={1}>
-                {statusLabel}
-              </Text>
-            </Pressable>
-          )}
-          </View>
-        </GlassSurface>
-
-        {/* Its own pane, with air between it and the one above.
-            The dock does two unrelated jobs: the top says what is next and
-            takes the check-in, the bottom moves you around the app. They shared
-            one card separated by a hairline, which read as one control with a
-            line through it. Two panes with a gap say plainly that the habit and
-            the navigation are different things. */}
-        <GlassSurface
-          blurFallback
-          variant="clear"
-          style={[
-            styles.tabBar,
-            {
-              borderColor: alpha(accent, 0.22),
-              backgroundColor: LIQUID_GLASS ? 'transparent' : colors.glass,
-            },
-          ]}
-        >
+      {/* Clear, not the everyday material: "regular" carries its own dimming,
+          and the dock sits over the bleed — dimming the one thing the screen
+          is coloured by turned the whole bar into a brown panel. */}
+      <GlassSurface
+        blurFallback
+        variant="clear"
+        style={[
+          styles.tabBar,
+          {
+            borderColor: alpha(accent, 0.22),
+            backgroundColor: LIQUID_GLASS ? 'transparent' : colors.glass,
+          },
+        ]}
+      >
         <View style={styles.tabRow} onLayout={measureRow} {...drag.panHandlers}>
-          {/* Behind the tabs, and deaf to touches so it never eats one. It is a
-              brighter region inside the dock's own glass rather than a second
-              pane of it: glass stacked on glass turns to mush, which the time
-              picker demonstrated. */}
-          {/* The halo is what travels now, not a pill.
-              A filled block behind the whole tab boxed the lit one in and put a
-              second rounded outline a few pixels inside the card's own. A glow
-              sitting behind the icon lights the tab instead of framing it, and
-              it still slides under the thumb, so the drag keeps something to
-              hold on to. */}
+          {/* Behind the tabs, and deaf to touches so it never eats one. A glow
+              lights the tab instead of boxing it in, and still slides under the
+              thumb, so the drag keeps something to hold on to. */}
           {slot > 0 && (
             <Animated.View
               pointerEvents="none"
@@ -403,170 +263,26 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
             />
           )}
 
-          {tabRoutes.map((route, index) => {
-            const tab = TABS[route.name];
-            if (!tab) return null;
-
-            // What the pill is under right now, which during a drag is wherever
-            // the thumb has reached rather than where the app actually is.
-            const lit = index === shown;
-            // Where the app actually is. A screen reader should hear the truth,
-            // not the preview.
-            const selected = index === tabIndex;
-            // colors.text, not colors.white: the tab row sits on the dock, which is
-            // pale on a light ground, and white on pale is not a label.
-            // The habit's own colour, at full strength. With the pill gone
-            // there is nothing behind it to out-shine, so it no longer has to
-            // be lifted off its own highlight to stay legible.
-            const color = lit ? accent : colors.textInactive;
-
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!selected && !event.defaultPrevented) {
-                navigation.navigate(route.name, route.params);
-              }
-            };
-
-            return (
-              <Pressable
-                key={route.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={tab.label}
-                onPress={onPress}
-                style={styles.tab}
-              >
-                <tab.Icon size={20} color={color} />
-                <Text style={[styles.tabLabel, { color }]}>{tab.label}</Text>
-              </Pressable>
-            );
-          })}
+          {tabRoutes.slice(0, middle).map((route, i) => tabButton(route, i))}
+          <PlusBlocks blocks={blocks} />
+          {tabRoutes.slice(middle).map((route, i) => tabButton(route, i + middle))}
         </View>
-        </GlassSurface>
-
-        {habit && (
-          <GlassSurface
-            tint={alpha(habit.color, 0.22)}
-            style={[
-              styles.orbShell,
-              {
-                borderColor: alpha(habit.color, 0.35),
-                // Centred on the head, and nothing else. ORB_LIFT is already
-                // the wrap's top padding, so adding it here too pushed the orb
-                // its own six points below the middle of the card it sits in —
-                // a left-over from when the orb straddled the bar's top edge
-                // instead of centring on it.
-                top: Math.max((headHeight - ORB_SHELL) / 2, 0),
-              },
-            ]}
-          >
-            <CheckInOrb
-              color={habit.color}
-              done={done}
-              total={total}
-              checkedIn={habit.checkedIn}
-              accessibilityLabel={
-                habit.checkedIn
-                  ? copy.dock.checkedInLabel(habit.name)
-                  : copy.dock.checkInLabel(habit.name)
-              }
-              onPress={() => {
-                // Tapping a done orb takes it back — mis-taps happen.
-                if (habit.checkedIn) undo.mutate({ habitId: habit.id });
-                else checkIn.mutate({ habitId: habit.id });
-              }}
-            />
-          </GlassSurface>
-        )}
-      </GlassGroup>
+      </GlassSurface>
     </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
-  // The wrap is only a frame now: no fill, no border, no clipping. The orb has
-  // to be able to stand proud of the bar, and overflow: hidden here would cut
-  // the top off it.
   wrap: {
     position: 'absolute',
     left: DOCK_EDGE,
     right: DOCK_EDGE,
-    paddingTop: ORB_LIFT,
   },
-  // The gap between the two panes. Bigger than the group's own fusing
-  // distance, or liquid glass reaches across and heals them back into one.
-  group: {
-    position: 'relative',
-    gap: 8,
-  },
-  bar: {
-    borderRadius: radii.dock,
-    borderWidth: 1,
-    overflow: 'hidden',
-    flexDirection: 'column',
-    boxShadow: '0px 16px 40px rgba(0,0,0,0.55)',
-  },
-  // The same card as the one above, a little quieter: it is the thing you
-  // navigate with, not the thing you act on.
   tabBar: {
     borderRadius: radii.dock,
     borderWidth: 1,
     overflow: 'hidden',
     boxShadow: '0px 12px 32px rgba(0,0,0,0.5)',
-  },
-  orbShell: {
-    position: 'absolute',
-    right: 16,
-    width: ORB_SHELL,
-    height: ORB_SHELL,
-    borderRadius: ORB_SHELL / 2,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // The day at a glance: one pip per habit, filled once it is done, and wider
-  // for whichever the dock is currently about.
-  pipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingLeft: 16,
-    paddingRight: ORB_CLEARANCE,
-    paddingTop: 10,
-  },
-  // Tighter than it looks: the pips carry hitSlop of 10, so the padding here is
-  // only spacing and the target stays well over the floor without it.
-  pipTap: {
-    paddingVertical: 6,
-  },
-  pip: {
-    height: PIP_HEIGHT,
-    borderRadius: PIP_HEIGHT / 2,
-  },
-  nowRow: {
-    gap: 2,
-    paddingLeft: 16,
-    paddingRight: ORB_CLEARANCE,
-    paddingBottom: 10,
-  },
-  upNextLabel: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  upNextName: {
-    ...display(22, 22),
-    color: colors.text,
-  },
-  upNextStatus: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.textMuted,
   },
   // Centred on the tab as a whole, icon and label together, rather than on the
   // icon alone — behind the icon only, it lit the top half of the item and left

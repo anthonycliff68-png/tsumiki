@@ -4,8 +4,9 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandHeader } from '@/components/BrandHeader';
+import { BackIcon, RoundButton } from '@/components/DayParts';
+import { goBack } from '@/lib/back';
 import { Bleed } from '@/components/Bleed';
-import { useDockClearance } from '@/components/Dock';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { AllTimeCard } from '@/components/AllTimeCard';
@@ -109,7 +110,6 @@ export default function ProgressScreen() {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const insets = useSafeAreaInsets();
-  const clearance = useDockClearance();
   const { session } = useAuth();
   const userId = session?.user.id;
   const { data: history = [], refetch } = useHabitHistory(userId);
@@ -259,7 +259,7 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + spacing.xl,
-          paddingBottom: clearance,
+          paddingBottom: insets.bottom + spacing.xxl,
           paddingHorizontal: spacing.xl,
           gap: spacing.lg,
         }}
@@ -268,7 +268,13 @@ export default function ProgressScreen() {
           <RefreshControl {...pull} tintColor={colors.textMuted} />
         }
       >
-        <BrandHeader />
+        <BrandHeader
+          left={
+            <RoundButton label={copy.notes.back} onPress={() => goBack()}>
+              <BackIcon color={colors.text} />
+            </RoundButton>
+          }
+        />
 
         <Text style={styles.pageTitle}>{copy.stats.title}</Text>
 

@@ -29,10 +29,20 @@ export const copy = {
     tabs: {
       today: 'Home',
       myDay: 'My Day',
+      notes: 'Notes',
       crews: 'Crews',
       progress: 'Progress',
       you: 'You',
     },
+    // The ＋ in the middle of the dock and what tumbles out of it.
+    add: 'Add',
+    closeAdd: 'Close',
+    brainDump: 'Brain dump',
+    brainDumpBody: 'Talk or type. Tsumiki sorts it.',
+    pro: 'PRO',
+    note: 'Note',
+    habit: 'Habit',
+    todo: 'To-do',
   },
 
   today: {
@@ -413,7 +423,6 @@ export const copy = {
   hints: {
     dismiss: 'Got it',
     /** The dock's pips are the only undiscoverable thing the walkthrough skips. */
-    dockPips: 'The bars at the top of the dock are the rest of your day. Tap one and the dock points at it, so you can check anything off from anywhere.',
     /**
      * Onboarding used to end on a page whose only job was one check-in. Two
      * readers found it unnecessary and one of them could not tell the button
@@ -508,11 +517,12 @@ export const copy = {
     browsingTitle: 'You have Pro. Thank you.',
 
     // What Pro adds, with Free's cap beside it. Only what the build actually
-    // does: the calendar and the brain dump join this list the release they
-    // ship in, because App Review rejects a paywall that sells something
-    // missing. A crew really does stop at five, enforced by a trigger on
-    // crew_members, so it is never "unlimited".
+    // does: the calendar joins this list the release it ships in, because
+    // App Review rejects a paywall that sells something missing. A crew
+    // really does stop at five, enforced by a trigger on crew_members, so it
+    // is never "unlimited".
     includes: [
+      { title: 'AI brain dump', note: '' },
       { title: 'Unlimited habits', note: 'Free has 5' },
       { title: 'Unlimited to-dos', note: 'Free has 5' },
       { title: 'Crews with up to five friends', note: '' },
@@ -737,6 +747,11 @@ export const copy = {
 
   myDay: {
     title: 'My Day',
+    ring: (done: number, total: number) => `${done} of ${total}`,
+    ringLabel: (done: number, total: number) => `${done} of ${total} habits done`,
+    headFull: 'Head full?',
+    headFullBody: 'Talk or type. I\u2019ll sort it.',
+    addTodo: 'Add a to-do',
     editRoutine: 'Edit routine',
     habitCount: (count: number) => `${count} habit${count === 1 ? '' : 's'}`,
     // Only the kinds you actually have. The parts have to add up to the habit
@@ -885,6 +900,9 @@ export const copy = {
 
   you: {
     profile: 'You',
+    progressTitle: 'Progress \u00b7 last 30 days',
+    progressRate: (pct: number) => `${pct}% of habits done`,
+    seeProgress: 'See all progress \u203a',
     // The headings over each run of rows. Short, because they name a group
     // rather than explain it — the rows do that themselves.
     groupAccount: 'Your account',
@@ -931,6 +949,46 @@ export const copy = {
     timezone: (zone: string) => `Times follow ${zone}`,
   },
 
+  brainDump: {
+    title: 'Brain dump',
+    close: 'Close',
+    consentTitle: 'Before you talk.',
+    consentBody:
+      'Brain dump sends what you say or type to Anthropic, the makers of Claude, to sort it into your day. We keep your words with the notes it writes, so you can read them back. Nothing is added until you tap Add.',
+    agree: 'Agree',
+    notNow: 'Not now',
+    prompt: 'Empty your head.',
+    hold: 'Hold to talk',
+    release: 'Let go to sort',
+    typeInstead: 'Type instead',
+    typePlaceholder: 'Everything on your mind…',
+    sort: 'Sort it',
+    sorting: 'Sorting…',
+    tryAgain: 'Try again',
+    failed: "Couldn't sort that. Your words are still here.",
+    cap: "That's 30 brain dumps today. More tomorrow — your words are still here.",
+    notPro: 'Brain dump is part of Pro.',
+    seePro: 'See Pro',
+    sorted: (n: number) => `Sorted · ${n} ${n === 1 ? 'thing' : 'things'}`,
+    heard: 'What I heard.',
+    timeline: '📅 Timeline',
+    todos: '☑️ To-dos',
+    notes: '📝 Notes',
+    habits: '🌱 Habit idea · tick to add',
+    newFolder: 'new folder',
+    after: (moment: string) => `after ${moment}`,
+    today: 'Today',
+    setTime: 'Set a time',
+    time: 'Time',
+    nothing: 'Nothing to add',
+    nothingBody: "I couldn't find anything to file. Your words are still here.",
+    add: (n: number) => `Add ${n}`,
+    addFailed: "Couldn't add those. Try again.",
+    tick: (title: string) => `Add ${title}`,
+    filed: (folders: string[]) =>
+      folders.length ? `Added. Notes filed in ${folders.join(', ')}.` : 'Added to your day.',
+    fresh: '✦ new',
+  },
   notes: {
     title: 'Notes',
     search: 'Search notes',

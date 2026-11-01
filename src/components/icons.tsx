@@ -42,6 +42,11 @@ export function MyDayIcon(props: IconProps) {
   );
 }
 
+/** A page with a folded corner: the notes tab. */
+export function NotesIcon(props: IconProps) {
+  return <StrokeIcon {...props} d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />;
+}
+
 /** Two people: the crews tab. */
 export function CrewsIcon(props: IconProps) {
   return (

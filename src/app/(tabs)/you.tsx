@@ -11,11 +11,13 @@ import { Screen, Title } from '@/components/Screen';
 import { SettingsGroup, SettingsRow } from '@/components/SettingsRow';
 import { PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
-import { useBlocked, useDeleteAccount, useMyProfile } from '@/lib/api';
+import { useBlocked, useDeleteAccount, useHabitHistory, useMyProfile } from '@/lib/api';
 import { useStyles } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
+import { localDateString } from '@/lib/dates';
+import { isDue, shiftDate } from '@/lib/stats';
 import { registerForPush, type PushRegistration } from '@/lib/push';
-import { fonts, habitColors, spacing, type Palette } from '@/theme';
+import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /**
  * You.
@@ -39,6 +41,20 @@ export default function YouScreen() {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const deleteAccount = useDeleteAccount();
+  const { data: history = [] } = useHabitHistory(userId);
+
+  // Done over due across the thirty days before today, which are finished.
+  const today = localDateString(new Date());
+  let due = 0;
+  let done = 0;
+  for (let d = shiftDate(today, -30); d < today; d = shiftDate(d, 1)) {
+    for (const h of history) {
+      if (!isDue(h, d, today)) continue;
+      due += 1;
+      if (h.checkedOn.includes(d)) done += 1;
+    }
+  }
+  const rate = due ? Math.round((done / due) * 100) : null;
 
   const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -70,6 +86,21 @@ export default function YouScreen() {
       {/* Who you are to other people, and how you get back in. Each group
           arrives just behind the one above, which gives the eye an order to
           read them in — the reason they were grouped at all. */}
+      {/* Progress lives behind this now that it is not a tab of its own. */}
+      <Reveal index={1}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/progress')}
+          style={({ pressed }) => [styles.progress, pressed && { opacity: 0.85 }]}
+        >
+          <Text style={styles.label}>{copy.you.progressTitle}</Text>
+          <Text style={styles.progressRate}>
+            {rate === null ? copy.you.noStatsYet : copy.you.progressRate(rate)}
+          </Text>
+          <Text style={styles.progressLink}>{copy.you.seeProgress}</Text>
+        </Pressable>
+      </Reveal>
+
       <Reveal index={1} style={styles.group}>
         <Text style={styles.label}>{copy.you.groupAccount}</Text>
         <SettingsGroup>
@@ -170,6 +201,16 @@ const makeStyles = (colors: Palette) => ({
     color: colors.textFaint,
   },
   group: { gap: spacing.sm, paddingTop: spacing.md },
+  progress: {
+    gap: spacing.xs,
+    padding: spacing.lg,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: alpha(habitColors[2], 0.4),
+    backgroundColor: alpha(habitColors[2], 0.14),
+  },
+  progressRate: { fontFamily: fonts.bodyMedium, fontSize: 22, color: colors.text },
+  progressLink: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textMuted },
   leaving: { gap: spacing.sm, paddingTop: spacing.xl },
   danger: {
     gap: spacing.sm,

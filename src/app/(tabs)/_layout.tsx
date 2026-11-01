@@ -38,17 +38,19 @@ export default function TabsLayout() {
       <FirstRunPlans />
       <DockClearanceProvider>
         <Tabs
+          initialRouteName="my-day"
           tabBar={(props) => <Dock {...props} />}
           screenOptions={{
             headerShown: false,
             sceneStyle: { backgroundColor: colors.bg },
           }}
         >
-          <Tabs.Screen name="index" />
           <Tabs.Screen name="my-day" />
+          <Tabs.Screen name="notes" />
           <Tabs.Screen name="crews" />
-          <Tabs.Screen name="progress" />
           <Tabs.Screen name="you" />
+          {/* Not a tab: only here so "/" can redirect to My Day. */}
+          <Tabs.Screen name="index" />
         </Tabs>
         {/* Over the tabs, under the dock: every screen scrolls up into the
             status bar and none of them handled it. */}

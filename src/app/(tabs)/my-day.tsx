@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -35,7 +36,10 @@ import { EVENT_BLUE } from '@/components/DayPreview';
 import { MonthGrid, ViewSwitch, WeekList, type View3 } from '@/components/DayViews';
 import { HabitSheet, TodoSheet } from '@/components/EditSheets';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
+import { CheckIcon } from '@/components/icons';
 import { MomentSheet, type MomentDraft } from '@/components/MomentSheet';
+import { ProgressRing } from '@/components/ProgressRing';
+import { Reveal } from '@/components/Reveal';
 import { copy } from '@/copy';
 import {
   useAnchorLoad,
@@ -43,6 +47,7 @@ import {
   useDeleteAnchor,
   useHabitHistory,
   useMoveHabit,
+  useNudgesForMe,
   useToday,
   useTodoActions,
   useTodos,
@@ -54,14 +59,15 @@ import {
 } from '@/lib/api';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
+import { freshIds } from '@/lib/brainDump';
 import { useTodayEvents, type DayEvent } from '@/lib/calendar';
 import { addDays, localDateString } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
 import { emojiFor } from '@/lib/onboardingDay';
-import { useIsPro } from '@/lib/pro';
+import { FREE_TODOS, openBrainDump, showUpgrade, useIsPro } from '@/lib/pro';
 import { usePull } from '@/lib/pull';
 import { formatTime } from '@/lib/times';
-import { alpha, fonts, habitColors, momentColor, spacing, type Palette } from '@/theme';
+import { alpha, display, fonts, habitColors, ink, momentColor, spacing, type Palette } from '@/theme';
 
 /** Width of the hour labels down the left. */
 const GUTTER = 74;
@@ -145,23 +151,53 @@ export default function MyDayScreen() {
   // Calendar events are Pro. Read-only: they show where they fall, nothing more.
   const isPro = useIsPro();
   const { data: events = [], refetch: refetchEvents } = useTodayEvents(isPro);
-  const pull = usePull(refetchDay, refetchAnchors, refetchTodos, refetchEvents);
+  // Nudges are written by somebody else, so this screen is the only thing that
+  // ever goes looking for them.
+  const { data: nudges = [], refetch: refetchNudges } = useNudgesForMe(userId);
+  const pull = usePull(refetchDay, refetchAnchors, refetchTodos, refetchEvents, refetchNudges);
 
   useFocusEffect(
     useCallback(() => {
       setToday(new Date());
       void refetchDay();
-    }, [refetchDay]),
+      void refetchNudges();
+    }, [refetchDay, refetchNudges]),
   );
 
   // tsumiki:///my-day?view=Week opens straight onto a view. Home passes a
   // fresh `opened` each time, so its buttons always land back on today.
-  const { view: viewParam, opened } = useLocalSearchParams<{ view?: View3; opened?: string }>();
+  const { view: viewParam, opened, dumped, at, add } = useLocalSearchParams<{
+    view?: View3;
+    opened?: string;
+    /** Set by the ＋ menu's To-do: opens today with the add field focused. */
+    add?: string;
+    /** Folders a brain dump just filed notes into, for the toast. */
+    dumped?: string;
+    at?: string;
+  }>();
   const [view, setView] = useState<View3>(viewParam ?? 'Day');
   useEffect(() => {
     if (viewParam) setView(viewParam);
     if (opened) setOffset(0);
   }, [viewParam, opened]);
+  const addField = useRef<TextInput>(null);
+  useEffect(() => {
+    if (!add) return;
+    setView('Day');
+    setOffset(0);
+    // After the menu has gone and the day has drawn, or the keyboard opens on nothing.
+    const timer = setTimeout(() => addField.current?.focus(), 350);
+    return () => clearTimeout(timer);
+  }, [add]);
+  const [draft, setDraft] = useState('');
+  const addDraft = () => {
+    if (!draft.trim()) return;
+    // Free holds five open at once. The draft stays put, so it is still there
+    // after upgrading or ticking one off.
+    if (!isPro && todos.filter((t) => !t.done).length >= FREE_TODOS) return showUpgrade();
+    todo.add(draft.trim());
+    setDraft('');
+  };
   const offsetTo = (d: Date) => Math.round((d.getTime() - today.getTime()) / 86_400_000);
 
   const nowMinutes = today.getHours() * 60 + today.getMinutes();
@@ -203,6 +239,7 @@ export default function MyDayScreen() {
   const lastHour = Math.ceil(lastMinute / 60);
   const hours = Array.from({ length: lastHour - firstHour + 1 }, (_, i) => firstHour + i);
   const hero = habits.find((h) => !h.checkedIn)?.color ?? habitColors[0];
+  const doneCount = habits.filter((h) => h.checkedIn).length;
   // Up next is what the dock calls up next: the first open habit still to come.
   const active = isToday
     ? [...habits].sort((a, b) => a.sortKey - b.sortKey).find((h) => !h.checkedIn && h.time && h.sortKey >= nowMinutes)
@@ -396,7 +433,7 @@ export default function MyDayScreen() {
     <Lift key={t.id} onTap={(x) => (x < 44 ? todo.toggle(t) : setEditingTodo(t))} drag={dragFor(t.id, placeTodo(t))}>
       <TodoRow
         todo={t}
-        when={when}
+        when={freshIds.has(t.id) ? [copy.brainDump.fresh, when].filter(Boolean).join(' · ') : when}
         shown={shown}
         onToggle={() => todo.toggle(t)}
         onEdit={() => setEditingTodo(t)}
@@ -437,6 +474,30 @@ export default function MyDayScreen() {
           refreshControl={<RefreshControl {...pull} tintColor={colors.textMuted} />}
         >
           <BrandHeader />
+          {dumped !== undefined && <DumpToast key={at} folders={dumped} />}
+
+          {nudges
+            .filter((nudge) => !nudge.checkedIn)
+            .map((nudge) => (
+              <Pressable
+                key={nudge.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${copy.nudge.from(nudge.fromName)}: ${nudge.message}`}
+                onPress={() => router.push({ pathname: '/nudge/[id]', params: { id: nudge.id } })}
+                style={({ pressed }) => [styles.nudge, pressed && { opacity: 0.9 }]}
+              >
+                <View style={[styles.nudgeAvatar, { backgroundColor: nudge.fromColor }]}>
+                  <Text style={styles.nudgeInitials}>{nudge.fromName.slice(0, 2).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.nudgeFrom}>{copy.nudge.from(nudge.fromName)}</Text>
+                  <Text style={styles.nudgeMessage} numberOfLines={2}>
+                    “{nudge.message}”
+                  </Text>
+                </View>
+                <View style={[styles.nudgeDot, { backgroundColor: nudge.habitColor }]} />
+              </Pressable>
+            ))}
 
           <FirstTimeHint id="myday-move">{copy.myDay.moveTip}</FirstTimeHint>
 
@@ -452,7 +513,22 @@ export default function MyDayScreen() {
             >
               <BackIcon color={colors.text} />
             </RoundButton>
-            <Text style={styles.title}>{copy.myDay.title}</Text>
+            <View style={styles.date} accessibilityRole="header">
+              <Text style={styles.dateDay}>{day.toLocaleDateString('en-US', { weekday: 'long' })}</Text>
+              <Text style={styles.dateBig}>{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+            </View>
+            {habits.length > 0 && (
+              <View style={styles.ring} accessible accessibilityLabel={copy.myDay.ringLabel(doneCount, habits.length)}>
+                <ProgressRing
+                  size={56}
+                  strokeWidth={6}
+                  progress={doneCount / habits.length}
+                  color={hero}
+                  trackColor={alpha(hero, 0.2)}
+                />
+                <Text style={styles.ringText}>{copy.myDay.ring(doneCount, habits.length)}</Text>
+              </View>
+            )}
             <RoundButton label={copy.myDay.editRoutine} onPress={() => router.push('/schedule')}>
               <DotsIcon color={colors.text} />
             </RoundButton>
@@ -539,7 +615,23 @@ export default function MyDayScreen() {
               {anchors.length === 0 && <Text style={styles.empty}>{copy.myDay.empty}</Text>}
               {error && <Text style={styles.error}>{error}</Text>}
 
-              {anytimeTodos.length > 0 && (
+              {isToday && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${copy.myDay.headFull} ${copy.myDay.headFullBody}`}
+                  onPress={() => openBrainDump(isPro)}
+                  style={({ pressed }) => [styles.headFull, pressed && { opacity: 0.9 }]}
+                >
+                  <View style={styles.headFullWords}>
+                    <Text style={styles.headFullTitle}>{copy.myDay.headFull}</Text>
+                    <Text style={styles.headFullBody}>{copy.myDay.headFullBody}</Text>
+                  </View>
+                  <View style={styles.headFullMic}>
+                    <Text style={styles.headFullMicIcon}>🎙️</Text>
+                  </View>
+                </Pressable>
+              )}
+
                 <View
                   ref={register('any-todos', ANY)}
                   collapsable={false}
@@ -554,8 +646,32 @@ export default function MyDayScreen() {
                       {todoRow(t, 40)}
                     </View>
                   ))}
+                  <View style={[styles.addLine, anytimeTodos.length > 0 && styles.anyRow]}>
+                    <Text style={styles.plus}>+</Text>
+                    <TextInput
+                      ref={addField}
+                      maxLength={120}
+                      value={draft}
+                      onChangeText={setDraft}
+                      placeholder={copy.myDay.addTodo}
+                      placeholderTextColor={colors.textFaint}
+                      returnKeyType="done"
+                      onSubmitEditing={addDraft}
+                      style={styles.addInput}
+                    />
+                    {draft.trim().length > 0 && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={copy.myDay.addTodo}
+                        onPress={addDraft}
+                        hitSlop={5}
+                        style={styles.addConfirm}
+                      >
+                        <CheckIcon size={16} color={colors.bg} strokeWidth={3} />
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
-              )}
 
               {anytimeHabits.length > 0 && (
                 <View
@@ -689,6 +805,22 @@ export default function MyDayScreen() {
         />
       )}
     </View>
+  );
+}
+
+/** One line after a brain dump says where things went, then goes. */
+function DumpToast({ folders }: { folders: string }) {
+  const styles = useStyles(makeStyles);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!visible) return null;
+  return (
+    <Reveal>
+      <Text style={styles.toast}>{copy.brainDump.filed(folders ? folders.split(',') : [])}</Text>
+    </Reveal>
   );
 }
 
@@ -953,6 +1085,7 @@ function CalendarCard({
               <View style={styles.cardTop}>
                 <Text style={[styles.cardName, ink && { color: ink }]} numberOfLines={1}>
                   {habit.name}
+                  {freshIds.has(habit.id) && <Text style={styles.fresh}> {copy.brainDump.fresh}</Text>}
                 </Text>
                 {/* Its own tap, inside the card's: the dots edit, the rest checks in. */}
                 <GestureDetector gesture={Gesture.Tap().runOnJS(true).onEnd((_e, ok) => ok && edit())}>
@@ -989,7 +1122,36 @@ function CalendarCard({
 const makeStyles = (colors: Palette) => ({
   root: { flex: 1, backgroundColor: colors.bg },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontFamily: fonts.bodyMedium, fontSize: 22, color: colors.text },
+  date: { flex: 1, paddingHorizontal: spacing.md },
+  dateDay: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: colors.textMuted },
+  dateBig: { ...display(34, 34), color: colors.text },
+  ring: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  ringText: { position: 'absolute', fontFamily: fonts.bodyBold, fontSize: 11, color: colors.text },
+  nudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardEdge,
+  },
+  nudgeAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  nudgeInitials: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.white },
+  nudgeFrom: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text },
+  nudgeMessage: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+  nudgeDot: { width: 8, height: 8, borderRadius: 4 },
+  headFull: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: 16, borderRadius: 20, backgroundColor: alpha(habitColors[1], 0.16), borderWidth: 1, borderColor: alpha(habitColors[1], 0.4) },
+  headFullWords: { flex: 1, gap: 2 },
+  headFullTitle: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: ink(habitColors[1], colors) },
+  headFullBody: { fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.text },
+  headFullMic: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: habitColors[1] },
+  headFullMicIcon: { fontSize: 22 },
+  addLine: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 },
+  plus: { width: 20, textAlign: 'center', fontFamily: fonts.bodyMedium, fontSize: 20, color: colors.textFaint },
+  addInput: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: colors.text, paddingVertical: 10 },
+  addConfirm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.text },
   monthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', minHeight: 44 },
   month: { fontFamily: fonts.bodyMedium, fontSize: 18, color: colors.text },
   monthChip: {
@@ -1088,6 +1250,8 @@ const makeStyles = (colors: Palette) => ({
   anyCount: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   anyRow: { borderTopWidth: 1, borderTopColor: colors.hairline },
   todoText: { fontSize: 14, color: colors.textMuted },
+  fresh: { color: habitColors[4] },
+  toast: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.text, textAlign: 'center' },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: DONE_ROW_H, paddingHorizontal: spacing.sm },
   doneStub: { width: 14, height: 3, borderRadius: 2, opacity: 0.7 },
   doneName: { alignSelf: 'flex-start', fontFamily: fonts.body, fontSize: 15, lineHeight: 20, color: colors.textFaint },

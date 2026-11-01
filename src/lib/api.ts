@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 import { EVERY_DAY } from '@/data/defaults';
+import { freshIds, type LookRow, type Sorted } from '@/lib/brainDump';
 import { addDays, localDateString, localWeekday, minutesOfDay } from '@/lib/dates';
 import type { Enums } from '@/lib/database.types';
 import { dayComplete } from '@/lib/crewWeek';
@@ -1796,6 +1798,140 @@ export function useNoteDump(dumpId: string | null) {
       const { data, error } = await supabase.from('brain_dumps').select('transcript').eq('id', dumpId!).single();
       if (error) throw error;
       return data.transcript;
+    },
+  });
+}
+
+/* Brain dump ------------------------------------------------------------- */
+
+/** The function's refusal, by code: no_consent, not_pro, daily_cap, bad_input,
+ *  sort_failed — or network when the call never got an answer. */
+export class BrainDumpError extends Error {}
+
+/** Agreeing once to words going to Anthropic to be sorted. */
+export function useGiveAiConsent(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Not signed in.');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ai_consent_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
+    },
+    // Returned so the button stays busy until the consent screen is gone.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile'] }),
+  });
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+export function useSortDump() {
+  return useMutation({
+    mutationFn: async (transcript: string): Promise<{ dumpId: string | null; sorted: Sorted }> => {
+      const now = new Date();
+      const { data, error } = await supabase.functions.invoke('brain-dump', {
+        body: {
+          transcript,
+          localNow: `${localDateString(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      });
+      if (error) {
+        const body = error instanceof FunctionsHttpError ? await error.context.json().catch(() => null) : null;
+        throw new BrainDumpError(body?.error ?? 'network');
+      }
+      return data;
+    },
+  });
+}
+
+const isDay = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day);
+
+/**
+ * Adds the ticked rows: new folders first, then to-dos and notes in one insert
+ * each, then each ticked habit. Returns the folders the notes went into, for
+ * the toast on My Day.
+ */
+export function useAddFromDump(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  const createHabit = useCreateHabit(userId);
+  return useMutation({
+    mutationFn: async ({ rows, dumpId }: { rows: LookRow[]; dumpId: string | null }) => {
+      if (!userId) throw new Error('Not signed in.');
+      const ticked = rows.filter((r) => r.ticked);
+      const today = localDateString();
+
+      const { data: known, error: foldersError } = await supabase.from('note_folders').select('id, name, color');
+      if (foldersError) throw foldersError;
+      const folderId = new Map(known.map((f) => [f.name.toLowerCase(), f.id]));
+      const colors = known.map((f) => f.color);
+      const missing = ticked
+        .filter((r) => r.kind === 'note' && r.folder && !folderId.has(r.folder.toLowerCase()))
+        .filter((r, i, all) => all.findIndex((o) => o.folder!.toLowerCase() === r.folder!.toLowerCase()) === i)
+        .map((r) => {
+          const color = nextFolderColor(colors);
+          colors.push(color);
+          return { user_id: userId, name: r.folder!, emoji: r.emoji ?? null, color };
+        });
+      if (missing.length) {
+        const { data, error } = await supabase.from('note_folders').insert(missing).select('id, name');
+        if (error) throw error;
+        for (const f of data) folderId.set(f.name.toLowerCase(), f.id);
+      }
+
+      const todos = ticked
+        .filter((r) => r.kind === 'timeline' || r.kind === 'todo')
+        .map((r) => ({
+          user_id: userId,
+          title: r.title.trim(),
+          day: isDay(r.day) ? r.day : today,
+          moment_mode: r.momentId ? 'after' : r.time ? 'at' : 'any',
+          anchor_id: r.momentId,
+          at_time: r.momentId ? null : r.time,
+        }));
+      if (todos.length) {
+        const { data, error } = await supabase.from('todos').insert(todos).select('id');
+        if (error) throw error;
+        data.forEach((t) => freshIds.add(t.id));
+      }
+
+      const notes = ticked
+        .filter((r) => r.kind === 'note')
+        .map((r) => ({
+          user_id: userId,
+          title: r.title.trim(),
+          body: r.body ?? '',
+          folder_id: r.folder ? (folderId.get(r.folder.toLowerCase()) ?? null) : null,
+          dump_id: dumpId,
+        }));
+      if (notes.length) {
+        const { data, error } = await supabase.from('notes').insert(notes).select('id');
+        if (error) throw error;
+        data.forEach((n) => freshIds.add(n.id));
+      }
+
+      const habitColorsUsed = (queryClient.getQueryData<Habit[]>(['habits', userId]) ?? []).map((h) => h.color);
+      for (const r of ticked.filter((row) => row.kind === 'habit')) {
+        const color = nextFolderColor(habitColorsUsed);
+        habitColorsUsed.push(color);
+        const habit = await createHabit.mutateAsync({
+          name: r.title,
+          color,
+          mode: r.momentId ? 'after' : r.time ? 'at' : 'any',
+          anchorId: r.momentId,
+          atTime: r.time,
+        });
+        freshIds.add(habit.id);
+      }
+
+      return { folders: [...new Set(ticked.filter((r) => r.kind === 'note').map((r) => r.folder ?? copy.notes.inbox))] };
+    },
+    onSuccess: () => {
+      for (const key of ['todos', 'notes', 'noteFolders', 'habits', 'today']) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
+      }
     },
   });
 }

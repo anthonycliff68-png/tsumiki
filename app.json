@@ -61,6 +61,13 @@
         {
           "calendarPermission": "Tsumiki reads today's events so they show on your timeline. It never changes your calendar."
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Tsumiki listens while you hold the mic so you can talk instead of type.",
+          "speechRecognitionPermission": "Your words are turned into text on your iPhone."
+        }
       ]
     ],
     "experiments": {
