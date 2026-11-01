@@ -4,7 +4,7 @@ import {
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Animated, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { Display, Eyebrow, Screen } from '@/components/Screen';
@@ -15,6 +15,7 @@ import {
   useAddFromDump,
   useAnchors,
   useGiveAiConsent,
+  useHabits,
   useMyProfile,
   useNoteFolders,
   useSortDump,
@@ -44,6 +45,7 @@ export default function BrainDumpScreen() {
   const consent = useGiveAiConsent(userId);
   const { data: folders = [] } = useNoteFolders(userId);
   const { data: anchors = [] } = useAnchors(userId);
+  const { data: habits = [] } = useHabits(userId);
   const sort = useSortDump();
   const add = useAddFromDump(userId);
 
@@ -116,6 +118,16 @@ export default function BrainDumpScreen() {
     } else setListening(false);
   });
 
+  // The mic swells with their voice, so they can see it's hearing them.
+  const level = useRef(new Animated.Value(0)).current;
+  useSpeechRecognitionEvent('volumechange', (event) => {
+    Animated.timing(level, {
+      toValue: Math.min(Math.max(event.value, 0) / 10, 1),
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  });
+
   const listen = () => {
     startedAt.current = Date.now();
     ExpoSpeechRecognitionModule.start({
@@ -123,6 +135,12 @@ export default function BrainDumpScreen() {
       continuous: true,
       requiresOnDeviceRecognition: true,
       addsPunctuation: true,
+      // Tuned for long free talk, and told their own words so it stops mishearing them.
+      iosTaskHint: 'dictation',
+      contextualStrings: [
+        ...new Set(['Tsumiki', ...habits.map((h) => h.name), ...anchors.map((a) => a.label), ...folders.map((f) => f.name)]),
+      ].slice(0, 100),
+      volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
     });
   };
 
@@ -287,14 +305,20 @@ export default function BrainDumpScreen() {
       ) : (
         !sorting && (
           <View style={styles.micWrap}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={listening ? copy.brainDump.done : copy.brainDump.talk}
-              onPress={() => (listening ? stopListening() : void startListening())}
-              style={[styles.mic, listening && styles.micOn]}
+            <Animated.View
+              style={
+                listening && { transform: [{ scale: level.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1.3] }) }] }
+              }
             >
-              <Text style={styles.micIcon}>{listening ? '⏹️' : '🎙️'}</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={listening ? copy.brainDump.done : copy.brainDump.talk}
+                onPress={() => (listening ? stopListening() : void startListening())}
+                style={[styles.mic, listening && styles.micOn]}
+              >
+                <Text style={styles.micIcon}>{listening ? '⏹️' : '🎙️'}</Text>
+              </Pressable>
+            </Animated.View>
             <Text style={styles.meta}>{listening ? copy.brainDump.done : copy.brainDump.talk}</Text>
             <TextButton label={copy.brainDump.typeInstead} onPress={toTyping} />
           </View>
@@ -443,7 +467,7 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 12,
     borderColor: alpha(MIC, 0.25),
   },
-  micOn: { transform: [{ scale: 1.08 }], borderColor: alpha(MIC, 0.4) },
+  micOn: { borderColor: alpha(MIC, 0.4) },
   micIcon: { fontSize: 36 },
   meta: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textFaint },
   label: {
