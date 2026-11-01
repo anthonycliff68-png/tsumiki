@@ -1660,3 +1660,142 @@ export function useReport(userId: string | undefined) {
     },
   });
 }
+
+/* Notes ------------------------------------------------------------------ */
+
+export type NoteFolder = {
+  id: string;
+  name: string;
+  emoji: string | null;
+  color: string;
+  createdAt: string;
+};
+
+export type Note = {
+  id: string;
+  /** Null is Inbox. */
+  folderId: string | null;
+  title: string;
+  body: string;
+  /** Set when a brain dump wrote it, for "Your words". */
+  dumpId: string | null;
+  createdAt: string;
+};
+
+/** The first colour no folder has yet, then round again. */
+export function nextFolderColor(used: string[]): string {
+  return habitColors.find((c) => !used.includes(c)) ?? habitColors[used.length % habitColors.length]!;
+}
+
+export function useNoteFolders(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['noteFolders', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<NoteFolder[]> => {
+      const { data, error } = await supabase
+        .from('note_folders')
+        .select('id, name, emoji, color, created_at')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data.map((f) => ({ id: f.id, name: f.name, emoji: f.emoji, color: f.color, createdAt: f.created_at }));
+    },
+  });
+}
+
+/**
+ * Every note, newest first. Screens filter by folder and search on the phone:
+ * ponytail: one query for all of them, page it once someone has thousands.
+ */
+export function useNotes(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['notes', userId],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<Note[]> => {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, folder_id, title, body, dump_id, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data.map((n) => ({
+        id: n.id,
+        folderId: n.folder_id,
+        title: n.title,
+        body: n.body,
+        dumpId: n.dump_id,
+        createdAt: n.created_at,
+      }));
+    },
+  });
+}
+
+export type NoteInput = { id?: string; title: string; body: string; folderId: string | null };
+
+/** Insert without an id, update with one. Moving a note is a save with a new folder. */
+export function useSaveNote(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, title, body, folderId }: NoteInput): Promise<string> => {
+      if (!userId) throw new Error('Not signed in.');
+      const fields = { title: title.trim(), body, folder_id: folderId };
+      const { data, error } = id
+        ? await supabase.from('notes').update(fields).eq('id', id).select('id').single()
+        : await supabase.from('notes').insert({ user_id: userId, ...fields }).select('id').single();
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notes'] }),
+  });
+}
+
+export function useDeleteNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('notes').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notes'] }),
+  });
+}
+
+export function useCreateFolder(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name, emoji = null }: { name: string; emoji?: string | null }): Promise<NoteFolder> => {
+      if (!userId) throw new Error('Not signed in.');
+      const existing = queryClient.getQueryData<NoteFolder[]>(['noteFolders', userId]) ?? [];
+      const { data, error } = await supabase
+        .from('note_folders')
+        .insert({ user_id: userId, name: name.trim(), emoji, color: nextFolderColor(existing.map((f) => f.color)) })
+        .select('id, name, emoji, color, created_at')
+        .single();
+      if (error) throw error;
+      return { id: data.id, name: data.name, emoji: data.emoji, color: data.color, createdAt: data.created_at };
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['noteFolders'] }),
+  });
+}
+
+export function useRenameFolder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from('note_folders').update({ name: name.trim() }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['noteFolders'] }),
+  });
+}
+
+/** Exactly what was said, for "Your words" on a note a brain dump wrote. */
+export function useNoteDump(dumpId: string | null) {
+  return useQuery({
+    queryKey: ['brainDump', dumpId],
+    enabled: Boolean(dumpId),
+    queryFn: async (): Promise<string> => {
+      const { data, error } = await supabase.from('brain_dumps').select('transcript').eq('id', dumpId!).single();
+      if (error) throw error;
+      return data.transcript;
+    },
+  });
+}

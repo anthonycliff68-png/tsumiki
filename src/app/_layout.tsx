@@ -110,6 +110,8 @@ function RootNavigator() {
           <Stack.Screen name="schedule" options={{ presentation: 'modal' }} />
           <Stack.Screen name="crew/[id]" />
           <Stack.Screen name="habit/[id]" />
+          <Stack.Screen name="notes/[folderId]" />
+          <Stack.Screen name="note/[id]" />
           <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
           {/* Outside the tabs on purpose: it has to work from behind the paywall. */}

@@ -596,6 +596,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_consent_at: string | null
           avatar_color: string
           avatar_emoji: string
           created_at: string
@@ -612,6 +613,7 @@ export type Database = {
           unsubscribe_token: string
         }
         Insert: {
+          ai_consent_at?: string | null
           avatar_color?: string
           avatar_emoji?: string
           created_at?: string
@@ -628,6 +630,7 @@ export type Database = {
           unsubscribe_token?: string
         }
         Update: {
+          ai_consent_at?: string | null
           avatar_color?: string
           avatar_emoji?: string
           created_at?: string
@@ -798,6 +801,101 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_dumps: {
+        Row: {
+          created_at: string
+          id: string
+          transcript: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          transcript: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          transcript?: string
+          user_id?: string
+        }
+        Relationships: [
+        ]
+      }
+      note_folders: {
+        Row: {
+          color: string
+          created_at: string
+          emoji: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+        ]
+      }
+      notes: {
+        Row: {
+          body: string
+          created_at: string
+          dump_id: string | null
+          folder_id: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          dump_id?: string | null
+          folder_id?: string | null
+          id?: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          dump_id?: string | null
+          folder_id?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_dump_id_fkey"
+            columns: ["dump_id"]
+            isOneToOne: false
+            referencedRelation: "brain_dumps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "note_folders"
             referencedColumns: ["id"]
           },
         ]
