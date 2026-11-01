@@ -31,7 +31,7 @@ const MIC = habitColors[1];
 const SPARK = habitColors[4];
 
 /**
- * The brain dump. Hold the mic and ramble, let go, take a short look at what
+ * The brain dump. Tap the mic and ramble, tap again, take a short look at what
  * it sorted, tap Add. The words are never thrown away: every failure leaves
  * them on screen to try again.
  */
@@ -57,13 +57,25 @@ export default function BrainDumpScreen() {
   }, [words]);
 
   const [typing, setTyping] = useState(false);
-  const [holding, setHolding] = useState(false);
-  const released = useRef(false);
-  const pressed = useRef(false);
+  const [listening, setListening] = useState(false);
+  const stopped = useRef(false);
+  const startedAt = useRef(0);
+  // Set on an error or on leaving the screen, so the mic never restarts itself.
+  const off = useRef(false);
+  useEffect(
+    () => () => {
+      off.current = true;
+      ExpoSpeechRecognitionModule.abort();
+    },
+    [],
+  );
   const [problem, setProblem] = useState<string | null>(null);
   const [look, setLook] = useState<{ rows: LookRow[]; dumpId: string | null } | null>(null);
 
   const toTyping = () => {
+    off.current = true;
+    ExpoSpeechRecognitionModule.abort();
+    setListening(false);
     setSaid(wordsRef.current);
     setHearing('');
     setTyping(true);
@@ -94,30 +106,18 @@ export default function BrainDumpScreen() {
     if (event.error !== 'no-speech' && event.error !== 'aborted') toTyping();
   });
   useSpeechRecognitionEvent('end', () => {
-    setHolding(false);
-    if (released.current) {
-      released.current = false;
+    if (stopped.current) {
+      setListening(false);
       // The last "result" lands just before "end"; let it settle first.
       setTimeout(() => run(wordsRef.current), 0);
-    }
+    } else if (!off.current && Date.now() - startedAt.current > 2000) {
+      // iOS ended it on its own (a long pause); keep going until they tap.
+      listen();
+    } else setListening(false);
   });
 
-  const startListening = async () => {
-    pressed.current = true;
-    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable() || !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) {
-      return toTyping();
-    }
-    const permission = await ExpoSpeechRecognitionModule.getPermissionsAsync();
-    if (!permission.granted) {
-      // Asking interrupts the press; once allowed, the next hold talks.
-      const asked = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!asked.granted) toTyping();
-      return;
-    }
-    // A quick tap can let go before the permission check answers.
-    if (!pressed.current) return;
-    released.current = false;
-    setHolding(true);
+  const listen = () => {
+    startedAt.current = Date.now();
     ExpoSpeechRecognitionModule.start({
       interimResults: true,
       continuous: true,
@@ -126,10 +126,23 @@ export default function BrainDumpScreen() {
     });
   };
 
+  const startListening = async () => {
+    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable() || !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) {
+      return toTyping();
+    }
+    const permission = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+    if (!permission.granted) {
+      const asked = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!asked.granted) return toTyping();
+    }
+    stopped.current = false;
+    off.current = false;
+    setListening(true);
+    listen();
+  };
+
   const stopListening = () => {
-    pressed.current = false;
-    if (!holding) return;
-    released.current = true;
+    stopped.current = true;
     ExpoSpeechRecognitionModule.stop();
   };
 
@@ -276,14 +289,13 @@ export default function BrainDumpScreen() {
           <View style={styles.micWrap}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={copy.brainDump.hold}
-              onPressIn={() => void startListening()}
-              onPressOut={stopListening}
-              style={[styles.mic, holding && styles.micOn]}
+              accessibilityLabel={listening ? copy.brainDump.done : copy.brainDump.talk}
+              onPress={() => (listening ? stopListening() : void startListening())}
+              style={[styles.mic, listening && styles.micOn]}
             >
-              <Text style={styles.micIcon}>🎙️</Text>
+              <Text style={styles.micIcon}>{listening ? '⏹️' : '🎙️'}</Text>
             </Pressable>
-            <Text style={styles.meta}>{holding ? copy.brainDump.release : copy.brainDump.hold}</Text>
+            <Text style={styles.meta}>{listening ? copy.brainDump.done : copy.brainDump.talk}</Text>
             <TextButton label={copy.brainDump.typeInstead} onPress={toTyping} />
           </View>
         )
