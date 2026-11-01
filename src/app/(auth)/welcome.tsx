@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { Welcome } from '@/components/Welcome';
+import { WelcomePage } from '@/components/WelcomePage';
 import { useTheme } from '@/lib/appearance';
 
 const SEEN = 'tsumiki.welcome.seen';
@@ -44,5 +44,5 @@ export default function WelcomeRoute() {
   };
 
   if (show !== true) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
-  return <Welcome onStart={done} />;
+  return <WelcomePage onStart={done} />;
 }

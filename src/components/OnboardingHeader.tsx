@@ -1,6 +1,3 @@
-import { router } from 'expo-router';
-
-import { goBack } from '@/lib/back';
 import { Pressable, Text, View } from 'react-native';
 
 import { ChevronLeftIcon } from '@/components/icons';
@@ -8,18 +5,18 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { alpha, fonts, radii, type Palette } from '@/theme';
 
-/** Five steps: welcome, you, routine, first habit, crew. */
-const TOTAL_STEPS = 5;
-
 type Props = {
-  /** 0-based, counting the welcome screen as step 0. */
-  step: number;
+  /** 1-based. With `total`, draws the progress bar; left out, there is none. */
+  step?: number;
+  total?: number;
+  /** Left out on a first page, which has nowhere to go back to. */
   onBack?: () => void;
   /** Left out by a step with nothing to skip to. */
   onSkip?: () => void;
 };
 
-export function OnboardingHeader({ step, onBack, onSkip }: Props) {
+/** Back, a thin progress bar, and Skip where there is one. */
+export function OnboardingHeader({ step, total, onBack, onSkip }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   return (
@@ -28,7 +25,7 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={copy.onboarding.back}
-          onPress={() => (onBack ? onBack() : goBack())}
+          onPress={onBack}
           style={({ pressed }) => [styles.back, pressed && styles.pressed]}
         >
           <ChevronLeftIcon size={18} color={colors.text} />
@@ -37,22 +34,17 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
         <View style={styles.spacer} />
       )}
 
-      <View
-        style={styles.dots}
-        accessibilityRole="progressbar"
-        accessibilityLabel={copy.onboarding.progress(step + 1, TOTAL_STEPS)}
-      >
-        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              i === step && styles.dotCurrent,
-              i <= step ? styles.dotDone : styles.dotTodo,
-            ]}
-          />
-        ))}
-      </View>
+      {step && total ? (
+        <View
+          style={styles.track}
+          accessibilityRole="progressbar"
+          accessibilityLabel={copy.onboarding.progress(step, total)}
+        >
+          <View style={[styles.fill, { width: `${(step / total) * 100}%` }]} />
+        </View>
+      ) : (
+        <View style={{ flex: 1 }} />
+      )}
 
       {onSkip ? (
         <Pressable
@@ -64,8 +56,8 @@ export function OnboardingHeader({ step, onBack, onSkip }: Props) {
           <Text style={styles.skipLabel}>{copy.onboarding.skip}</Text>
         </Pressable>
       ) : (
-        // Keeps the dots centred with nothing on the right.
-        <View style={styles.skip} />
+        // Keeps the bar centred with nothing on the right.
+        <View style={styles.spacer} />
       )}
     </View>
   );
@@ -75,7 +67,7 @@ const makeStyles = (colors: Palette) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 14,
     minHeight: 44,
   },
   back: {
@@ -89,25 +81,14 @@ const makeStyles = (colors: Palette) => ({
     borderColor: colors.border,
   },
   spacer: { width: 44, height: 44 },
-  dots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
+  track: {
+    flex: 1,
+    height: 4,
     borderRadius: radii.chip,
+    backgroundColor: alpha(colors.overlay, 0.18),
+    overflow: 'hidden',
   },
-  dotCurrent: {
-    width: 22,
-  },
-  dotDone: {
-    backgroundColor: colors.text,
-  },
-  dotTodo: {
-    backgroundColor: alpha(colors.overlay, 0.2),
-  },
+  fill: { height: 4, borderRadius: radii.chip, backgroundColor: colors.text },
   skip: {
     minHeight: 44,
     minWidth: 44,

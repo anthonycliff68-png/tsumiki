@@ -31,22 +31,34 @@ import {
   statusOf,
   useInstantToggle,
 } from '@/components/DayParts';
+import { EVENT_BLUE } from '@/components/DayPreview';
 import { MonthGrid, ViewSwitch, WeekList, type View3 } from '@/components/DayViews';
+import { HabitSheet, TodoSheet } from '@/components/EditSheets';
+import { FirstTimeHint } from '@/components/FirstTimeHint';
+import { MomentSheet, type MomentDraft } from '@/components/MomentSheet';
 import { copy } from '@/copy';
 import {
+  useAnchorLoad,
   useAnchors,
+  useDeleteAnchor,
   useHabitHistory,
   useMoveHabit,
   useToday,
   useTodoActions,
   useTodos,
+  useUpdateAnchor,
+  useUpdateHabit,
   type TodayHabit,
   type Todo,
+  type TodoPlace,
 } from '@/lib/api';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
+import { useTodayEvents, type DayEvent } from '@/lib/calendar';
 import { addDays, localDateString } from '@/lib/dates';
 import type { Anchor } from '@/lib/models';
+import { emojiFor } from '@/lib/onboardingDay';
+import { useIsPro } from '@/lib/pro';
 import { usePull } from '@/lib/pull';
 import { formatTime } from '@/lib/times';
 import { alpha, fonts, habitColors, momentColor, spacing, type Palette } from '@/theme';
@@ -85,6 +97,7 @@ function WaterLayer({ color, width, crest }: { color: string; width: number; cre
 }
 
 const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'AM' : 'PM'}`;
+const VIEWS: View3[] = ['Day', 'Week', 'Month'];
 const minutesOf = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -124,8 +137,15 @@ export default function MyDayScreen() {
   const { data: history = [] } = useHabitHistory(userId);
   const todo = useTodoActions(userId, day);
   const moveHabit = useMoveHabit(userId);
+  const updateAnchor = useUpdateAnchor(userId);
+  const deleteAnchor = useDeleteAnchor();
+  const updateHabit = useUpdateHabit(userId);
+  const { data: stacks = [] } = useAnchorLoad(userId);
   const { toggle: instant } = useInstantToggle(userId);
-  const pull = usePull(refetchDay, refetchAnchors, refetchTodos);
+  // Calendar events are Pro. Read-only: they show where they fall, nothing more.
+  const isPro = useIsPro();
+  const { data: events = [], refetch: refetchEvents } = useTodayEvents(isPro);
+  const pull = usePull(refetchDay, refetchAnchors, refetchTodos, refetchEvents);
 
   useFocusEffect(
     useCallback(() => {
@@ -151,16 +171,17 @@ export default function MyDayScreen() {
 
   // One block per hour: the anchors in it, then its habits, then its to-dos,
   // so a to-do always sits under the moment and the habits it belongs to.
-  type Block = { minute: number; anchors: Anchor[]; habits: TodayHabit[]; todos: Todo[] };
+  type Block = { minute: number; anchors: Anchor[]; events: DayEvent[]; habits: TodayHabit[]; todos: Todo[] };
   const byHour = new Map<number, Block>();
   const blockAt = (minute: number) => {
     const hour = Math.floor(minute / 60);
-    const block = byHour.get(hour) ?? { minute: hour * 60, anchors: [], habits: [], todos: [] };
+    const block = byHour.get(hour) ?? { minute: hour * 60, anchors: [], events: [], habits: [], todos: [] };
     byHour.set(hour, block);
     return block;
   };
   const placed = new Set<string>();
   for (const a of anchors) blockAt(minutesOf(a.usual_time)).anchors.push(a);
+  if (isToday) for (const e of events) blockAt(minutesOf(e.start)).events.push(e);
   for (const h of [...habits].sort((a, b) => a.sortKey - b.sortKey)) {
     if (h.mode === 'any' || !h.time) continue;
     placed.add(h.id);
@@ -230,7 +251,7 @@ export default function MyDayScreen() {
   // the drop, and an animation configured at the drop is spent on the drop's
   // own re-render.
   const order =
-    blocks.map((b) => `${b.minute}:${b.habits.map((h) => h.id)}:${b.todos.map((t) => t.id)}`).join('|') +
+    blocks.map((b) => `${b.minute}:${b.anchors.map((a) => a.id)}:${b.habits.map((h) => h.id)}:${b.todos.map((t) => t.id)}`).join('|') +
     `|${anytimeHabits.map((h) => h.id)}:${anytimeTodos.map((t) => t.id)}`;
   const [moving, setMoving] = useState(false);
   const [drawn, setDrawn] = useState(order);
@@ -294,6 +315,72 @@ export default function MyDayScreen() {
     todo.move(td, t.kind === 'anchor' ? { anchorId: t.anchorId } : t.kind === 'hour' ? { at: `${pad(t.hour)}:00:00` } : 'any');
   };
 
+  /**
+   * A moment changes its usual time, keeping its minutes: 7:30 dropped on the
+   * 9 o'clock row is 9:30. Habits stacked on it follow, because their time is
+   * read from the moment's. Dropped on another moment, it takes that hour.
+   */
+  const placeMoment = (a: Anchor) => (t: Target) => {
+    const other = t.kind === 'anchor' ? anchors.find((x) => x.id === t.anchorId) : undefined;
+    const hour = t.kind === 'hour' ? t.hour : other ? Math.floor(minutesOf(other.usual_time) / 60) : null;
+    const was = Math.floor(minutesOf(a.usual_time) / 60);
+    if (hour === null || hour === was) return;
+    const shift = (time: string) => {
+      const m = (((minutesOf(time) + (hour - was) * 60) % 1440) + 1440) % 1440;
+      return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+    };
+    setMoving(true);
+    updateAnchor.mutate(
+      { id: a.id, label: a.label, usualTime: shift(a.usual_time), endsAt: a.ends_at && shift(a.ends_at), color: a.color },
+      { onError: () => setError(copy.myDay.moveFailed) },
+    );
+  };
+
+  // --- tap to edit ------------------------------------------------------------
+
+  const [momentDraft, setMomentDraft] = useState<MomentDraft | null>(null);
+  const [editingHabit, setEditingHabit] = useState<TodayHabit | null>(null);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const closeSheets = () => {
+    setMomentDraft(null);
+    setEditingHabit(null);
+    setEditingTodo(null);
+    setSheetError(null);
+  };
+  const openMoment = (a: Anchor) =>
+    setMomentDraft({ id: a.id, label: a.label, usualTime: a.usual_time.slice(0, 5), endsAt: a.ends_at?.slice(0, 5) ?? null, color: a.color });
+  const saveMoment = () => {
+    if (!momentDraft?.id) return;
+    if (!momentDraft.label.trim()) return setSheetError(copy.schedule.needLabel);
+    if (momentDraft.endsAt && minutesOf(momentDraft.endsAt) <= minutesOf(momentDraft.usualTime)) {
+      return setSheetError(copy.schedule.needLaterEnd);
+    }
+    setMoving(true);
+    updateAnchor.mutate(
+      { ...momentDraft, id: momentDraft.id },
+      { onSuccess: closeSheets, onError: () => setSheetError(copy.myDay.edit.saveFailed) },
+    );
+  };
+  const saveHabit = ({ when, days, color }: { when: TodoPlace; days: number[]; color: string }) => {
+    if (!editingHabit) return;
+    setMoving(true);
+    updateHabit.mutate(
+      {
+        habitId: editingHabit.id,
+        name: editingHabit.name,
+        color,
+        daysOfWeek: days,
+        ...(when === 'any'
+          ? { mode: 'any' as const }
+          : 'anchorId' in when
+            ? { mode: 'after' as const, anchorId: when.anchorId }
+            : { mode: 'at' as const, atTime: when.at.slice(0, 5) }),
+      },
+      { onSuccess: closeSheets, onError: () => setSheetError(copy.myDay.edit.saveFailed) },
+    );
+  };
+
   const habitCard = (h: TodayHabit, now: number | null, open: boolean) => (
     <CalendarCard
       key={h.id}
@@ -301,16 +388,18 @@ export default function MyDayScreen() {
       nowMinutes={now}
       open={open}
       onToggle={() => toggle(h)}
+      onEdit={() => setEditingHabit(h)}
       drag={dragFor(h.id, placeHabit(h))}
     />
   );
   const todoRow = (t: Todo, height: number, when?: string) => (
-    <Lift key={t.id} onTap={() => todo.toggle(t)} drag={dragFor(t.id, placeTodo(t))}>
+    <Lift key={t.id} onTap={(x) => (x < 44 ? todo.toggle(t) : setEditingTodo(t))} drag={dragFor(t.id, placeTodo(t))}>
       <TodoRow
         todo={t}
         when={when}
         shown={shown}
         onToggle={() => todo.toggle(t)}
+        onEdit={() => setEditingTodo(t)}
         colors={colors}
         height={height}
         textStyle={styles.todoText}
@@ -320,211 +409,285 @@ export default function MyDayScreen() {
   /** The row holding the carried card draws above the rows after it. */
   const lifted = (ids: string[]) => carried !== null && ids.includes(carried) && styles.lifted;
 
+  // A sideways swipe steps between Day, Week and Month. Off while a card is
+  // held, so moving one never changes the view under it.
+  const swipe = Gesture.Pan()
+    .runOnJS(true)
+    .enabled(carried === null)
+    .activeOffsetX([-30, 30])
+    .failOffsetY([-15, 15])
+    .onEnd((e) => {
+      const next = VIEWS[VIEWS.indexOf(view) + (e.translationX < 0 ? 1 : -1)];
+      if (next) setView(next);
+    });
+
   return (
     <View style={styles.root}>
       <Bleed color={hero} />
-      <ScrollView
-        scrollEnabled={carried === null}
-        contentContainerStyle={{
-          paddingTop: insets.top + spacing.xl,
-          paddingBottom: clearance,
-          paddingHorizontal: spacing.xl,
-          gap: 12,
-        }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl {...pull} tintColor={colors.textMuted} />}
-      >
-        <BrandHeader />
-
-        <View style={styles.head}>
-          <RoundButton
-            label={view === 'Month' ? 'Previous month' : 'Previous week'}
-            onPress={() => {
-              if (view !== 'Month') return setOffset((o) => o - 7);
-              const prev = new Date(day);
-              prev.setMonth(prev.getMonth() - 1);
-              setOffset(offsetTo(prev));
-            }}
-          >
-            <BackIcon color={colors.text} />
-          </RoundButton>
-          <Text style={styles.title}>{copy.myDay.title}</Text>
-          <RoundButton label={copy.myDay.editRoutine} onPress={() => router.push('/schedule')}>
-            <DotsIcon color={colors.text} />
-          </RoundButton>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to today"
-          onPress={() => setOffset(0)}
-          style={styles.monthRow}
+      <GestureDetector gesture={swipe}>
+        <ScrollView
+          scrollEnabled={carried === null}
+          contentContainerStyle={{
+            paddingTop: insets.top + spacing.xl,
+            paddingBottom: clearance,
+            paddingHorizontal: spacing.xl,
+            gap: 12,
+          }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl {...pull} tintColor={colors.textMuted} />}
         >
-          <Text style={styles.month}>{day.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
-          <View style={styles.monthChip}>
-            <UpDownIcon size={14} color={colors.textMuted} />
+          <BrandHeader />
+
+          <FirstTimeHint id="myday-move">{copy.myDay.moveTip}</FirstTimeHint>
+
+          <View style={styles.head}>
+            <RoundButton
+              label={view === 'Month' ? 'Previous month' : 'Previous week'}
+              onPress={() => {
+                if (view !== 'Month') return setOffset((o) => o - 7);
+                const prev = new Date(day);
+                prev.setMonth(prev.getMonth() - 1);
+                setOffset(offsetTo(prev));
+              }}
+            >
+              <BackIcon color={colors.text} />
+            </RoundButton>
+            <Text style={styles.title}>{copy.myDay.title}</Text>
+            <RoundButton label={copy.myDay.editRoutine} onPress={() => router.push('/schedule')}>
+              <DotsIcon color={colors.text} />
+            </RoundButton>
           </View>
-        </Pressable>
 
-        <ViewSwitch value={view} onChange={setView} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to today"
+            onPress={() => setOffset(0)}
+            style={styles.monthRow}
+          >
+            <Text style={styles.month}>{day.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
+            <View style={styles.monthChip}>
+              <UpDownIcon size={14} color={colors.textMuted} />
+            </View>
+          </Pressable>
 
-        {view === 'Week' && (
-          <WeekList
-            days={week}
-            today={today}
-            history={history}
-            todosLeft={todayTodos.filter((t) => !t.done).length}
-            onPick={(d) => {
-              setOffset(offsetTo(d));
-              setView('Day');
-            }}
-          />
-        )}
+          <ViewSwitch value={view} onChange={setView} />
 
-        {view === 'Month' && (
-          <MonthGrid
-            month={day}
-            today={today}
-            history={history}
-            onPick={(d) => {
-              setOffset(offsetTo(d));
-              setView('Day');
-            }}
-          />
-        )}
+          {view === 'Week' && (
+            <WeekList
+              days={week}
+              today={today}
+              history={history}
+              todosLeft={todayTodos.filter((t) => !t.done).length}
+              onPick={(d) => {
+                setOffset(offsetTo(d));
+                setView('Day');
+              }}
+            />
+          )}
 
-        {view === 'Day' && (
-          <>
-            <View>
-              {/* Never flattened away: losing this view when the fade comes off
-                  made the move animation fly the week in from the top. */}
-              <View collapsable={false} style={carried !== null && styles.hidden}>
-                <View style={styles.week}>
-                  {week.map((d) => {
-                    const selected = localDateString(d) === shown;
-                    return (
-                      <Pressable
-                        key={d.toDateString()}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected }}
-                        onPress={() => setOffset(offsetTo(d))}
-                        style={[styles.weekCell, selected && styles.weekSelected]}
-                      >
-                        <Text style={styles.weekDay}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
-                        <Text style={styles.weekNum}>{d.getDate()}</Text>
-                      </Pressable>
-                    );
-                  })}
+          {view === 'Month' && (
+            <MonthGrid
+              month={day}
+              today={today}
+              history={history}
+              onPick={(d) => {
+                setOffset(offsetTo(d));
+                setView('Day');
+              }}
+            />
+          )}
+
+          {view === 'Day' && (
+            <>
+              <View>
+                {/* Never flattened away: losing this view when the fade comes off
+                    made the move animation fly the week in from the top. */}
+                <View collapsable={false} style={carried !== null && styles.hidden}>
+                  <View style={styles.week}>
+                    {week.map((d) => {
+                      const selected = localDateString(d) === shown;
+                      return (
+                        <Pressable
+                          key={d.toDateString()}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          onPress={() => setOffset(offsetTo(d))}
+                          style={[styles.weekCell, selected && styles.weekSelected]}
+                        >
+                          <Text style={styles.weekDay}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
+                          <Text style={styles.weekNum}>{d.getDate()}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.rule} />
                 </View>
-                <View style={styles.rule} />
+                {/* While something is held, the week makes way for "anytime", so
+                    there is always somewhere to take a card off the clock. Drawn
+                    over the week rather than added, so nothing below moves. */}
+                {carried !== null && (
+                  <View
+                    ref={register('any-strip', ANY)}
+                    collapsable={false}
+                    style={[styles.anyStrip, hovered === 'any-strip' && styles.anyStripOn]}
+                  >
+                    <Text style={styles.anyStripText}>{copy.myDay.dropAnytime}</Text>
+                  </View>
+                )}
               </View>
-              {/* While something is held, the week makes way for "anytime", so
-                  there is always somewhere to take a card off the clock. Drawn
-                  over the week rather than added, so nothing below moves. */}
-              {carried !== null && (
+
+              {anchors.length === 0 && <Text style={styles.empty}>{copy.myDay.empty}</Text>}
+              {error && <Text style={styles.error}>{error}</Text>}
+
+              {anytimeTodos.length > 0 && (
                 <View
-                  ref={register('any-strip', ANY)}
+                  ref={register('any-todos', ANY)}
                   collapsable={false}
-                  style={[styles.anyStrip, hovered === 'any-strip' && styles.anyStripOn]}
+                  style={[styles.anyCard, hovered === 'any-todos' && styles.anyCardOn, lifted(anytimeTodos.map((t) => t.id))]}
                 >
-                  <Text style={styles.anyStripText}>{copy.myDay.dropAnytime}</Text>
+                  <View style={styles.anyHead}>
+                    <Text style={styles.anyTitle}>{isToday ? 'Anytime today' : 'Anytime'}</Text>
+                    <Text style={styles.anyCount}>{anytimeTodos.filter((t) => !t.done).length} left</Text>
+                  </View>
+                  {anytimeTodos.map((t) => (
+                    <View key={t.id} style={styles.anyRow}>
+                      {todoRow(t, 40)}
+                    </View>
+                  ))}
                 </View>
               )}
-            </View>
 
-            {anchors.length === 0 && <Text style={styles.empty}>{copy.myDay.empty}</Text>}
-            {error && <Text style={styles.error}>{error}</Text>}
-
-            {anytimeTodos.length > 0 && (
-              <View
-                ref={register('any-todos', ANY)}
-                collapsable={false}
-                style={[styles.anyCard, hovered === 'any-todos' && styles.anyCardOn, lifted(anytimeTodos.map((t) => t.id))]}
-              >
-                <View style={styles.anyHead}>
-                  <Text style={styles.anyTitle}>{isToday ? 'Anytime today' : 'Anytime'}</Text>
-                  <Text style={styles.anyCount}>{anytimeTodos.filter((t) => !t.done).length} left</Text>
+              {anytimeHabits.length > 0 && (
+                <View
+                  ref={register('any-habits', ANY)}
+                  collapsable={false}
+                  style={[styles.anyHabits, hovered === 'any-habits' && styles.hover, lifted(anytimeHabits.map((h) => h.id))]}
+                >
+                  <Text style={styles.anyLabel}>Anytime habits</Text>
+                  {anytimeHabits.map((h) => habitCard(h, null, false))}
                 </View>
-                {anytimeTodos.map((t) => (
-                  <View key={t.id} style={styles.anyRow}>
-                    {todoRow(t, 40)}
-                  </View>
-                ))}
-              </View>
-            )}
+              )}
 
-            {anytimeHabits.length > 0 && (
-              <View
-                ref={register('any-habits', ANY)}
-                collapsable={false}
-                style={[styles.anyHabits, hovered === 'any-habits' && styles.hover, lifted(anytimeHabits.map((h) => h.id))]}
-              >
-                <Text style={styles.anyLabel}>Anytime habits</Text>
-                {anytimeHabits.map((h) => habitCard(h, null, false))}
-              </View>
-            )}
-
-            {/* One row per hour, in normal flow: a row is as tall as what is in
-                it, so nothing is measured and nothing is repositioned while a
-                card animates. */}
-            <View>
-              {hours.map((h) => {
-                const current = isToday && h === nowHour;
-                const b = byHour.get(h);
-                const key = `h${h}`;
-                return (
-                  <View
-                    key={h}
-                    ref={register(key, { kind: 'hour', hour: h })}
-                    collapsable={false}
-                    style={[
-                      styles.hourRow,
-                      hovered === key && styles.hover,
-                      b && lifted([...b.habits.map((x) => x.id), ...b.todos.map((x) => x.id)]),
-                    ]}
-                  >
-                    <View style={styles.hour}>
-                      <View style={[styles.hourPill, current && styles.hourNow]}>
-                        <Text numberOfLines={1} style={[styles.hourText, current && { color: colors.text }]}>
-                          {hourLabel(h)}
-                        </Text>
+              {/* One row per hour, in normal flow: a row is as tall as what is in
+                  it, so nothing is measured and nothing is repositioned while a
+                  card animates. */}
+              <View>
+                {hours.map((h) => {
+                  const current = isToday && h === nowHour;
+                  const b = byHour.get(h);
+                  const key = `h${h}`;
+                  return (
+                    <View
+                      key={h}
+                      ref={register(key, { kind: 'hour', hour: h })}
+                      collapsable={false}
+                      style={[
+                        styles.hourRow,
+                        hovered === key && styles.hover,
+                        b && lifted([...b.anchors.map((x) => x.id), ...b.habits.map((x) => x.id), ...b.todos.map((x) => x.id)]),
+                      ]}
+                    >
+                      <View style={styles.hour}>
+                        <View style={[styles.hourPill, current && styles.hourNow]}>
+                          <Text numberOfLines={1} style={[styles.hourText, current && { color: colors.text }]}>
+                            {hourLabel(h)}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.placed}>
+                        {b?.anchors.map((a) => (
+                          <Lift key={a.id} onTap={() => openMoment(a)} drag={dragFor(a.id, placeMoment(a))}>
+                            <View
+                              ref={register(`a${a.id}`, { kind: 'anchor', anchorId: a.id })}
+                              collapsable={false}
+                              style={[styles.anchorLine, hovered === `a${a.id}` && styles.anchorLineOn]}
+                            >
+                              <View style={[styles.tick, { backgroundColor: momentColor(a) }]} />
+                              <Text style={styles.anchorEmoji}>{emojiFor(a.label)}</Text>
+                              <Text style={styles.anchorLabel}>{a.label}</Text>
+                              <Text style={styles.anchorTime}>{clock(a.usual_time)}</Text>
+                            </View>
+                          </Lift>
+                        ))}
+                        {b?.events.map((e) => (
+                          <View key={e.id} style={styles.event}>
+                            <Text numberOfLines={1} style={styles.eventTitle}>
+                              {e.title}
+                            </Text>
+                            <Text style={styles.anchorTime}>{`${clock(e.start)} – ${clock(e.end)}`}</Text>
+                          </View>
+                        ))}
+                        {b?.habits.map((habit) =>
+                          habitCard(habit, isToday ? nowMinutes : null, habit.id === active?.id),
+                        )}
+                        {b && b.todos.length > 0 && (
+                          <View style={styles.todos}>
+                            {b.todos.map((t) =>
+                              todoRow(
+                                t,
+                                32,
+                                t.at ? formatTime(t.at) : `After ${anchorFor(t, anchors)?.label.toLowerCase() ?? ''}`,
+                              ),
+                            )}
+                          </View>
+                        )}
                       </View>
                     </View>
-                    <View style={styles.placed}>
-                      {b?.anchors.map((a) => (
-                        <View
-                          key={a.id}
-                          ref={register(`a${a.id}`, { kind: 'anchor', anchorId: a.id })}
-                          collapsable={false}
-                          style={[styles.anchorLine, hovered === `a${a.id}` && styles.anchorLineOn]}
-                        >
-                          <View style={[styles.tick, { backgroundColor: momentColor(a) }]} />
-                          <Text style={styles.anchorLabel}>{a.label}</Text>
-                          <Text style={styles.anchorTime}>{clock(a.usual_time)}</Text>
-                        </View>
-                      ))}
-                      {b?.habits.map((habit) =>
-                        habitCard(habit, isToday ? nowMinutes : null, habit.id === active?.id),
-                      )}
-                      {b && b.todos.length > 0 && (
-                        <View style={styles.todos}>
-                          {b.todos.map((t) =>
-                            todoRow(
-                              t,
-                              32,
-                              t.at ? formatTime(t.at) : `After ${anchorFor(t, anchors)?.label.toLowerCase() ?? ''}`,
-                            ),
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        )}
-      </ScrollView>
+                  );
+                })}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </GestureDetector>
+
+      <MomentSheet
+        draft={momentDraft}
+        stacked={momentDraft?.id ? (stacks.find((s) => s.anchorId === momentDraft.id)?.count ?? 0) : 0}
+        stackedNames={habits.filter((h) => h.anchorId === momentDraft?.id).map((h) => h.name)}
+        busy={updateAnchor.isPending || deleteAnchor.isPending}
+        error={sheetError}
+        onChange={setMomentDraft}
+        onSave={saveMoment}
+        onDelete={() =>
+          momentDraft?.id &&
+          deleteAnchor.mutate(momentDraft.id, {
+            onSuccess: closeSheets,
+            onError: () => setSheetError(copy.schedule.deleteFailed),
+          })
+        }
+        onClose={closeSheets}
+      />
+      {editingHabit && (
+        <HabitSheet
+          habit={editingHabit}
+          anchors={anchors}
+          busy={updateHabit.isPending}
+          error={sheetError}
+          onSave={saveHabit}
+          onMore={() => {
+            closeSheets();
+            router.push({ pathname: '/new-habit', params: { id: editingHabit.id } });
+          }}
+          onClose={closeSheets}
+        />
+      )}
+      {editingTodo && (
+        <TodoSheet
+          todo={editingTodo}
+          anchors={anchors}
+          onSave={({ title, when }) => {
+            if (title !== editingTodo.title) todo.rename(editingTodo, title);
+            todo.move(editingTodo, when);
+            closeSheets();
+          }}
+          onDelete={() => {
+            todo.remove(editingTodo);
+            closeSheets();
+          }}
+          onClose={closeSheets}
+        />
+      )}
     </View>
   );
 }
@@ -534,7 +697,7 @@ export default function MyDayScreen() {
  * Pressable inside can see it, so the tap is handed in here; the Pressables
  * inside stay for VoiceOver, which activates them directly.
  */
-function Lift({ drag, onTap, children }: { drag: Drag; onTap: () => void; children: ReactNode }) {
+function Lift({ drag, onTap, children }: { drag: Drag; onTap: (x: number) => void; children: ReactNode }) {
   const styles = useStyles(makeStyles);
   const offset = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -547,8 +710,8 @@ function Lift({ drag, onTap, children }: { drag: Drag; onTap: () => void; childr
   // segfault inside Expo Go.
   const tap = Gesture.Tap()
     .runOnJS(true)
-    .onEnd((_e, success) => {
-      if (success) onTap();
+    .onEnd((e, success) => {
+      if (success) onTap(e.x);
     });
   const pan = Gesture.Pan()
     .runOnJS(true)
@@ -597,12 +760,14 @@ function CalendarCard({
   nowMinutes,
   open,
   onToggle,
+  onEdit: edit,
   drag,
 }: {
   habit: TodayHabit;
   nowMinutes: number | null;
   open: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   drag: Drag;
 }) {
   const styles = useStyles(makeStyles);
@@ -752,7 +917,6 @@ function CalendarCard({
   // and ends on the card, where the normal ink reads at both ends.
   const wet = phase === 'fill';
   const ink = wet ? colors.white : undefined;
-  const edit = () => router.push({ pathname: '/new-habit', params: { id: habit.id } });
 
   return (
     <Lift drag={drag} onTap={press}>
@@ -903,6 +1067,17 @@ const makeStyles = (colors: Palette) => ({
   anchorLine: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 22, borderRadius: 8 },
   anchorLineOn: { backgroundColor: colors.raised, marginHorizontal: -6, paddingHorizontal: 6 },
   tick: { width: 3, height: 13, borderRadius: 2 },
+  anchorEmoji: { fontSize: 12 },
+  event: {
+    gap: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: EVENT_BLUE,
+    backgroundColor: alpha(EVENT_BLUE, 0.18),
+  },
+  eventTitle: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   anchorLabel: { fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.7, textTransform: 'uppercase', color: colors.textMuted },
   anchorTime: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   todos: { paddingLeft: 4 },

@@ -140,9 +140,65 @@ export const copy = {
     back: 'Back',
     skip: 'Skip',
     progress: (step: number, total: number) => `Step ${step} of ${total}`,
+    done: 'Done',
+
+    /** The first page anyone sees, before signing in. */
+    welcome: {
+      title: 'Plan your day.\nClear your head.',
+      blurb: 'Your habits, to-dos and calendar on one timeline. Let’s build today together.',
+      start: 'Let’s build my day',
+      invite: 'I have an invite link',
+      invitePlaceholder: 'Paste your invite link',
+      inviteGo: 'Open invite',
+    },
+
+    /** One question a page, after signing in. */
+    setup: {
+      yourDay: 'Your day',
+      next: 'Next',
+      saving: 'Building your day…',
+      failed: 'Could not save your day. Try again.',
+      day: {
+        eyebrow: 'Your day',
+        title: 'When does your day start and end?',
+        wake: 'Wake up',
+        bed: 'Bed',
+      },
+      moments: {
+        eyebrow: 'Your moments',
+        title: 'What already happens every day?',
+        blurb: 'Tap the ones you do. Your habits will hang off these.',
+        addOwn: 'Add your own',
+        ownPlaceholder: 'Name this moment',
+      },
+      habit: {
+        eyebrow: 'Your first habit',
+        title: 'What do you want to start?',
+        after: (moment: string) => `after ${moment}`,
+        writeOwn: 'Write my own',
+        ownPlaceholder: 'Your habit',
+      },
+      calendar: {
+        eyebrow: 'Your calendar',
+        title: 'Bring in your plans?',
+        blurb: 'Meetings and appointments show on your timeline. Tsumiki only reads them.',
+        toggle: 'Show calendar events',
+        denied: 'Calendar access is off. You can turn it on in Settings.',
+        notNow: 'Not now',
+      },
+      todos: {
+        eyebrow: 'Today’s to-dos',
+        title: 'Anything to get done today?',
+        blurb: 'One line each. They stay until they’re done.',
+        placeholder: 'A to-do',
+        addAnother: 'Add another',
+        build: 'Build my day',
+        skip: 'Skip',
+      },
+    },
 
     profile: {
-      eyebrow: 'Step 1 · You',
+      eyebrow: 'You',
       title: 'Who should\nwe call you?',
       blurb: 'Your crew sees this name and this face. Nothing else about you is shared.',
       nameLabel: 'Your name',
@@ -160,56 +216,6 @@ export const copy = {
       failed: 'Could not save that. Try again.',
     },
 
-    routine: {
-      eyebrow: 'Step 2 · Your routine',
-      title: 'What does your\nday look like?',
-      // The reviewer read this list as a set of tasks to complete and only
-      // worked out what it was after reaching the home screen. Saying what
-      // these are not is the part that was missing.
-      blurb:
-        'Not habits to tick off \u2014 these already happen. They are the moments in your day, and habits hang off them. Rough times are fine, and drop any you do not do.',
-      addOwn: 'Your own',
-      ownPlaceholder: 'Name this moment',
-      timeLabel: (label: string) => `Change the time for ${label}`,
-      nameLabel: (label: string) => (label ? `Rename ${label}` : 'Name this moment'),
-      removeLabel: (label: string) => `Remove ${label}`,
-      next: 'Looks right',
-      saving: 'Saving\u2026',
-      failed: 'Could not save your routine. Try again.',
-      pickTime: 'Pick a time',
-      done: 'Done',
-    },
-
-    habit: {
-      eyebrow: 'Step 3 · First habit',
-      title: 'Start with\none.',
-      blurb:
-        'This is the whole idea: a habit hangs off a moment you already have, so it has a time it actually happens. Small beats ambitious.',
-      /** The moment the habit hangs off, and the fact that it is yours to move. */
-      whenLabel: 'Hang it after',
-      whenHint: 'Tap another moment to move it.',
-      after: (anchor: string) => `After ${anchor}`,
-      makeOwn: 'Make my own instead',
-      add: (habit: string) => `Add ${habit}`,
-      adding: 'Adding\u2026',
-      failed: 'Could not add that habit. Try again.',
-    },
-
-    crew: {
-      eyebrow: 'Step 4 · Your crew',
-      title: 'It\u2019s in\nyour day.',
-      justYou: 'Just you, for now',
-      isNew: 'New',
-      pitch: 'People who start with friends are way more likely to follow through',
-      // "Miss a day and it is forgiven, miss twice and it goes" came back from
-      // a reader as "1 share each, picking their own moment". Two short
-      // sentences, one idea each, rather than one clever line.
-      pitchBlurb:
-        'Up to 4 friends, all doing the same habit \u2014 each at their own moment. You share one streak. Miss a day and it is forgiven; miss two in a row and the streak starts again.',
-      invite: 'Invite friends',
-      solo: 'Start solo for now',
-      you: 'You',
-    },
   },
 
   newHabit: {
@@ -404,45 +410,6 @@ export const copy = {
     cancel: 'Cancel',
   },
 
-  welcome: {
-    /**
-     * One slide per thing the app has: moments, crews, the streak.
-     *
-     * These were the argument — why hanging a habit on your day beats a list,
-     * why other people make it stick, why one bad day is not the end. It read
-     * well and left people unable to say what the app was. Three abstractions
-     * in a row is an essay, and nobody signs up for an essay.
-     *
-     * So each slide now names one thing, says what it is, and says what it
-     * does with it. The reasoning has not gone: it is the second half of each
-     * body, where it lands on something concrete instead of floating. The
-     * screenshot behind each slide is the screen that thing actually lives on.
-     */
-    slides: [
-      {
-        step: 'Moments',
-        title: 'The fixed points\nin your day.',
-        body:
-          'Wake up, coffee, lunch, getting home. You already have these, at roughly the same time every day \u2014 you tell Tsumiki yours once, and every habit hangs off one of them. That is what makes it happen: the thing you already do becomes the reminder.',
-      },
-      {
-        step: 'Crews',
-        title: 'Two to five,\none habit.',
-        body:
-          'Everyone in a crew does the same habit, each hung on their own moment \u2014 yours after lunch, theirs after work. You can see who has still to go, and send them one nudge. Alone, the only person you let down is you.',
-      },
-      {
-        step: 'The streak',
-        title: 'One streak,\nshared.',
-        body:
-          'The crew keeps a single streak, not one each. Miss a day and it is forgiven; miss two in a row and it starts again. One bad day costs you nothing, which is the whole point \u2014 two in a row is how a habit actually ends.',
-      },
-    ],
-    next: 'Next',
-    start: 'Get started',
-    slideOf: (i: number, total: number) => `Slide ${i} of ${total}`,
-  },
-
   hints: {
     dismiss: 'Got it',
     /** The dock's pips are the only undiscoverable thing the walkthrough skips. */
@@ -531,40 +498,40 @@ export const copy = {
     // when the SDK is absent, and they say so by being vague about currency.
     annualPrice: '$29.99',
     monthlyPrice: '$3.99',
+    lifetimePrice: '$99.99',
     perYear: '/ year',
     perMonth: '/ month',
+    perLifetime: 'once',
 
-    // Was "Your free days are up. Keep going." — which was only ever true of
-    // the handful of accounts carrying a trial stamp from before Apple's
-    // introductory offer became the free days. Everyone who meets this wall
-    // now never had days of ours to run out, so the old line told them
-    // something that had not happened.
-    overTitle: 'Keep Tsumiki. Keep the streak.',
-    browsingTitle: 'Everything, for everyone you do it with.',
+    // Under TSUMIKI PRO. Pro people who open the screen from You are thanked.
+    overTitle: 'Your whole day, with no limits.',
+    browsingTitle: 'You have Pro. Thank you.',
 
-    /**
-     * These used to read "Unlimited habits and crews / Stack as many as your
-     * day can hold, with up to four friends on each", which was wrong twice.
-     *
-     * Nothing in Tsumiki is capped at a number, so there was no limit for
-     * "unlimited" to lift: the free days run out and the app locks, which is a
-     * different promise and the only one the build can actually be checked
-     * against. And a crew really does stop at five, enforced by a trigger on
-     * crew_members rather than only by the UI, so "unlimited" sat directly
-     * above its own exception.
-     */
-    features: [
-      {
-        title: 'As many habits as your day holds',
-        sub: 'Stack them onto the routine you already have',
-      },
-      {
-        title: 'Crews of up to five',
-        sub: 'Nudges, and a streak the whole crew shares',
-      },
+    // What Pro adds, with Free's cap beside it. Only what the build actually
+    // does: the calendar and the brain dump join this list the release they
+    // ship in, because App Review rejects a paywall that sells something
+    // missing. A crew really does stop at five, enforced by a trigger on
+    // crew_members, so it is never "unlimited".
+    includes: [
+      { title: 'Unlimited habits', note: 'Free has 5' },
+      { title: 'Unlimited to-dos', note: 'Free has 5' },
+      { title: 'Crews with up to five friends', note: '' },
+      { title: 'Early access to new features', note: '' },
     ],
+    // The line under each price. The yearly one is the store's own per-month
+    // figure; this is only its fallback.
+    annualPerMonth: '$2.50',
+    planSub: {
+      monthly: 'per month',
+      annual: (perMonth: string) => `${perMonth} a month`,
+      lifetime: 'pay once',
+    },
+    save: (pct: number) => `\u2212${pct}%`,
+    close: 'Close',
+    pro: 'Pro',
 
     subscribe: 'Subscribe',
+    buyLifetime: 'Get Pro',
     // Only ever shown when StoreKit has confirmed this Apple ID is eligible.
     // An introductory offer is one per Apple ID per subscription group, for
     // ever, so a returning customer sees "Subscribe" and is charged at once —
@@ -576,8 +543,8 @@ export const copy = {
     trialTerms: (days: number, price: string, per: string) =>
       `${days} days free, then ${price} ${per.replace('/ ', 'a ')}. Auto-renews. Cancel any time in Settings. Payment is taken by Apple.`,
     subscribing: 'One moment\u2026',
-    seeMonthly: 'See monthly',
-    seeAnnual: 'See annual',
+    planName: { annual: 'Yearly', monthly: 'Monthly', lifetime: 'Lifetime' } as const,
+    lifetimeTerms: 'One payment, Pro for good. Payment is taken by Apple.',
     /**
      * The only way out of the paywall, and only for somebody who has access
      * already.
@@ -592,7 +559,8 @@ export const copy = {
      * pressed it.
      */
     back: 'Back',
-    restore: 'Restore purchases',
+    continueFree: 'Continue with Free',
+    restore: 'Restore',
     restoredNone: 'No earlier purchase found on this Apple ID.',
     failed: 'That did not go through. Nothing has been charged.',
     unavailable: 'The store is not reachable right now. Try again in a moment.',
@@ -602,7 +570,6 @@ export const copy = {
     // itself, not only from a settings screen three taps away.
     termsLink: 'Terms of Use',
     privacyLink: 'Privacy Policy',
-    deleteAccount: 'Delete my account',
   },
 
   schedule: {
@@ -799,9 +766,26 @@ export const copy = {
     empty: 'Set your routine first and the day will fill in around it.',
     dragHint: 'Hold a habit to move it to another moment.',
     dropAnytime: 'Drop here for anytime',
+    moveTip: 'Press and hold a habit, moment or to-do to move it. Swipe left or right for Day, Week and Month.',
     dropOnMoment: (label: string) => `after ${label.toLowerCase()}`,
     dropAtHour: (hour: string) => `at ${hour}`,
     moveFailed: 'Could not move it. Try again.',
+    edit: {
+      habit: 'habit',
+      todo: 'to-do',
+      when: 'When',
+      days: 'Days',
+      colour: 'Colour',
+      text: 'To-do',
+      stacked: 'Stacked on it',
+      after: (label: string) => `After ${label}`,
+      at: (time: string) => `At ${time}`,
+      anytime: 'Anytime',
+      done: 'Done',
+      more: 'Edit habit ›',
+      deleteTodo: 'Delete to-do',
+      saveFailed: 'Could not save that. Try again.',
+    },
   },
 
   notifications: {

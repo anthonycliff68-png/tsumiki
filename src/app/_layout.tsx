@@ -114,6 +114,8 @@ function RootNavigator() {
           <Stack.Screen name="note/[id]" />
           <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
+          {/* Signed in only: a purchase has to belong to an account, and Free behind it needs one too. */}
+          <Stack.Screen name="plans" />
           {/* Outside the tabs on purpose: it has to work from behind the paywall. */}
           <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
         </Stack.Protected>

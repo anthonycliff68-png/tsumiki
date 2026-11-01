@@ -55,6 +55,12 @@
           "color": "#3F5FA8",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Tsumiki reads today's events so they show on your timeline. It never changes your calendar."
+        }
       ]
     ],
     "experiments": {

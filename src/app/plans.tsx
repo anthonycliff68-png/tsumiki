@@ -23,6 +23,7 @@ export default function PlansScreen() {
   // from You it is just a screen you came to look at, so the way out says so.
   const { first, then } = useLocalSearchParams<{ first?: string; then?: string }>();
   const { access } = useAccess();
+  const isPro = hasAccess(access);
 
   // Seeing it here is being offered it. Without this the tabs would push the
   // same screen again the moment setting up finished, which is the thing this
@@ -70,23 +71,10 @@ export default function PlansScreen() {
           if (found) leave();
         });
       }}
-      onDeleteAccount={() => router.push('/delete-account')}
-      /**
-       * No way out for somebody who is locked, because there is nowhere to go:
-       * the tabs behind this are wrapped in the same paywall, so dismissing
-       * would clear one wall straight into another. It is offered only to the
-       * people who can still use the app — anyone grandfathered, anyone inside
-       * a trial that was already running, anyone already paying.
-       *
-       * One label, and it is "Back". There used to be a second, "Not now",
-       * shown at the end of setting up — but a locked person never sees any
-       * dismiss, so the only people it ever reached were people who already
-       * had access, including anyone who had just that second paid. Offering
-       * somebody a way to decline immediately after they bought it is nonsense
-       * dressed as a choice.
-       */
-      dismissLabel={hasAccess(access) ? copy.paywall.back : undefined}
-      onDismiss={hasAccess(access) ? leave : undefined}
+      // Always a way out: there is no wall behind this any more, only Free.
+      // At the end of setting up it says what saying no gets you.
+      dismissLabel={first === '1' && !isPro ? copy.paywall.continueFree : copy.paywall.back}
+      onDismiss={leave}
     />
   );
 }
