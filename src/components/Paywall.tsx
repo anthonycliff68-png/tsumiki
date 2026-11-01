@@ -1,21 +1,27 @@
+import { BlurView } from 'expo-blur';
 import { useState } from 'react';
-import { Dimensions, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Dimensions, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
-import { CardCollage } from '@/components/CardCollage';
-import { TextButton } from '@/components/Button';
+import { ProCollage } from '@/components/ProCollage';
 import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
 import type { TrialOffer } from '@/lib/trialOffer';
-import { useStyles } from '@/lib/appearance';
 import { type Access } from '@/lib/entitlement';
-import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
+import { darkPalette as c, display, fonts, habitColors, spacing } from '@/theme';
 
-const { width: W } = Dimensions.get('window');
+const { width: W, height: H } = Dimensions.get('window');
+const backdrop = require('../../assets/backdrop.jpg');
+// The photo is 1400×930. Taller than the screen and pinned to the top, so the
+// peak sits behind the title rather than being cropped off.
+const BD_H = H * 1.18;
+const BD_W = (BD_H * 1400) / 930;
 
-export type Plan = 'annual' | 'monthly';
+export type Plan = 'annual' | 'monthly' | 'lifetime';
+// Left to right in the bar. Yearly is still what the screen opens on.
+const PLANS: Plan[] = ['monthly', 'annual', 'lifetime'];
 
 type Props = {
   access: Access;
@@ -25,15 +31,10 @@ type Props = {
   error: string | null;
   onSubscribe: (pkg: PurchasesPackage | null, plan: Plan) => void;
   onRestore: () => void;
-  onDeleteAccount: () => void;
-  /**
-   * Shown when the paywall is an offer rather than a wall: after sign-up, and
-   * on a reinstall. Absent when somebody's week is actually up, because then
-   * there is nothing to dismiss to.
-   */
-  onDismiss?: () => void;
-  /** What the way out says. The offer and the screen you opened differ. */
-  dismissLabel?: string;
+  /** The ✕, and the line at the bottom. Free is always behind this screen. */
+  onDismiss: () => void;
+  /** What the line at the bottom says. The offer and the screen you opened differ. */
+  dismissLabel: string;
   /**
    * The trial this Apple ID would actually get, from StoreKit. Null means they
    * are charged straight away — because they have used their one offer, or
@@ -43,7 +44,8 @@ type Props = {
 };
 
 /**
- * The paywall.
+ * The paywall: TSUMIKI PRO over the mountains, what Pro adds, one bar of
+ * plans, one button.
  *
  * Prices come from the store, not from copy.ts. A hardcoded "$29.99" is wrong
  * the moment App Store Connect changes, wrong in every country that is not
@@ -51,79 +53,120 @@ type Props = {
  * request. The strings in copy are only a fallback for when the SDK is
  * absent — Expo Go, or a store that cannot be reached.
  *
- * "Delete my account" stays on this screen. Apple requires the path to remain
- * reachable, and a paywall that traps someone who wants to leave would be
- * indefensible even if Apple did not care.
+ * One look in both themes: it sits on a photograph, so its colours are the
+ * dark palette's whatever the app is set to.
+ *
+ * "Delete my account" lives on You. It used to be here because this screen
+ * could be a wall; nobody is locked out any more, so You is always reachable.
  */
-export function Paywall({
-  access,
-  offering,
-  busy,
-  error,
-  onSubscribe,
-  onRestore,
-  onDeleteAccount,
-  onDismiss,
-  dismissLabel,
-  trial,
-}: Props) {
-  const styles = useStyles(makeStyles);
+export function Paywall({ access, offering, busy, error, onSubscribe, onRestore, onDismiss, dismissLabel, trial }: Props) {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('annual');
 
-  const annual = offering?.annual ?? null;
-  const monthly = offering?.monthly ?? null;
-  const chosen = plan === 'annual' ? annual : monthly;
+  const packages = {
+    annual: offering?.annual ?? null,
+    monthly: offering?.monthly ?? null,
+    lifetime: offering?.lifetime ?? null,
+  };
+  // Lifetime is offered once the store has it. In Expo Go every plan shows,
+  // with the fallback prices, so the screen can still be looked at.
+  const plans = PLANS.filter((p) => !offering || packages[p] !== null);
+  const chosen = packages[plan];
 
-  const price =
-    chosen?.product.priceString ??
-    (plan === 'annual' ? copy.paywall.annualPrice : copy.paywall.monthlyPrice);
-  const per = plan === 'annual' ? copy.paywall.perYear : copy.paywall.perMonth;
+  const fallback = {
+    annual: [copy.paywall.annualPrice, copy.paywall.perYear],
+    monthly: [copy.paywall.monthlyPrice, copy.paywall.perMonth],
+    lifetime: [copy.paywall.lifetimePrice, copy.paywall.perLifetime],
+  } as const;
+  const priceOf = (p: Plan) => packages[p]?.product.priceString ?? fallback[p][0];
+  const price = priceOf(plan);
+  const per = fallback[plan][1];
 
-  // The button says what will happen. "Start free trial" to somebody who is
-  // about to be charged $29.99 is the single worst thing this screen could do,
-  // so the words come from StoreKit's answer and never from a constant.
-  const cta = trial ? copy.paywall.startTrial(trial.days) : copy.paywall.subscribe;
+  const sub = {
+    monthly: copy.paywall.planSub.monthly,
+    annual: copy.paywall.planSub.annual(packages.annual?.product.pricePerMonthString ?? copy.paywall.annualPerMonth),
+    lifetime: copy.paywall.planSub.lifetime,
+  };
+  // What yearly saves against twelve months, from the store's own numbers.
+  const m = packages.monthly?.product.price ?? 3.99;
+  const y = packages.annual?.product.price ?? 29.99;
+  const saving = Math.round((1 - y / (m * 12)) * 100);
+
+  // The trial is on the yearly plan only, and the button says what will
+  // happen. "Start free trial" to somebody who is about to be charged $29.99
+  // is the single worst thing this screen could do, so the words come from
+  // StoreKit's answer and never from a constant.
+  const planTrial = plan === 'annual' ? trial : null;
+  const cta = planTrial
+    ? copy.paywall.startTrial(planTrial.days)
+    : plan === 'lifetime'
+      ? copy.paywall.buyLifetime
+      : copy.paywall.subscribe;
 
   return (
-    <View style={styles.root}>
-      {/* The collage is absolutely placed at the top of its parent, so it is
-          nudged down here rather than by padding the root: left at zero its
-          sheets of habit cards run under the clock and the battery. */}
-      <View style={[styles.collageHolder, { top: insets.top }]} pointerEvents="none">
-        <CardCollage height={400} fadeFrom={60} />
-      </View>
+    <View style={s.root}>
+      <Image source={backdrop} style={s.backdrop} />
+      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="pwShade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={c.bg} stopOpacity="0.1" />
+            <Stop offset="0.28" stopColor={c.bg} stopOpacity="0.35" />
+            <Stop offset="0.46" stopColor={c.bg} stopOpacity="0.6" />
+            <Stop offset="0.7" stopColor={c.bg} stopOpacity="0.8" />
+            <Stop offset="1" stopColor={c.bg} stopOpacity="0.92" />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#pwShade)" />
+      </Svg>
 
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.body,
-          { paddingTop: 300 + insets.top, paddingBottom: insets.bottom + spacing.xl },
-        ]}
+        contentContainerStyle={[s.body, { paddingTop: insets.top + 218, paddingBottom: insets.bottom + spacing.lg }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[display(72, 62), styles.word]}>{APP_NAME.toUpperCase()}</Text>
-        <Text style={styles.sub}>
-          {access.state === 'locked' ? copy.paywall.overTitle : copy.paywall.browsingTitle}
-        </Text>
+        <ProCollage top={insets.top} />
 
-        <View style={styles.priceRow}>
-          <Text style={[styles.price, { color: habitColors[1] }]}>{price}</Text>
-          <Text style={styles.per}>{per}</Text>
+        <View style={s.word}>
+          <Text style={[display(58, 54), s.text]}>{APP_NAME}</Text>
+          <Text style={[display(27), s.text, s.proBadge]}>{copy.paywall.pro}</Text>
+        </View>
+        <Text style={s.sub}>{access.state === 'subscribed' ? copy.paywall.browsingTitle : copy.paywall.overTitle}</Text>
+
+        <View style={s.feats}>
+          {copy.paywall.includes.map((f) => (
+            <View key={f.title} style={s.feat}>
+              <Svg width={20} height={20} viewBox="0 0 20 20">
+                <Path d="M4 10.5l4 4 8-9" fill="none" stroke={habitColors[1]} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={s.featText}>{f.title}</Text>
+              {f.note !== '' && <Text style={s.featNote}>{f.note}</Text>}
+            </View>
+          ))}
         </View>
 
-        {copy.paywall.features.map((f, i) => (
-          <View key={f.title} style={styles.feature}>
-            <View style={[styles.chip, { backgroundColor: habitColors[i === 0 ? 1 : 0] }]} />
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>{f.title}</Text>
-              <Text style={styles.featureSub}>{f.sub}</Text>
-            </View>
-          </View>
-        ))}
+        <BlurView intensity={28} tint="dark" style={s.plans} accessibilityRole="radiogroup">
+          {plans.map((p) => (
+            <Pressable
+              key={p}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: plan === p }}
+              accessibilityLabel={`${copy.paywall.planName[p]}, ${priceOf(p)}, ${sub[p]}`}
+              onPress={() => setPlan(p)}
+              style={[s.seg, plan === p && s.segOn]}
+            >
+              <View style={s.segHead}>
+                <Text style={[s.segName, plan === p && s.text]}>{copy.paywall.planName[p]}</Text>
+                {p === 'annual' && saving > 0 && <Text style={s.tag}>{copy.paywall.save(saving)}</Text>}
+              </View>
+              <Text style={[s.segPrice, plan === p && s.text]} numberOfLines={1} adjustsFontSizeToFit>
+                {priceOf(p)}
+              </Text>
+              <Text style={s.segSub} numberOfLines={1}>{sub[p]}</Text>
+            </Pressable>
+          ))}
+        </BlurView>
 
         {error !== null && (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
+          <Text style={s.error} accessibilityLiveRegion="polite">
             {error}
           </Text>
         )}
@@ -134,9 +177,9 @@ export function Paywall({
           accessibilityState={{ busy, disabled: busy }}
           disabled={busy}
           onPress={() => onSubscribe(chosen, plan)}
-          style={({ pressed }) => [styles.cta, (pressed || busy) && styles.ctaDim]}
+          style={({ pressed }) => [s.cta, (pressed || busy) && s.dim]}
         >
-          <Svg width="100%" height={62} style={styles.ctaFill}>
+          <Svg width="100%" height={56} style={StyleSheet.absoluteFill}>
             <Defs>
               <LinearGradient id="ctaGrad" x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0" stopColor={habitColors[5]} />
@@ -144,95 +187,117 @@ export function Paywall({
                 <Stop offset="1" stopColor={habitColors[4]} />
               </LinearGradient>
             </Defs>
-            <Rect x="0" y="0" width="100%" height="62" rx="31" fill="url(#ctaGrad)" />
+            <Rect x="0" y="0" width="100%" height="56" rx="28" fill="url(#ctaGrad)" />
           </Svg>
-          <Text style={styles.ctaLabel}>{busy ? copy.paywall.subscribing : cta}</Text>
+          <Text style={s.ctaLabel}>{busy ? copy.paywall.subscribing : cta}</Text>
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: plan === 'monthly' }}
-          accessibilityLabel={plan === 'annual' ? copy.paywall.seeMonthly : copy.paywall.seeAnnual}
-          onPress={() => setPlan(plan === 'annual' ? 'monthly' : 'annual')}
-          style={styles.secondary}
-        >
-          <Text style={styles.secondaryLabel}>
-            {plan === 'annual' ? copy.paywall.seeMonthly : copy.paywall.seeAnnual}
-          </Text>
-        </Pressable>
-
-        {onDismiss && (
-          <TextButton
-            label={dismissLabel ?? copy.paywall.back}
-            onPress={onDismiss}
-            disabled={busy}
-          />
-        )}
-        <TextButton label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
         {/* Apple requires the length, the price that follows and the renewal
             stated together, before the purchase. Built from the same two facts
             the button is built from, so they cannot drift apart. */}
-        <Text style={styles.terms}>
-          {trial ? copy.paywall.trialTerms(trial.days, price, per) : copy.paywall.terms}
+        <Text style={s.terms}>
+          {plan === 'lifetime'
+            ? copy.paywall.lifetimeTerms
+            : planTrial
+              ? copy.paywall.trialTerms(planTrial.days, price, per)
+              : copy.paywall.terms}
         </Text>
-        <View style={styles.legal}>
-          <TextButton
-            label={copy.paywall.termsLink}
-            onPress={() => void Linking.openURL(TERMS_URL)}
-          />
-          <Text style={styles.terms}>·</Text>
-          <TextButton
-            label={copy.paywall.privacyLink}
-            onPress={() => void Linking.openURL(PRIVACY_URL)}
-          />
+
+        <Link label={dismissLabel} onPress={onDismiss} disabled={busy} strong />
+        <View style={s.legal}>
+          <Link label={copy.paywall.termsLink} onPress={() => void Linking.openURL(TERMS_URL)} />
+          <Text style={s.faint}>·</Text>
+          <Link label={copy.paywall.privacyLink} onPress={() => void Linking.openURL(PRIVACY_URL)} />
         </View>
-        {/* Apple requires this to stay reachable, paywall or not. */}
-        <TextButton label={copy.paywall.deleteAccount} onPress={onDeleteAccount} disabled={busy} />
       </ScrollView>
+
+      {/* Fixed over the cards, so the way out never scrolls away. */}
+      <View style={[s.top, { top: insets.top + spacing.sm }]}>
+        <Chip label="✕" accessibilityLabel={copy.paywall.close} onPress={onDismiss} disabled={busy} round />
+        <Chip label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
+      </View>
     </View>
   );
 }
 
-const makeStyles = (colors: Palette) => ({
-  root: { flex: 1, backgroundColor: colors.bg },
-  // Out of the flow entirely, so the scroll view below starts at the top of
-  // the screen and the collage can be nudged clear of the clock on its own.
-  collageHolder: { position: 'absolute', left: 0, right: 0 },
-  // Scrolls because it has to. Terms of Use and Privacy Policy sit at the
-  // bottom and Apple requires both to be reachable; on a short screen they
-  // were simply cut off, which is a rejection waiting to happen.
-  scroll: { flex: 1 },
-  body: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  word: { color: colors.text, textAlign: 'center' },
-  sub: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: -4,
+function Chip({ label, accessibilityLabel, onPress, disabled, round }: { label: string; accessibilityLabel?: string; onPress: () => void; disabled: boolean; round?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} onPress={onPress} disabled={disabled}
+      style={({ pressed }) => pressed && s.dim}>
+      <BlurView intensity={30} tint="dark" style={[s.chip, round && s.chipRound]}>
+        <Text style={s.chipText}>{label}</Text>
+      </BlurView>
+    </Pressable>
+  );
+}
+
+function Link({ label, onPress, disabled, strong }: { label: string; onPress: () => void; disabled?: boolean; strong?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} hitSlop={8}
+      style={({ pressed }) => [s.link, pressed && s.dim]}>
+      <Text style={strong ? s.linkStrong : s.faint}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bg, overflow: 'hidden' },
+  backdrop: { position: 'absolute', top: 0, height: BD_H, width: BD_W, left: (W - BD_W) * 0.56 },
+  body: { paddingHorizontal: spacing.xl },
+  text: { color: c.text },
+  word: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  proBadge: { letterSpacing: 0.5, borderWidth: 2.5, borderColor: c.text, borderRadius: 9, paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 },
+  sub: { fontFamily: fonts.body, fontSize: 16, color: '#D9D4CB', textAlign: 'center', marginTop: 10, marginBottom: 16 },
+  feats: { gap: 11, paddingHorizontal: 4 },
+  feat: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  featText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 16, color: c.text },
+  featNote: { fontFamily: fonts.body, fontSize: 12.5, color: '#8E887E' },
+  plans: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 5,
+    marginTop: 20,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(28,28,31,0.45)',
   },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6 },
-  price: { fontFamily: fonts.bodyBold, fontSize: 40 },
-  per: { fontFamily: fonts.bodyBold, fontSize: 20, color: colors.text },
-  feature: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', marginTop: spacing.sm },
-  chip: { width: 12, height: 12, borderRadius: 3, marginTop: 5 },
-  featureText: { flex: 1 },
-  featureTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.text },
-  featureSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textMuted, marginTop: 2 },
-  cta: { height: 62, justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg },
-  ctaDim: { opacity: 0.7 },
-  ctaFill: { position: 'absolute', top: 0, left: 0 },
-  ctaLabel: { fontFamily: fonts.bodyBold, fontSize: 17, letterSpacing: 1.4, color: '#FFFFFF' },
-  secondary: {
-    height: 58,
-    borderRadius: radii.chip,
-    borderWidth: 1.5,
-    borderColor: alpha(habitColors[5], 0.75),
-    alignItems: 'center',
-    justifyContent: 'center',
+  seg: { flex: 1, borderRadius: 17, paddingVertical: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: 'transparent' },
+  segOn: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' },
+  segHead: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  segName: { fontFamily: fonts.bodyBold, fontSize: 13, color: c.textMuted },
+  tag: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 9.5,
+    color: habitColors[1],
+    backgroundColor: 'rgba(232,85,43,0.16)',
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-  secondaryLabel: { fontFamily: fonts.bodyBold, fontSize: 15, letterSpacing: 1.2, color: colors.text },
-  legal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  terms: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, color: colors.textFaint, textAlign: 'center' },
-  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1], textAlign: 'center' },
-}) as const;
+  segPrice: { fontFamily: fonts.bodyBold, fontSize: 21, marginTop: 6, color: c.textMuted, fontVariant: ['tabular-nums'] },
+  segSub: { fontFamily: fonts.body, fontSize: 11, marginTop: 2, color: '#8E887E' },
+  cta: { height: 56, marginTop: 16, alignItems: 'center', justifyContent: 'center' },
+  dim: { opacity: 0.7 },
+  ctaLabel: { fontFamily: fonts.bodyBold, fontSize: 16.5, letterSpacing: 0.6, color: '#FFFFFF' },
+  terms: { fontFamily: fonts.body, fontSize: 12, lineHeight: 17, color: c.textFaint, textAlign: 'center', marginTop: 9 },
+  error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1], textAlign: 'center', marginTop: 12 },
+  link: { alignSelf: 'center', paddingVertical: 6 },
+  linkStrong: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.text, marginTop: 14 },
+  faint: { fontFamily: fonts.body, fontSize: 11.5, color: '#6F6A63' },
+  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 2 },
+  top: { position: 'absolute', left: 22, right: 22, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chip: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(11,11,12,0.55)',
+  },
+  chipRound: { width: 34, height: 34, paddingVertical: 0, paddingHorizontal: 0, alignItems: 'center', justifyContent: 'center' },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: c.text },
+});

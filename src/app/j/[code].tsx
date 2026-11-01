@@ -16,9 +16,11 @@ import {
   useAnchors,
   useInvitePreview,
   useJoinCrew,
+  useMyProfile,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { rememberInvite } from '@/lib/invite';
+import { showUpgrade, useIsPro } from '@/lib/pro';
 import type { ScheduleMode } from '@/lib/models';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
@@ -35,6 +37,10 @@ export default function JoinScreen() {
   const { data: invite, isPending } = useInvitePreview(code);
   const { data: anchors = [] } = useAnchors(userId);
   const joinCrew = useJoinCrew();
+  const isPro = useIsPro();
+  // Crews show your name to others, and setup no longer asks for one.
+  const unnamed = useMyProfile(userId).data?.display_name.trim() === '';
+  const askName = () => router.push({ pathname: '/profile', params: { from: 'crew' } });
 
   const [mode, setMode] = useState<ScheduleMode>('after');
   const [anchorId, setAnchorId] = useState<string | null>(null);
@@ -71,6 +77,8 @@ export default function JoinScreen() {
 
   const join = () => {
     setError(null);
+    if (!isPro) return showUpgrade();
+    if (unnamed) return askName();
     if (mode === 'after' && !anchorId) return setError(copy.newHabit.needAnchor);
     joinCrew.mutate(
       { code: invite.code, mode, anchorId, atTime },

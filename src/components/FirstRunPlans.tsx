@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 
 import { useAccess } from '@/lib/access';
 import { useAuth } from '@/lib/auth';
-import { hasAccess } from '@/lib/entitlement';
 
 /**
  * Offers the plans once, the first time someone gets into the app.
@@ -33,9 +32,8 @@ export function FirstRunPlans() {
 
   useEffect(() => {
     if (!userId || loading || asked.current) return;
-    // Somebody locked out meets the wall itself, and somebody already paying
-    // has no use for a list of plans.
-    if (!hasAccess(access) || access.state === 'subscribed') return;
+    // Somebody already paying has no use for a list of plans.
+    if (access.state === 'subscribed') return;
 
     asked.current = true;
     void AsyncStorage.getItem(KEY)

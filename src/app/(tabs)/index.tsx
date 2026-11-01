@@ -32,6 +32,7 @@ import { usePull } from '@/lib/pull';
 import { isDue, shiftDate, startOfMonth, startOfWeek } from '@/lib/stats';
 import { formatTime } from '@/lib/times';
 import { openFocus, orderForDay } from '@/lib/today';
+import { FREE_TODOS, showUpgrade, useIsPro } from '@/lib/pro';
 import { alpha, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 const RINGS = [
@@ -96,8 +97,13 @@ export default function HomeScreen() {
   const [fanColor, setFanColor] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState<{ todo: Todo; text: string } | null>(null);
+  const isPro = useIsPro();
   const addDraft = () => {
-    if (draft.trim()) todo.add(draft.trim());
+    if (!draft.trim()) return;
+    // Free holds five open at once. The draft stays put, so it is still there
+    // after upgrading or ticking one off.
+    if (!isPro && todos.filter((t) => !t.done).length >= FREE_TODOS) return showUpgrade();
+    todo.add(draft.trim());
     setDraft('');
   };
   const saveEdit = () => {

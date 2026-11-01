@@ -40,7 +40,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose} visible>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={copy.onboarding.routine.done} />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={copy.onboarding.done} />
       <View style={styles.sheet}>
         <Text style={styles.title}>{label}</Text>
         <DateTimePicker
@@ -53,7 +53,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
             if (date) onChange(toTimeString(date));
           }}
         />
-        <PrimaryButton label={copy.onboarding.routine.done} onPress={onClose} />
+        <PrimaryButton label={copy.onboarding.done} onPress={onClose} />
       </View>
     </Modal>
   );

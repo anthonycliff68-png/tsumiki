@@ -8,11 +8,8 @@ import { purchase, purchasesAvailable, restore } from '@/lib/purchases';
 /**
  * Buying and restoring, shared by the two places the paywall appears.
  *
- * It shows up twice on purpose. PaywallGate puts it in front of somebody whose
- * week is up, and the You tab lets anyone open it who wants to look — someone
- * grandfathered who would rather pay, someone mid-trial who has decided
- * already, and an App Reviewer, who otherwise has no way to reach a paywall
- * that only appears once an account is locked.
+ * There is one paywall, /plans, and every way into Pro leads to it: the end
+ * of onboarding, a Free limit, and the You tab.
  */
 export function usePaywallActions() {
   const queryClient = useQueryClient();

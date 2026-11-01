@@ -17,6 +17,7 @@ import {
   useAnchors,
   useArchiveHabit,
   useCreateHabit,
+  useHabits,
   useHabitWithSchedule,
   useUpdateHabit,
 } from '@/lib/api';
@@ -24,6 +25,7 @@ import { useAuth } from '@/lib/auth';
 import type { ScheduleMode } from '@/lib/models';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 import { Display } from '@/components/Screen';
+import { FREE_HABITS, useIsPro } from '@/lib/pro';
 
 /** Create a habit, or edit one when opened with ?id=. Artboard: NewHabitDark. */
 export default function NewHabitScreen() {
@@ -37,6 +39,14 @@ export default function NewHabitScreen() {
 
   const { data: anchors = [] } = useAnchors(userId);
   const { data: existing } = useHabitWithSchedule(userId, id);
+  const { data: habits } = useHabits(userId);
+  const isPro = useIsPro();
+
+  // Free holds five. A sixth goes to the plans instead of a form that could
+  // never be saved; editing one of the five is always fine.
+  useEffect(() => {
+    if (!isEdit && !isPro && habits && habits.length >= FREE_HABITS) router.replace('/plans');
+  }, [isEdit, isPro, habits]);
   const createHabit = useCreateHabit(userId);
   const updateHabit = useUpdateHabit(userId);
   const archiveHabit = useArchiveHabit(userId);

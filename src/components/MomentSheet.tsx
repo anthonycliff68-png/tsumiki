@@ -22,6 +22,8 @@ type Props = {
   draft: MomentDraft | null;
   /** How many habits are stacked on this moment, for the delete warning. */
   stacked: number;
+  /** The habits stacked on it, listed when it's opened from My Day. */
+  stackedNames?: string[];
   busy: boolean;
   onChange: (draft: MomentDraft) => void;
   onSave: () => void;
@@ -40,6 +42,7 @@ type Props = {
 export function MomentSheet({
   draft,
   stacked,
+  stackedNames = [],
   busy,
   onChange,
   onSave,
@@ -161,6 +164,13 @@ export function MomentSheet({
               );
             })}
           </View>
+
+          {stackedNames.length > 0 && (
+            <>
+              <Text style={styles.label}>{copy.myDay.edit.stacked}</Text>
+              <Text style={styles.rowLabel}>{stackedNames.join(', ')}</Text>
+            </>
+          )}
 
           {error !== null && <Text style={styles.error}>{error}</Text>}
 

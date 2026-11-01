@@ -10,8 +10,9 @@ import { useDockClearance } from '@/components/Dock';
 import { FlameIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { useCreateCrew, useCrews, useHabits } from '@/lib/api';
+import { useCreateCrew, useCrews, useHabits, useMyProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { showUpgrade, useIsPro } from '@/lib/pro';
 import { alpha, display, fonts, habitColors, ink, radii, spacing, tint, type Palette } from '@/theme';
 
 /** Crews. Artboards: GroupDark, CrewWalk. */
@@ -26,6 +27,10 @@ export default function CrewsScreen() {
   const { data: crews = [], refetch } = useCrews(userId);
   const { data: habits = [] } = useHabits(userId);
   const createCrew = useCreateCrew(userId);
+  const isPro = useIsPro();
+  // Crews show your name to others, and setup no longer asks for one.
+  const unnamed = useMyProfile(userId).data?.display_name.trim() === '';
+  const askName = () => router.push({ pathname: '/profile', params: { from: 'crew' } });
 
   const [starting, setStarting] = useState(false);
   const [habitId, setHabitId] = useState<string | null>(null);
@@ -104,12 +109,18 @@ export default function CrewsScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{copy.crews.emptyTitle}</Text>
             <Text style={styles.emptyBody}>{copy.crews.emptyBody}</Text>
-            <PrimaryButton label={copy.crews.startCrew} onPress={() => setStarting(true)} />
+            <PrimaryButton
+              label={copy.crews.startCrew}
+              onPress={() => (!isPro ? showUpgrade() : unnamed ? askName() : setStarting(true))}
+            />
           </View>
         )}
 
         {crews.length > 0 && !starting && (
-          <TextButton label={copy.crews.startCrew} onPress={() => setStarting(true)} />
+          <TextButton
+            label={copy.crews.startCrew}
+            onPress={() => (!isPro ? showUpgrade() : unnamed ? askName() : setStarting(true))}
+          />
         )}
 
         {starting && (

@@ -11,7 +11,7 @@ import { ArrowRightIcon } from '@/components/icons';
 import { OnboardingHeader } from '@/components/OnboardingHeader';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
-import { useAnchors, useMyProfile, useUpdateProfile } from '@/lib/api';
+import { useMyProfile, useUpdateProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { faceOf } from '@/lib/models';
 import { display, fonts, habitColors, spacing, type Palette } from '@/theme';
@@ -21,7 +21,7 @@ import { Display } from '@/components/Screen';
 const PREVIEW = 96;
 
 /**
- * Step 1. Name, face and colour.
+ * Name, face and colour, asked for on the way into a crew.
  *
  * This step exists because display_name used to be written exactly once, from
  * Apple's given name — so anyone who signed in by email never had one, and
@@ -35,7 +35,6 @@ export default function ProfileScreen() {
   const { session } = useAuth();
   const userId = session?.user.id;
   const { data: profile } = useMyProfile(userId);
-  const { data: anchors } = useAnchors(userId);
   const update = useUpdateProfile(userId);
 
   const [name, setName] = useState('');
@@ -72,12 +71,9 @@ export default function ProfileScreen() {
         avatarColor: colour,
         avatarEmoji: emoji,
       });
-      // Most people arriving here are new and go on to set their routine up.
-      // Some are not: this step also catches accounts made before it existed,
-      // and those already have a routine. Sending them to step 2 would show
-      // them the default anchors and insert a second set on top of their own.
-      if (anchors && anchors.length > 0) router.replace('/');
-      else router.push('/routine');
+      // Asked for on the way into a crew, so it goes back there.
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : copy.onboarding.profile.failed);
     }
@@ -101,7 +97,7 @@ export default function ProfileScreen() {
       >
         {/* No back: behind this is the sign-in screen. No skip either — a
             nameless member is the bug this screen was added to fix. */}
-        <OnboardingHeader step={1} />
+        <OnboardingHeader onBack={router.canGoBack() ? router.back : undefined} />
 
         <View style={styles.intro}>
           <Text style={styles.eyebrow}>{copy.onboarding.profile.eyebrow}</Text>

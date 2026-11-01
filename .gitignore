@@ -50,3 +50,4 @@ store/
 
 # Ids specific to whoever is capturing the board
 scripts/shots.env
+.superpowers/
