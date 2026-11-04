@@ -26,7 +26,6 @@ import {
   Faces,
   RoundButton,
   TodoRow,
-  UpDownIcon,
   anchorFor,
   clock,
   statusOf,
@@ -513,10 +512,15 @@ export default function MyDayScreen() {
             >
               <BackIcon color={colors.text} />
             </RoundButton>
-            <View style={styles.date} accessibilityRole="header">
+            <Pressable
+              style={styles.date}
+              accessibilityRole="button"
+              accessibilityLabel={`${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Back to today`}
+              onPress={() => setOffset(0)}
+            >
               <Text style={styles.dateDay}>{day.toLocaleDateString('en-US', { weekday: 'long' })}</Text>
               <Text style={styles.dateBig}>{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
-            </View>
+            </Pressable>
             {habits.length > 0 && (
               <View style={styles.ring} accessible accessibilityLabel={copy.myDay.ringLabel(doneCount, habits.length)}>
                 <ProgressRing
@@ -533,18 +537,6 @@ export default function MyDayScreen() {
               <DotsIcon color={colors.text} />
             </RoundButton>
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back to today"
-            onPress={() => setOffset(0)}
-            style={styles.monthRow}
-          >
-            <Text style={styles.month}>{day.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
-            <View style={styles.monthChip}>
-              <UpDownIcon size={14} color={colors.textMuted} />
-            </View>
-          </Pressable>
 
           <ViewSwitch value={view} onChange={setView} />
 
@@ -1152,16 +1144,6 @@ const makeStyles = (colors: Palette) => ({
   plus: { width: 20, textAlign: 'center', fontFamily: fonts.bodyMedium, fontSize: 20, color: colors.textFaint },
   addInput: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: colors.text, paddingVertical: 10 },
   addConfirm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.text },
-  monthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', minHeight: 44 },
-  month: { fontFamily: fonts.bodyMedium, fontSize: 18, color: colors.text },
-  monthChip: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.raised,
-  },
   hidden: { opacity: 0 },
   week: { flexDirection: 'row', marginHorizontal: -4 },
   weekCell: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 9, borderRadius: 16, borderWidth: 1, borderColor: 'transparent' },

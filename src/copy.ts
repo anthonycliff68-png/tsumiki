@@ -517,8 +517,7 @@ export const copy = {
     browsingTitle: 'You have Pro. Thank you.',
 
     // What Pro adds, with Free's cap beside it. Only what the build actually
-    // does: the calendar joins this list the release it ships in, because
-    // App Review rejects a paywall that sells something missing. A crew
+    // does, because App Review rejects a paywall that sells something missing. A crew
     // really does stop at five, enforced by a trigger on crew_members, so it
     // is never "unlimited".
     includes: [
@@ -526,6 +525,7 @@ export const copy = {
       { title: 'Unlimited habits', note: 'Free has 5' },
       { title: 'Unlimited to-dos', note: 'Free has 5' },
       { title: 'Crews with up to five friends', note: '' },
+      { title: 'Your calendar on My Day', note: '' },
       { title: 'Early access to new features', note: '' },
     ],
     // The line under each price. The yearly one is the store's own per-month
@@ -954,7 +954,7 @@ export const copy = {
     close: 'Close',
     consentTitle: 'Before you talk.',
     consentBody:
-      'Brain dump sends what you say or type to Anthropic, the makers of Claude, to sort it into your day. We keep your words with the notes it writes, so you can read them back. Nothing is added until you tap Add.',
+      'Brain dump sends what you say or type to Anthropic, the makers of Claude, to sort it into your day, along with the names of your habits, moments and folders. We keep your words with the notes it writes, so you can read them back. Nothing is added until you tap Add.',
     agree: 'Agree',
     notNow: 'Not now',
     prompt: 'Empty your head.',
@@ -992,7 +992,7 @@ export const copy = {
   notes: {
     title: 'Notes',
     search: 'Search notes',
-    inbox: 'Inbox',
+    inbox: 'Unsorted',
     recent: 'Recent',
     count: (n: number) => (n === 1 ? '1 note' : `${n} notes`),
     empty: 'Nothing here yet. Tap + to write one.',

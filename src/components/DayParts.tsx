@@ -35,7 +35,6 @@ export const CalendarIcon = (p: P) => (
 );
 export const ClockIcon = (p: P) => <Stroke {...p} d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7.5V12l3 2" />;
 export const BackIcon = (p: P) => <Stroke {...p} d="M19 12H5M11 6l-6 6 6 6" />;
-export const UpDownIcon = (p: P) => <Stroke {...p} width={2} d="M8.5 9.5 12 6l3.5 3.5M8.5 14.5 12 18l3.5-3.5" />;
 export const DotsIcon = ({ color }: { color: string }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
     <Path d="M5 12h.01M12 12h.01M19 12h.01" stroke={color} strokeWidth={3.2} strokeLinecap="round" />

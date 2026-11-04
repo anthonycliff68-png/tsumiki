@@ -66,7 +66,7 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Tsumiki listens while you hold the mic so you can talk instead of type.",
+          "microphonePermission": "Tsumiki listens after you tap the mic, so you can talk instead of type.",
           "speechRecognitionPermission": "Your words are turned into text on your iPhone."
         }
       ]
