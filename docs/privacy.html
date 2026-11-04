@@ -16,34 +16,50 @@ nav{margin-top:64px;padding-top:24px;border-top:1px solid rgba(255,255,255,.14);
 </style></head>
 <body><main>
 <h1>Privacy Policy</h1>
-<p class="date"><strong>Tsumiki</strong> Last updated: 25 September 2026</p>
-<p>Tsumiki is a habit app you use with a small group of friends. This policy says what it stores, why, who can see it, and how to get rid of it. It is written plainly on purpose.</p>
+<p class="date"><strong>Tsumiki</strong> Last updated: 4 November 2026</p>
+<p>Tsumiki is a day planner and habit app you can use alone or with a small group of friends. This policy says what it stores, why, who can see it, and how to get rid of it. It is written plainly on purpose.</p>
 <h2>Who is responsible</h2>
-<p>Tsumiki is made by Anthony Clifford, an individual developer. For anything in this policy, including a request to delete your data, write to <strong>tsumikihabittracker@gmail.com</strong>.</p>
+<p>Tsumiki is made by Anthony Clifford, an individual developer. For anything in this policy, including a request to delete your data, write to <strong>tsumiki@conjureapps.com</strong>.</p>
 <h2>What Tsumiki stores</h2>
 <p><strong>Your account.</strong> Your email address, so you can sign in. If you use Sign in with Apple and choose to hide your email, Apple gives us a relay address instead and we never see your real one.</p>
-<p><strong>Your profile.</strong> A display name, a colour, your time zone, and the hours you have asked not to be disturbed. Your time zone is needed because a habit is due on *your* local date, not ours.</p>
+<p><strong>Your profile.</strong> A display name, a colour, your time zone, and the hours you have asked not to be disturbed. Your time zone is needed because a habit is due on <em>your</em> local date, not ours.</p>
 <p><strong>Your routine and habits.</strong> The moments of your day (wake up, lunch, and so on), the habits you stack onto them, the days of the week each one runs, and the times you expect to do them.</p>
 <p><strong>Your check-ins.</strong> Which habit you completed and on which of your local dates. This is what streaks are counted from.</p>
+<p><strong>Your to-dos.</strong> What you write and where you put it in your day.</p>
+<p><strong>Your notes.</strong> The folders and notes you make, and the ones brain dump writes for you.</p>
+<p><strong>Your brain dumps.</strong> The words you ask brain dump to sort, and when you agreed to it. They are kept so a note can show you what you actually said. See "Brain dump and AI" below.</p>
 <p><strong>Your crews.</strong> Which crews you belong to, who else is in them, and invites you have created or accepted.</p>
 <p><strong>Nudges and reactions.</strong> The nudges you send and receive, including the short message attached, and any thank-you reaction.</p>
 <p><strong>Reports and blocks.</strong> If you block someone or report them, we store that, because it would not work otherwise.</p>
+<p><strong>Your plan.</strong> Whether you have Pro and which plan you bought. Apple takes the payment, and we never see your card.</p>
+<p><strong>Feedback.</strong> What you write on the feedback screen, your app version and platform, and whether you want a reply.</p>
+<p><strong>Your email preference.</strong> Whether you have said yes to emails about the app. It is off unless you turn it on.</p>
 <p><strong>A push token</strong>, if you allow notifications, so reminders and nudges can reach your device. Delete the app or turn notifications off and it stops being used.</p>
 <p>Tsumiki has no advertising, no analytics SDK, no third-party trackers, and no profiling. Nothing is sold, and nothing is shared with anyone for marketing.</p>
+<h2>Brain dump and AI</h2>
+<p>Brain dump is a Pro feature, and it does nothing until you agree to it in the app.</p>
+<p><strong>Your voice stays on your iPhone.</strong> Apple's speech recognition turns what you say into text on the device. The audio is not recorded, and it is not sent to us or to anyone else.</p>
+<p><strong>Your words go to Anthropic when you tap Sort it.</strong> Anthropic makes the AI model, Claude, that sorts them. It receives the text, your local date, time and time zone, and the names of your habits, moments and note folders, so it can place things in your day. It does not receive your email address, your display name, your crews or your calendar. Nothing is added to your day until you tap Add.</p>
+<p>Under its commercial terms, Anthropic does not use this data to train its models. Its standard retention for this kind of data is 30 days, and it can keep data longer where safety or the law requires it. Read more at <a href="https://privacy.claude.com">privacy.claude.com</a>.</p>
+<h2>Your calendar</h2>
+<p>If you give permission, Tsumiki reads today's events from your iPhone's calendar and shows them on your timeline. This happens on your phone. Your events are not sent to us or to anyone else, and Tsumiki never changes your calendar.</p>
 <h2>Who can see your information</h2>
-<p><strong>Your crew can see</strong> your display name, your colour, whether you have checked in today, your current streak state, and nudges between you. They <strong>cannot</strong> see your email address, your other habits, your routine, or any crew you are in that they are not.</p>
+<p><strong>Your crew can see</strong> your display name, your colour, whether you have checked in today, your current streak state, and nudges between you. They <strong>cannot</strong> see your email address, your other habits, your routine, your to-dos, your notes, your brain dumps, or any crew you are in that they are not.</p>
 <p><strong>Nobody else can see anything.</strong> There are no public profiles and no way to search for a person. Access is enforced in the database itself, per row, not only in the app.</p>
 <h2>Who processes it for us</h2>
-<p><strong>Supabase</strong> hosts the database, authentication and server functions. <strong>Expo</strong> operates the push notification service that delivers reminders and nudges. <strong>Apple</strong> provides Sign in with Apple and app distribution. Each one only handles what it needs to do that job.</p>
+<p><strong>Supabase</strong> hosts the database, authentication and server functions. <strong>Expo</strong> operates the push notification service that delivers reminders and nudges. <strong>Apple</strong> provides Sign in with Apple, payments, on-device speech recognition and app distribution. <strong>RevenueCat</strong> keeps track of who has Pro, and receives your account ID and purchase details. <strong>Anthropic</strong> sorts brain dumps, as described above. <strong>Resend</strong> delivers email from the app, including feedback sent to us. Each one only handles what it needs to do that job.</p>
 <h2>How long it is kept</h2>
-<p>Until you delete it. Delete your account in the app (You → Delete my account) and your profile, habits, check-ins, nudges and crew memberships are removed. Deletion is immediate and cannot be undone. Crew streaks that other people share are not reset by your leaving.</p>
+<p>Until you delete it. Delete your account in the app (You → Delete my account) and your profile, habits, to-dos, notes, brain dumps, check-ins, nudges and crew memberships are removed. Deletion is immediate and cannot be undone. Crew streaks that other people share are not reset by your leaving.</p>
+<p>Delete a note brain dump wrote and, once no other note from that dump is left, we erase what you said. Words from a dump that left no notes stay until you delete your account, or you can email us to remove them sooner.</p>
+<p>Some things are not removed automatically. Feedback you sent stays with us, no longer linked to your account. Apple and RevenueCat keep their purchase records, and we can ask RevenueCat to remove yours if you email us. Deleting your account does not cancel a subscription: do that in your Apple Account settings.</p>
 <h2>Your rights</h2>
-<p>You can see everything Tsumiki holds about you inside the app, correct it there, and delete all of it there. If you would rather have a copy sent to you, or want anything removed by hand, email the address above and it will be dealt with within 30 days. Depending on where you live you may also have the right to object to processing or to complain to a data protection regulator.</p>
+<p>You can see and correct most of what Tsumiki holds about you inside the app, and delete your account there. If you would rather have a copy sent to you, or want anything removed by hand, email the address above and it will be dealt with within 30 days. Depending on where you live you may also have the right to object to processing or to complain to a data protection regulator.</p>
 <h2>Children</h2>
 <p>Tsumiki is not intended for children under 13 and is not directed at them.</p>
 <h2>Security</h2>
 <p>Traffic is encrypted in transit. Row-level security rules mean one account cannot read another's rows even if the app asked it to. No system is perfect, and this policy does not promise otherwise.</p>
 <h2>Changes</h2>
 <p>If this policy changes in a way that matters, the date at the top changes and the app will say so before the change takes effect.</p>
+
 <nav><a href="./">Tsumiki</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="support.html">Support</a></nav>
 </main></body></html>

@@ -16,14 +16,20 @@ Productivity
 
 ## Promotional text (170 max, changeable without review)
 Habits stick when they hang off something you already do — and when someone
-notices you missed. Stack a habit onto your routine, share the streak, and
+notices you missed. Stack a habit onto your routine, bring your friends, and
 nudge each other.
-`163 characters`
+`170 characters`
 
 ## Description (4000 max)
 Tsumiki is a habit app built on two ideas that actually work: attach a new
 habit to something you already do, and do it with people who notice when you
 don't.
+
+EMPTY YOUR HEAD (PRO)
+Tap the mic and ramble, or type. Brain dump sorts it into your timeline, to-dos,
+notes and habit ideas. You take a quick look, tap Add, and it's in your day.
+Your voice is turned into text on your iPhone. Brain dump uses Anthropic's
+Claude to do the sorting, and it only starts once you agree.
 
 STACK IT ONTO YOUR DAY
 You set up your day once — wake up, coffee, lunch, home, bed. Those are your
@@ -31,10 +37,14 @@ moments. Every habit hangs off one of them. "After lunch, a fifteen minute
 walk" is a plan. "Walk more" is a wish. You can also set a habit to a time,
 or leave it as anytime today.
 
-DO IT WITH A CREW
-Two to five of you take the same habit and share one streak. Everyone does
-the same habit, but each person picks their own moment — your walk can be
-after lunch and theirs after work. The streak belongs to all of you.
+PLAN THE WHOLE DAY
+My Day holds your habits, to-dos and moments on one timeline. Press and hold
+anything to move it. With Pro, today's events from your iPhone's calendar show
+up there too. Notes keeps everything else, in folders.
+
+DO IT WITH A CREW (PRO)
+Two to five of you take on the same habit. Each person picks their own moment:
+your walk can be after lunch and theirs after work.
 
 NEVER MISS TWICE
 Missing one day is forgiven. The streak survives. Miss again before you check
@@ -65,10 +75,10 @@ habit,streak,routine,tracker,friends,accountability,daily,goals,ritual,stacking,
 `87 characters`
 
 ## Support URL
-https://anthonycliff68-png.github.io/tsumiki/support.html
+https://conjureapps.com/apps/tsumiki/support/
 
 ## Privacy Policy URL
-https://anthonycliff68-png.github.io/tsumiki/privacy.html
+https://conjureapps.com/apps/tsumiki/privacy/
 
 ## Copyright
 2026 Anthony Clifford
@@ -103,25 +113,38 @@ quickest way in.
 
 WHAT TO TRY
 1. Sign in with Apple.
-2. Onboarding sets up the moments of your day, then you pick a first habit.
-   Choose "Start solo" at the crew step.
-3. On Today, the habits left are held as a fan of cards. Swipe sideways
-   through them. Tap a card to check it in; tap again to undo.
-4. My Day shows the same habits on a timeline against your routine.
-5. Progress shows rings for a day, a heat wall for a week, a trend for a
-   month. A new account has no history yet, so these start empty and fill in
-   as you check things off.
+2. Setup asks for your wake and bed times, the moments of your day, a first
+   habit, the calendar and to-dos. It ends on the plans screen. Tap "Continue
+   with Free".
+3. My Day shows habits, moments and to-dos on one timeline. Tap a habit to check
+   it in. Press and hold anything to move it. Swipe sideways for Week and Month.
+4. The middle button in the dock adds a brain dump, to-do, habit or note.
+5. Notes keeps folders and notes. You > Progress shows how habits are going.
+
+PRO
+Pro has three plans: monthly, yearly and the Lifetime in-app purchase submitted
+with this version. Buy one from You > Subscription with a sandbox account. Monthly and yearly carry a three-day free trial for an eligible Apple ID. It
+unlocks brain dump, crews, the calendar and unlimited habits and to-dos.
+
+BRAIN DUMP AND AI
+Brain dump (Pro) asks for consent the first time. It says what is sent to
+Anthropic and who that is, and the server refuses to sort until consent is
+recorded. Speech is turned into text on the device, so it needs a real iPhone
+and speech recognition with on-device support. Otherwise it falls back to typing
+("Type instead" is always there). Nothing is added until you tap Add.
 
 CREWS AND NUDGES
-A crew needs a second real person, so it cannot be fully exercised from one
-device. Create a crew from Crews > New, and the invite screen shows the link
-you would send. Nudges only appear once a crew has another member who has
+Crews are Pro. A crew needs a second real person, so it cannot be fully exercised
+from one device. Start a crew from the Crews tab, and the invite screen shows the
+link you would send. Nudges only appear once a crew has another member who has
 not yet checked in.
 
+CALENDAR
+Calendar permission is read-only and optional. Events stay on the device.
+
 NOTIFICATIONS
-The app asks for notification permission during onboarding. Reminders fire at
-each habit's expected time, so nothing will arrive during a short review
-session. Declining permission does not block any other feature.
+Reminders fire at each habit's expected time, so nothing will arrive during a
+short review session. Declining permission does not block any other feature.
 
 ACCOUNT DELETION
 You > Delete my account removes everything immediately.
@@ -142,7 +165,22 @@ NOT used for tracking.
 
 ## User Content > Other User Content
 Collected. Linked to identity. Used for: App Functionality.
-(This covers habit names, routine labels and the text of a nudge.)
+(This covers habit names, routine labels, to-dos, notes, brain dump text and
+the text of a nudge.)
+
+## User Content > Customer Support
+Collected. Linked to identity. Used for: App Functionality.
+(The feedback screen.)
+
+## Purchases > Purchase History
+Collected. Linked to identity. Used for: App Functionality.
+(Whether someone has Pro, through RevenueCat.)
+
+## User Content > Audio Data
+Not collected. Speech is turned into text on the device and no audio leaves it.
+
+## Calendar events
+Not collected. They are read on the device and never sent anywhere.
 
 ## Usage Data > Product Interaction
 Collected. Linked to identity. Used for: App Functionality.
@@ -178,20 +216,30 @@ License Agreement), so the fix is Apple's first route: link the standard EULA
 from the description. A custom EULA would instead be pasted into App Store
 Connect, which does not apply here.
 
-Appended to the description, verbatim:
+Appended to the description, verbatim (current wording, updated for 1.2.3):
 
 ```
 SUBSCRIPTION
-Tsumiki is free for three days. After that it is $29.99 a year or $3.99 a
-month. Payment is taken by your Apple Account at confirmation of purchase.
-The subscription renews automatically unless you turn off auto-renew at least
-24 hours before the current period ends, and you can manage or cancel it at
-any time in your Apple Account settings.
+Tsumiki is free to use: plan your day with up to 5 habits and 5 to-dos, and keep
+notes. Pro adds brain dump, crews, your calendar, and unlimited habits and
+to-dos.
+
+Pro is $3.99 a month, $29.99 a year, or $99.99 once for Lifetime. Monthly and yearly start with 3 days free for eligible Apple IDs. Payment is
+taken by your Apple Account at confirmation of purchase. Subscriptions renew
+automatically unless you turn off auto-renew at least 24 hours before the
+current period ends, and you can manage or cancel at any time in your Apple
+Account settings. Lifetime does not renew.
 
 Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-Privacy Policy: https://anthonycliff68-png.github.io/tsumiki/privacy.html
+Privacy Policy: https://conjureapps.com/apps/tsumiki/privacy/
 ```
 
 The pricing and renewal sentences are not strictly what the rejection asked
 for; they are there because 3.1.2 also wants length, price and renewal terms
 disclosed, and a reviewer reading the page should not have to hunt for them.
+
+## Updated for 1.2.3 (3 November 2026)
+
+The block above is what the description says now: the Free plan replaced the
+three-day trial, and Lifetime was added. If App Store Connect has an introductory
+offer on a subscription, say so here too, since 3.1.2 wants it disclosed.
