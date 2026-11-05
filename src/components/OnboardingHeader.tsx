@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { BrandMark } from '@/components/BrandHeader';
 import { ChevronLeftIcon } from '@/components/icons';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
@@ -20,7 +21,9 @@ export function OnboardingHeader({ step, total, onBack, onSkip }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   return (
-    <View style={styles.row}>
+    <View style={styles.root}>
+      <BrandMark />
+      <View style={styles.row}>
       {onBack ? (
         <Pressable
           accessibilityRole="button"
@@ -59,11 +62,13 @@ export function OnboardingHeader({ step, total, onBack, onSkip }: Props) {
         // Keeps the bar centred with nothing on the right.
         <View style={styles.spacer} />
       )}
+      </View>
     </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
+  root: { gap: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

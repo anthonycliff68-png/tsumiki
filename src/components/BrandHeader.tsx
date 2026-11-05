@@ -26,23 +26,31 @@ export function BrandHeader({ left }: { left?: ReactNode }) {
   const styles = useStyles(makeStyles);
   return (
     <View style={styles.row}>
-      <View style={styles.lockup} accessibilityRole="header" accessibilityLabel={APP_NAME}>
-        <Image
-          source={require('../../assets/icon.png')}
-          style={styles.mark}
-          // Decorative: the row already carries the name for a screen reader,
-          // and announcing the logo twice helps nobody.
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        />
-        <Text style={styles.name}>{APP_NAME}</Text>
-      </View>
+      <BrandMark />
       {/* Pinned, and drawn after the lockup so they take the taps, which keeps
           the name centred whatever sits beside it. */}
       <View style={[styles.side, { left: 0 }]}>{left}</View>
       <View style={[styles.side, { right: 0 }]}>
         <SparkleButton />
       </View>
+    </View>
+  );
+}
+
+/** The mark and the name on their own, for the screens outside the tabs. */
+export function BrandMark({ large = false, markOnly = false }: { large?: boolean; markOnly?: boolean }) {
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={large ? styles.lockupLarge : styles.lockup} accessibilityRole="header" accessibilityLabel={APP_NAME}>
+      <Image
+        source={require('../../assets/icon.png')}
+        style={large ? styles.markLarge : styles.mark}
+        // Decorative: the row already carries the name for a screen reader,
+        // and announcing the logo twice helps nobody.
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+      {!markOnly && <Text style={large ? styles.nameLarge : styles.name}>{APP_NAME}</Text>}
     </View>
   );
 }
@@ -59,6 +67,9 @@ const makeStyles = (colors: Palette) => ({
     paddingBottom: spacing.xs,
   },
   lockup: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  lockupLarge: { alignItems: 'center', gap: spacing.sm },
+  markLarge: { width: 64, height: 64, borderRadius: 16 },
+  nameLarge: { ...display(24, 28), letterSpacing: 0, color: colors.text },
   side: { position: 'absolute', top: 0, bottom: 0, justifyContent: 'center' },
   mark: { width: 24, height: 24, borderRadius: 7 },
   name: {

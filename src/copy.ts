@@ -89,10 +89,17 @@ export const copy = {
     title: 'Build habits\nwith your\npeople.',
     blurb:
       'Stack new habits onto the routine you already have. Do them with friends who notice when you don\u2019t.',
-    // The welcome carousel does the explaining now, so this screen only has
-    // to get someone in. Apple first, because it is one tap and no inbox.
-    tagline: 'Build habits with your people.',
-    orEmail: 'or use your email',
+    // The welcome page does the explaining, so this screen only has to get
+    // someone in. Apple first, because it is one tap and no inbox.
+    headline: 'Welcome to\nTsumiki',
+    headlineBack: 'Welcome\nback',
+    emailMeCode: 'Email me a code',
+    useMyPassword: 'Use my password',
+    firstTime: 'First time building your day?',
+    alreadyUser: 'Already a user?',
+    startHere: 'Start here',
+    signInHere: 'Sign in',
+    useEmail: 'Use email instead',
     // Present but not advertised: nobody is offered a password here, and
     // nobody can make one. It exists so an account can be signed into
     // without an inbox, which App Review needs and a video could not give.
@@ -157,14 +164,14 @@ export const copy = {
       title: 'Plan your day.\nClear your head.',
       blurb: 'Your habits, to-dos and calendar on one timeline. Let’s build today together.',
       start: 'Let’s build my day',
-      invite: 'I have an invite link',
-      invitePlaceholder: 'Paste your invite link',
-      inviteGo: 'Open invite',
+      haveAccount: 'I already have an account',
     },
 
     /** One question a page, after signing in. */
     setup: {
       yourDay: 'Your day',
+      tapToEdit: 'Tap any to edit or remove',
+      remove: 'Remove',
       next: 'Next',
       saving: 'Building your day…',
       failed: 'Could not save your day. Try again.',
@@ -176,34 +183,41 @@ export const copy = {
       },
       moments: {
         eyebrow: 'Your moments',
-        title: 'What already happens every day?',
-        blurb: 'Tap the ones you do. Your habits will hang off these.',
+        title: 'What’s already in your day?',
+        blurb: 'Add up to 3, and pick a time for each.',
         addOwn: 'Add your own',
         ownPlaceholder: 'Name this moment',
       },
       habit: {
-        eyebrow: 'Your first habit',
-        title: 'What do you want to start?',
-        after: (moment: string) => `after ${moment}`,
+        eyebrow: 'Your habits',
+        title: 'What habit do you want to commit to?',
+        blurb: 'Pick the ones you want, and a time for each.',
+        limit: 'Free includes 5 habits. Pro has no limit.',
+        add: 'New habit',
+        edit: 'Edit habit',
         writeOwn: 'Write my own',
         ownPlaceholder: 'Your habit',
-      },
-      calendar: {
-        eyebrow: 'Your calendar',
-        title: 'Bring in your plans?',
-        blurb: 'Meetings and appointments show on your timeline. Tsumiki only reads them.',
-        toggle: 'Show calendar events',
-        denied: 'Calendar access is off. You can turn it on in Settings.',
-        notNow: 'Not now',
       },
       todos: {
         eyebrow: 'Today’s to-dos',
         title: 'Anything to get done today?',
-        blurb: 'One line each. They stay until they’re done.',
+        blurb: 'Give one a time to put it on your day. They stay until they’re done.',
+        limit: 'Free includes 5 to-dos. Pro has no limit.',
         placeholder: 'A to-do',
-        addAnother: 'Add another',
+        addAnother: 'Add a to-do',
+        add: 'New to-do',
+        edit: 'Edit to-do',
+        anyTime: 'Any time',
+        section: 'To-do',
+      },
+      calendar: {
+        eyebrow: 'Your calendar',
+        title: 'Add your calendar?',
+        blurb: 'See meetings and appointments on your timeline. Tsumiki only reads them.',
+        add: 'Add my calendar',
+        included: 'Included with Pro',
+        pro: 'PRO',
         build: 'Build my day',
-        skip: 'Skip',
       },
     },
 
@@ -541,17 +555,14 @@ export const copy = {
     pro: 'Pro',
 
     subscribe: 'Subscribe',
-    buyLifetime: 'Get Pro',
     // Only ever shown when StoreKit has confirmed this Apple ID is eligible.
     // An introductory offer is one per Apple ID per subscription group, for
-    // ever, so a returning customer sees "Subscribe" and is charged at once —
-    // which is exactly what the button then says.
-    startTrial: (days: number) => `Start my free ${days} days`,
+    // ever, so a returning customer is charged at once and is not told otherwise.
     // Apple requires the length, the price after it and the renewal stated
     // together before the purchase. Built from the live offer, never a
     // constant, so the words cannot outlive what App Store Connect is set to.
     trialTerms: (days: number, price: string, per: string) =>
-      `${days} days free, then ${price} ${per.replace('/ ', 'a ')}. Auto-renews. Cancel any time in Settings. Payment is taken by Apple.`,
+      `Start ${days} days free, then ${price} ${per.replace('/ ', 'a ')}. Auto-renews. Cancel any time in Settings. Payment is taken by Apple.`,
     subscribing: 'One moment\u2026',
     planName: { annual: 'Yearly', monthly: 'Monthly', lifetime: 'Lifetime' } as const,
     lifetimeTerms: 'One payment, Pro for good. Payment is taken by Apple.',
@@ -569,7 +580,7 @@ export const copy = {
      * pressed it.
      */
     back: 'Back',
-    continueFree: 'Continue with Free',
+    continueFree: 'Continue to Tsumiki Free',
     restore: 'Restore',
     restoredNone: 'No earlier purchase found on this Apple ID.',
     failed: 'That did not go through. Nothing has been charged.',
@@ -603,8 +614,6 @@ export const copy = {
     labelPlaceholder: 'Work',
     starts: 'Starts',
     ends: 'Ends',
-    lasts: 'It lasts a while',
-    lastsHint: 'A block like a work day or a school run.',
     noEnd: 'Just a moment',
     save: 'Save',
     delete: 'Remove',
@@ -789,6 +798,13 @@ export const copy = {
       habit: 'habit',
       todo: 'to-do',
       when: 'When',
+      howLong: 'How long?',
+      noLength: 'None',
+      customLength: 'Custom',
+      moreTime: (unit: string) => `More ${unit}`,
+      lessTime: (unit: string) => `Fewer ${unit}`,
+      hours: 'hours',
+      minutes: 'minutes',
       days: 'Days',
       colour: 'Colour',
       text: 'To-do',

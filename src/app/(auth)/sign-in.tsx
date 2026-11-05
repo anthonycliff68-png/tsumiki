@@ -1,13 +1,14 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandMark } from '@/components/BrandHeader';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { Field } from '@/components/Field';
-import { Body, Screen, Stub } from '@/components/Screen';
-import { CardCollage } from '@/components/CardCollage';
-import { APP_NAME } from '@/constants/brand';
+import { Body, Stub } from '@/components/Screen';
+import { PhotoBackdrop } from '@/components/WelcomePage';
 import { useStyles } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { useAuth } from '@/lib/auth';
@@ -20,7 +21,7 @@ import {
   RESEND_COOLDOWN_SECONDS,
 } from '@/lib/otp.ts';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { alpha, display, fonts, habitColors, spacing, type Palette } from '@/theme';
+import { display, fonts, spacing, type Palette } from '@/theme';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,7 +34,12 @@ function sayWhy(message: string): string {
 
 export default function SignInScreen() {
   const styles = useStyles(makeStyles);
+  const insets = useSafeAreaInsets();
   const { signInWithEmail, verifyEmailCode, signInWithApple, signInWithPassword } = useAuth();
+  // Both are the same sign-in underneath: a new account is made on first use.
+  // Only the words differ, so nobody has to know which one they are to get in.
+  const { first } = useLocalSearchParams<{ first?: string }>();
+  const [firstTime, setFirstTime] = useState(first === '1');
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -43,6 +49,7 @@ export default function SignInScreen() {
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [password, setPassword] = useState('');
   const [withPassword, setWithPassword] = useState(false);
+  const [emailChosen, setEmailChosen] = useState(false);
   /**
    * Seconds until another code may be asked for.
    *
@@ -62,6 +69,9 @@ export default function SignInScreen() {
     if (Platform.OS !== 'ios') return;
     void AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
   }, []);
+
+  // Apple first, email one tap behind it. Without Apple, email is the only way in.
+  const showEmail = emailChosen || !appleAvailable;
 
   const sendLink = async () => {
     const trimmed = email.trim();
@@ -193,12 +203,24 @@ export default function SignInScreen() {
   };
 
   return (
-    <Screen color={habitColors[1]} underDock={false}>
-      <CardCollage height={470} fadeFrom={150} />
-      <View style={styles.header}>
-        <Text style={[display(66, 58), styles.word]}>{APP_NAME.toUpperCase()}</Text>
-        <Text style={styles.tagline}>{copy.auth.tagline}</Text>
+    <View style={styles.root}>
+      <PhotoBackdrop />
+      <KeyboardAvoidingView behavior="padding" style={styles.avoid}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: insets.top + spacing.lg, paddingBottom: Math.max(insets.bottom, spacing.lg) },
+          ]}
+        >
+      <View style={styles.top}>
+        {/* The headline already says the name. */}
+        <BrandMark large markOnly />
+        <Text style={[display(60, 56), styles.word]}>{firstTime ? copy.auth.headline : copy.auth.headlineBack}</Text>
       </View>
+
+      <View>
 
       {!isSupabaseConfigured ? (
         <Stub>{copy.auth.notConfigured}</Stub>
@@ -249,9 +271,15 @@ export default function SignInScreen() {
         </View>
       ) : (
         <View style={styles.form}>
+          {firstTime && <Text style={styles.question}>{copy.auth.firstTime}</Text>}
           {appleAvailable && (
             <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              key={firstTime ? 'up' : 'in'}
+              buttonType={
+                firstTime
+                  ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+                  : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+              }
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
               cornerRadius={999}
               style={styles.apple}
@@ -259,17 +287,32 @@ export default function SignInScreen() {
             />
           )}
 
-          {/* Only an alternative when there is something to be an
-              alternative to: Apple sign-in does not exist in Expo Go, and
-              a lone "or use your email" reads as a bug. */}
-          {appleAvailable && (
-            <View style={styles.rule}>
-              <View style={styles.ruleLine} />
-              <Text style={styles.ruleLabel}>{copy.auth.orEmail}</Text>
-              <View style={styles.ruleLine} />
-            </View>
+          {!showEmail && firstTime && (
+            <TextButton label={copy.auth.useEmail} onPress={() => setEmailChosen(true)} />
           )}
 
+          {/* Coming back: every way in is one tap, and nothing to type until one is picked. */}
+          {!showEmail && !firstTime && (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setEmailChosen(true)}
+                style={({ pressed }) => [styles.ghost, pressed && styles.pressed]}
+              >
+                <Text style={styles.ghostLabel}>{copy.auth.emailMeCode}</Text>
+              </Pressable>
+              <TextButton
+                label={copy.auth.useMyPassword}
+                onPress={() => {
+                  setWithPassword(true);
+                  setEmailChosen(true);
+                }}
+              />
+            </>
+          )}
+
+          {showEmail && (
+            <>
           <Field
             label={copy.auth.emailLabel}
             placeholder={copy.auth.emailPlaceholder}
@@ -283,8 +326,9 @@ export default function SignInScreen() {
             returnKeyType="go"
             onSubmitEditing={sendLink}
             editable={!busy}
+            autoFocus={emailChosen}
           />
-          {withPassword && (
+          {withPassword && !firstTime && (
             <Field
               label={copy.auth.passwordLabel}
               placeholder={copy.auth.passwordPlaceholder}
@@ -302,7 +346,7 @@ export default function SignInScreen() {
 
           <PrimaryButton
             label={
-              withPassword
+              withPassword && !firstTime
                 ? busy
                   ? copy.auth.verifying
                   : copy.auth.signIn
@@ -310,33 +354,37 @@ export default function SignInScreen() {
                   ? copy.auth.sending
                   : copy.auth.sendLink
             }
-            onPress={withPassword ? signInPassword : sendLink}
+            onPress={withPassword && !firstTime ? signInPassword : sendLink}
             busy={busy}
           />
 
           {/* Quiet on purpose: no one is offered a password, and no one can
               make one here. It is a way in for an account that already has
               one. */}
-          <TextButton
-            label={withPassword ? copy.auth.useCode : copy.auth.usePassword}
-            onPress={() => {
-              setWithPassword(!withPassword);
-              setPassword('');
-              setError(null);
-            }}
-            disabled={busy}
-          />
+          {!firstTime && (
+            <TextButton
+              label={withPassword ? copy.auth.useCode : copy.auth.usePassword}
+              onPress={() => {
+                setWithPassword(!withPassword);
+                setPassword('');
+                setError(null);
+              }}
+              disabled={busy}
+            />
+          )}
 
           {/* Only alongside the password field. Offering a reset to somebody
               who signs in with a code is offering to fix something they do
               not use, and the code they already asked for is the faster way
               in anyway. */}
-          {withPassword && (
+          {withPassword && !firstTime && (
             <TextButton
               label={copy.auth.forgotPassword}
               onPress={() => router.push('/reset-password')}
               disabled={busy}
             />
+          )}
+            </>
           )}
         </View>
       )}
@@ -352,26 +400,51 @@ export default function SignInScreen() {
           {error}
         </Text>
       )}
-    </Screen>
+      </View>
+
+      {!sentTo && isSupabaseConfigured && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            setFirstTime(!firstTime);
+            setEmailChosen(false);
+            setWithPassword(false);
+            setPassword('');
+            setError(null);
+          }}
+          hitSlop={8}
+          style={({ pressed }) => [styles.switch, pressed && styles.pressed]}
+        >
+          <Text style={styles.switchAsk}>
+            {firstTime ? copy.auth.alreadyUser : copy.auth.firstTime}{' '}
+            <Text style={styles.switchGo}>{firstTime ? copy.auth.signInHere : copy.auth.startHere}</Text>
+          </Text>
+        </Pressable>
+      )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const makeStyles = (colors: Palette) => ({
-  header: {
-    gap: spacing.sm,
-    paddingTop: 330,
-    alignItems: 'center',
-  },
+  root: { flex: 1, backgroundColor: colors.bg, overflow: 'hidden' },
+  avoid: { flex: 1 },
+  page: { flexGrow: 1, gap: spacing.lg, paddingHorizontal: spacing.xl },
+  top: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xl },
   word: { color: colors.text, textAlign: 'center' },
-  tagline: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.textMuted,
+  question: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
     textAlign: 'center',
+    color: colors.textMuted,
   },
-  rule: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  ruleLine: { flex: 1, height: 1, backgroundColor: alpha(colors.overlay, 0.14) },
-  ruleLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
+  switch: { alignSelf: 'center', paddingVertical: spacing.sm },
+  switchAsk: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted, textAlign: 'center' },
+  switchGo: { fontFamily: fonts.bodyBold, color: colors.text },
+  pressed: { opacity: 0.75 },
   form: {
     gap: spacing.md,
     paddingTop: spacing.lg,
@@ -397,6 +470,15 @@ const makeStyles = (colors: Palette) => ({
   apple: {
     height: 58,
   },
+  ghost: {
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 29,
+    borderWidth: 1.5,
+    borderColor: 'rgba(244,241,236,0.4)',
+  },
+  ghostLabel: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.text },
   error: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,

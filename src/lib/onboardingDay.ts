@@ -3,21 +3,23 @@
  * guessed for them. Pure, so it is tested; nothing here may import from '@/'.
  */
 
-export type MomentKey = 'coffee' | 'lunch' | 'gym' | 'home' | 'dinner';
+export type MomentKey = 'coffee' | 'breakfast' | 'work' | 'lunch' | 'gym' | 'home' | 'dinner';
 
 export const MOMENT_CHOICES: { key: MomentKey; label: string; emoji: string }[] = [
   { key: 'coffee', label: 'Coffee', emoji: '☕' },
+  { key: 'breakfast', label: 'Breakfast', emoji: '🍳' },
+  { key: 'work', label: 'Work starts', emoji: '💼' },
   { key: 'lunch', label: 'Lunch', emoji: '🥪' },
   { key: 'gym', label: 'Gym', emoji: '🏋️' },
   { key: 'home', label: 'Get home', emoji: '🏠' },
   { key: 'dinner', label: 'Dinner', emoji: '🍝' },
 ];
 
-export const PICKED_FIRST: MomentKey[] = ['coffee', 'lunch', 'home'];
-
 /** Roughly when each one happens. Fixed by dragging later. */
 const USUAL: Record<MomentKey, string> = {
   coffee: '', // wake + 30, below
+  breakfast: '', // wake + 60, below
+  work: '09:00',
   lunch: '12:30',
   gym: '17:30',
   home: '18:00',
@@ -44,13 +46,38 @@ function inside(time: string, wake: string, bed: string, early: boolean): string
 }
 
 export function guessTime(key: MomentKey, wake: string, bed: string): string {
-  const usual = key === 'coffee' ? toHHMM(toMin(wake) + 30) : USUAL[key];
-  return inside(usual, wake, bed, key === 'coffee');
+  const soon = key === 'coffee' ? 30 : key === 'breakfast' ? 60 : null;
+  return inside(soon === null ? USUAL[key] : toHHMM(toMin(wake) + soon), wake, bed, soon !== null);
 }
 
-export type DayMoment = { key: string; label: string; emoji: string; time: string };
+/** Where a moment somebody wrote themselves starts out. */
+export const ownTime = (wake: string, bed: string) => inside('12:00', wake, bed, false);
 
-export function buildDay(wake: string, bed: string, picked: MomentKey[], own: string[]): DayMoment[] {
+/** Moments picked during setup, not counting Wake up and Bed. */
+export const MOMENT_LIMIT = 3;
+
+export type DayMoment = { key: string; label: string; emoji: string; time: string; endsAt?: string | null };
+
+/** Somebody's own name, time or length for a moment, kept by its key. */
+export type MomentEdit = { label?: string; time?: string; endsAt?: string | null };
+
+export function buildDay(
+  wake: string,
+  bed: string,
+  picked: MomentKey[],
+  own: string[],
+  edits: Record<string, MomentEdit> = {},
+): DayMoment[] {
+  const edited = (m: DayMoment): DayMoment => {
+    const label = edits[m.key]?.label ?? m.label;
+    return {
+      ...m,
+      label,
+      emoji: label === m.label ? m.emoji : emojiFor(label),
+      time: edits[m.key]?.time ?? m.time,
+      ...(edits[m.key]?.endsAt ? { endsAt: edits[m.key]?.endsAt } : {}),
+    };
+  };
   const middle: DayMoment[] = [
     ...MOMENT_CHOICES.filter((m) => picked.includes(m.key)).map((m) => ({
       key: m.key,
@@ -58,15 +85,17 @@ export function buildDay(wake: string, bed: string, picked: MomentKey[], own: st
       emoji: m.emoji,
       time: guessTime(m.key, wake, bed),
     })),
+    // Keyed by place in the list, so blanking one leaves the others' edits alone.
     ...own
-      .map((label) => label.trim())
-      .filter(Boolean)
-      .map((label, i) => ({ key: `own-${i}`, label, emoji: '✨', time: inside('12:00', wake, bed, false) })),
-  ].sort((a, b) => sinceWake(a.time, wake) - sinceWake(b.time, wake));
+      .map((label, i) => ({ key: `own-${i}`, label: label.trim(), emoji: '✨', time: ownTime(wake, bed) }))
+      .filter((m) => m.label),
+  ]
+    .map(edited)
+    .sort((a, b) => sinceWake(a.time, wake) - sinceWake(b.time, wake));
   return [
-    { key: 'wake', label: 'Wake up', emoji: '🌅', time: wake },
+    edited({ key: 'wake', label: 'Wake up', emoji: '🌅', time: wake }),
     ...middle,
-    { key: 'bed', label: 'Bed', emoji: '🌙', time: bed },
+    edited({ key: 'bed', label: 'Bed', emoji: '🌙', time: bed }),
   ];
 }
 
@@ -74,17 +103,39 @@ export const HABIT_CHOICES: { id: string; name: string; emoji: string; after: st
   { id: 'read', name: 'Read 10 pages', emoji: '📖', after: 'coffee' },
   { id: 'walk', name: '15 min walk', emoji: '🚶', after: 'lunch' },
   { id: 'water', name: 'Glass of water', emoji: '💧', after: 'wake' },
+  { id: 'stretch', name: 'Stretch', emoji: '🧘', after: 'wake' },
+  { id: 'journal', name: 'Journal', emoji: '✍️', after: 'dinner' },
+  { id: 'vitamins', name: 'Vitamins', emoji: '💊', after: 'breakfast' },
 ];
 
-/** The moment a habit hangs off, or Wake up when that one was not picked. */
+/** A habit being set up: where it hangs, unless it was given a time of its own. */
+export type SetupHabit = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  after: string;
+  at?: string;
+  /** Kept as a length, so it survives the moment it hangs off being moved. */
+  minutes?: number;
+};
+
+/** A to-do being set up. With no time it sits under "To-do", off the timeline. */
+export type SetupTodo = { id: string; title: string; at?: string; minutes?: number };
+
+/**
+ * The moment a habit hangs off. When that one was not picked: Wake up, or Bed
+ * for an evening habit, since nobody journals at 7 AM because they skipped dinner.
+ */
 export function momentFor(after: string, day: DayMoment[]): DayMoment {
-  return day.find((m) => m.key === after) ?? (day[0] as DayMoment);
+  const missing = after === 'dinner' ? day[day.length - 1] : day[0];
+  return day.find((m) => m.key === after) ?? (missing as DayMoment);
 }
 
 const EMOJI: Record<string, string> = {
   'wake up': '🌅',
   coffee: '☕',
-  breakfast: '🥣',
+  breakfast: '🍳',
   lunch: '🥪',
   gym: '🏋️',
   'get home': '🏠',

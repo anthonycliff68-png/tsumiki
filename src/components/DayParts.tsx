@@ -147,8 +147,11 @@ export function TodoRow({
   textStyle,
   height = 44,
   shown = localDateString(),
+  sub,
 }: {
   todo: Todo;
+  /** A second line under the title, for a to-do with room for one. */
+  sub?: string;
   /** The day on screen, for the carried-over tag. */
   shown?: string;
   when?: string;
@@ -191,6 +194,7 @@ export function TodoRow({
   const words = (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ flexShrink: 1, justifyContent: 'center' }}>
+        <View style={{ justifyContent: 'center' }}>
         <Text
           numberOfLines={1}
           onLayout={(e) => setTextW(e.nativeEvent.layout.width)}
@@ -211,6 +215,12 @@ export function TodoRow({
             width: done.interpolate({ inputRange: [0, 1], outputRange: [0, textW] }),
           }}
         />
+        </View>
+        {sub !== undefined && (
+          <Text numberOfLines={1} style={{ fontFamily: fonts.body, fontSize: 12, color: colors.textFaint }}>
+            {sub}
+          </Text>
+        )}
       </View>
       {carried && !todo.done && (
         <View style={{ paddingHorizontal: 7, height: 20, borderRadius: 10, justifyContent: 'center', backgroundColor: colors.raised }}>

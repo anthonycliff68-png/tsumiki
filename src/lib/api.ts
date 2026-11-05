@@ -61,6 +61,8 @@ export type RoutineAnchorInput = {
   label: string;
   /** "HH:MM". */
   usualTime: string;
+  /** "HH:MM", for a moment that lasts. */
+  endsAt?: string | null;
   isDefault: boolean;
 };
 
@@ -74,6 +76,7 @@ export function useSaveRoutine(userId: string | undefined) {
         user_id: userId,
         label: anchor.label,
         usual_time: anchor.usualTime,
+        ends_at: anchor.endsAt ?? null,
         sort_order: index,
         is_default: anchor.isDefault,
       }));
@@ -106,12 +109,15 @@ export function useSaveRoutine(userId: string | undefined) {
 export type FirstHabitInput = {
   name: string;
   color: string;
-  /** The anchor this habit stacks onto. */
-  anchorId: string;
+  /** The anchor this habit stacks onto, or else… */
+  anchorId?: string;
+  /** …"HH:MM", when somebody gave it a time of its own. */
+  atTime?: string;
+  durationMinutes?: number;
 };
 
 /**
- * The first habit is always solo and always stacked onto an anchor — the crew
+ * The first habits are always solo — the crew
  * comes later, on the next screen or from the Crews tab.
  */
 export function useCreateFirstHabit(userId: string | undefined) {
@@ -130,9 +136,11 @@ export function useCreateFirstHabit(userId: string | undefined) {
       const { error: scheduleError } = await supabase.from('habit_schedules').insert({
         habit_id: habit.id,
         user_id: userId,
-        mode: 'after',
-        anchor_id: input.anchorId,
+        mode: input.atTime ? 'at' : 'after',
+        anchor_id: input.atTime ? null : input.anchorId,
+        at_time: input.atTime ?? null,
         days_of_week: EVERY_DAY,
+        ...(input.durationMinutes ? { duration_minutes: input.durationMinutes } : {}),
       });
       if (scheduleError) throw scheduleError;
 
@@ -165,12 +173,15 @@ export type TodayHabit = {
   sortKey: number;
   /** 0 = Sunday … 6 = Saturday. */
   daysOfWeek: number[];
+  /** How long it takes, or null for no length. */
+  minutes: number | null;
 };
 
 type ScheduleRow = {
   mode: ScheduleMode;
   at_time: string | null;
   days_of_week: number[];
+  duration_minutes?: number | null;
   habits: { id: string; name: string; color: string; crew_id: string | null; archived_at: string | null } | null;
   anchors: { id: string; label: string; usual_time: string } | null;
 };
@@ -191,7 +202,9 @@ export function useToday(userId: string | undefined, date: Date = new Date()) {
         supabase
           .from('habit_schedules')
           .select(
-            'mode, at_time, days_of_week, habits!inner(id, name, color, crew_id, archived_at), anchors(id, label, usual_time)',
+            // All columns, not a list: naming duration_minutes would fail the whole
+            // day on a database that has not had that migration yet.
+            '*, habits!inner(id, name, color, crew_id, archived_at), anchors(id, label, usual_time)',
           )
           .eq('user_id', userId ?? ''),
         supabase.from('checkins').select('habit_id').eq('user_id', userId ?? '').eq('local_date', localDate),
@@ -220,6 +233,7 @@ export function useToday(userId: string | undefined, date: Date = new Date()) {
             checkedIn: done.has(habit.id),
             sortKey: minutesOfDay(time),
             daysOfWeek: row.days_of_week,
+            minutes: row.duration_minutes ?? null,
           };
         })
         .sort((a, b) => a.sortKey - b.sortKey);
@@ -293,6 +307,8 @@ export type HabitInput = {
   /** "HH:MM", required when mode is 'at'. */
   atTime?: string | null;
   daysOfWeek?: number[];
+  /** Left out, the length stays as it is. Null clears it. */
+  durationMinutes?: number | null;
 };
 
 /** A habit plus the caller's own schedule for it, for the edit form. */
@@ -325,6 +341,7 @@ function scheduleFields(input: HabitInput) {
     anchor_id: input.mode === 'after' ? (input.anchorId ?? null) : null,
     at_time: input.mode === 'at' ? (input.atTime ?? null) : null,
     days_of_week: input.daysOfWeek ?? EVERY_DAY,
+    ...(input.durationMinutes !== undefined ? { duration_minutes: input.durationMinutes } : {}),
   };
 }
 
@@ -413,6 +430,8 @@ export type Todo = {
   at: string | null;
   /** The day it was written for; earlier than the day shown means carried over. */
   day: string;
+  /** How long it takes, or null for no length. */
+  minutes: number | null;
 };
 
 type TodoRow = {
@@ -423,6 +442,7 @@ type TodoRow = {
   moment_mode: string;
   anchor_id: string | null;
   at_time: string | null;
+  duration_minutes?: number | null;
 };
 
 const asTodo = (row: TodoRow, shown: string): Todo => ({
@@ -432,6 +452,7 @@ const asTodo = (row: TodoRow, shown: string): Todo => ({
   anchorId: row.moment_mode === 'after' ? row.anchor_id : null,
   at: row.moment_mode === 'at' ? row.at_time : null,
   day: row.day,
+  minutes: row.duration_minutes ?? null,
 });
 
 /**
@@ -446,7 +467,8 @@ export function useTodos(userId: string | undefined, date: Date = new Date()) {
     queryFn: async (): Promise<Todo[]> => {
       const { data, error } = await supabase
         .from('todos')
-        .select('id, title, day, done_on, moment_mode, anchor_id, at_time')
+        // All columns, for the same reason as the day's habits.
+        .select('*')
         .eq('user_id', userId ?? '')
         .lte('day', shown)
         .or(`done_on.is.null,done_on.gte.${shown}`)
@@ -491,13 +513,14 @@ export function useTodoActions(userId: string | undefined, date: Date = new Date
   };
 
   return {
-    add: (title: string, place: TodoPlace = 'any') => {
+    add: (title: string, place: TodoPlace = 'any', minutes: number | null = null) => {
       if (!userId) return;
       const id = newId();
       const placement = {
         moment_mode: place === 'any' ? 'any' : 'anchorId' in place ? 'after' : 'at',
         anchor_id: place !== 'any' && 'anchorId' in place ? place.anchorId : null,
         at_time: place !== 'any' && 'at' in place ? place.at : null,
+        duration_minutes: minutes,
       };
       apply(
         (list) => [...list, asTodo({ id, title, day: shown, done_on: null, ...placement }, shown)],
@@ -513,6 +536,11 @@ export function useTodoActions(userId: string | undefined, date: Date = new Date
       apply(
         (list) => list.map((t) => (t.id === todo.id ? { ...t, title } : t)),
         () => supabase.from('todos').update({ title }).eq('id', todo.id),
+      ),
+    setLength: (todo: Todo, minutes: number | null) =>
+      apply(
+        (list) => list.map((t) => (t.id === todo.id ? { ...t, minutes } : t)),
+        () => supabase.from('todos').update({ duration_minutes: minutes }).eq('id', todo.id),
       ),
     remove: (todo: Todo) =>
       apply(

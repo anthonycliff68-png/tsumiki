@@ -326,6 +326,7 @@ export type Database = {
           at_time: string | null
           created_at: string
           days_of_week: number[]
+          duration_minutes: number | null
           habit_id: string
           id: string
           mode: Database["public"]["Enums"]["schedule_mode"]
@@ -336,6 +337,7 @@ export type Database = {
           at_time?: string | null
           created_at?: string
           days_of_week?: number[]
+          duration_minutes?: number | null
           habit_id: string
           id?: string
           mode: Database["public"]["Enums"]["schedule_mode"]
@@ -346,6 +348,7 @@ export type Database = {
           at_time?: string | null
           created_at?: string
           days_of_week?: number[]
+          duration_minutes?: number | null
           habit_id?: string
           id?: string
           mode?: Database["public"]["Enums"]["schedule_mode"]
@@ -907,6 +910,7 @@ export type Database = {
           created_at: string
           day: string
           done_on: string | null
+          duration_minutes: number | null
           id: string
           moment_mode: string
           title: string
@@ -918,6 +922,7 @@ export type Database = {
           created_at?: string
           day: string
           done_on?: string | null
+          duration_minutes?: number | null
           id?: string
           moment_mode?: string
           title: string
@@ -929,6 +934,7 @@ export type Database = {
           created_at?: string
           day?: string
           done_on?: string | null
+          duration_minutes?: number | null
           id?: string
           moment_mode?: string
           title?: string

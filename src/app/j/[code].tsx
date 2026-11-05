@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bleed } from '@/components/Bleed';
+import { BrandMark } from '@/components/BrandHeader';
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { FlameIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
@@ -107,6 +108,7 @@ export default function JoinScreen() {
       >
         {joinedCrewId ? (
           <>
+            <BrandMark />
             <Display size={64} line={58}>{copy.invite.joinedTitle}</Display>
             <Text style={styles.body}>
               {copy.invite.joinedBody(invite.crewName, invite.memberCount + 1)}
@@ -130,6 +132,7 @@ export default function JoinScreen() {
         ) : (
           <>
             <Text style={styles.eyebrow}>{copy.invite.invitedBy}</Text>
+            <BrandMark />
             <Display size={56} line={50}>{copy.invite.joinTitle(invite.crewName)}</Display>
 
             <View style={[styles.card, { backgroundColor: invite.habitColor }]}>

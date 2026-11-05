@@ -2,7 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/Button';
-import { useStyles, useTheme } from '@/lib/appearance';
+import { useAppearance, useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
 import { fromTimeString, toTimeString } from '@/data/defaults';
 import { fonts, radii, spacing, type Palette } from '@/theme';
@@ -23,6 +23,7 @@ type Props = {
 export function TimePickerSheet({ visible, value, label, onChange, onClose }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
+  const { theme } = useAppearance();
   if (!visible) return null;
 
   if (Platform.OS !== 'ios') {
@@ -46,7 +47,7 @@ export function TimePickerSheet({ visible, value, label, onChange, onClose }: Pr
         <DateTimePicker
           mode="time"
           display="spinner"
-          themeVariant="dark"
+          themeVariant={theme}
           textColor={colors.text}
           value={fromTimeString(value)}
           onChange={(_event, date) => {

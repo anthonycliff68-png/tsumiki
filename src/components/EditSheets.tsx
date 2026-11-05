@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { PrimaryButton, TextButton } from '@/components/Button';
 import { DayPicker } from '@/components/DayPicker';
 import { GlassSurface } from '@/components/GlassSurface';
+import { LengthChips } from '@/components/LengthChips';
 import { copy } from '@/copy';
 import type { Todo, TodayHabit, TodoPlace as When } from '@/lib/api';
 import { useStyles, useTheme } from '@/lib/appearance';
@@ -28,7 +29,7 @@ export function HabitSheet({
   anchors: Anchor[];
   busy: boolean;
   error: string | null;
-  onSave: (edit: { when: When; days: number[]; color: string }) => void;
+  onSave: (edit: { when: When; days: number[]; color: string; minutes: number | null }) => void;
   onMore: () => void;
   onClose: () => void;
 }) {
@@ -42,11 +43,13 @@ export function HabitSheet({
   );
   const [days, setDays] = useState(habit.daysOfWeek);
   const [color, setColor] = useState(habit.color);
+  const [minutes, setMinutes] = useState(habit.minutes);
 
   return (
     <Sheet title={habit.name} kind={copy.myDay.edit.habit} tint={color} onClose={onClose}>
       <Text style={styles.label}>{copy.myDay.edit.when}</Text>
       <WhenChips value={when} anchors={anchors} keepAt={habit.mode === 'at' ? habit.time : null} onChange={setWhen} />
+      {when !== 'any' && <HowLong value={minutes} onChange={setMinutes} />}
 
       <Text style={styles.label}>{copy.myDay.edit.days}</Text>
       <DayPicker value={days} color={color} onChange={setDays} />
@@ -69,7 +72,7 @@ export function HabitSheet({
       <PrimaryButton
         label={copy.myDay.edit.done}
         busy={busy}
-        onPress={() => (days.length === 0 ? undefined : onSave({ when, days, color }))}
+        onPress={() => (days.length === 0 ? undefined : onSave({ when, days, color, minutes }))}
       />
       <TextButton label={copy.myDay.edit.more} onPress={onMore} />
     </Sheet>
@@ -85,7 +88,7 @@ export function TodoSheet({
 }: {
   todo: Todo;
   anchors: Anchor[];
-  onSave: (edit: { title: string; when: When }) => void;
+  onSave: (edit: { title: string; when: When; minutes: number | null }) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -95,6 +98,7 @@ export function TodoSheet({
   const [when, setWhen] = useState<When>(
     todo.anchorId ? { anchorId: todo.anchorId } : todo.at ? { at: todo.at } : 'any',
   );
+  const [minutes, setMinutes] = useState(todo.minutes);
 
   return (
     <Sheet title={todo.title} kind={copy.myDay.edit.todo} tint={colors.textFaint} onClose={onClose}>
@@ -110,13 +114,25 @@ export function TodoSheet({
 
       <Text style={styles.label}>{copy.myDay.edit.when}</Text>
       <WhenChips value={when} anchors={anchors} keepAt={todo.at} onChange={setWhen} />
+      {when !== 'any' && <HowLong value={minutes} onChange={setMinutes} />}
 
       <PrimaryButton
         label={copy.myDay.edit.done}
-        onPress={() => (title.trim() ? onSave({ title: title.trim(), when }) : onDelete())}
+        onPress={() => (title.trim() ? onSave({ title: title.trim(), when, minutes }) : onDelete())}
       />
       <TextButton label={copy.myDay.edit.deleteTodo} onPress={onDelete} />
     </Sheet>
+  );
+}
+
+/** Only once it has a place in the day: a length on nothing shows nowhere. */
+function HowLong({ value, onChange }: { value: number | null; onChange: (minutes: number | null) => void }) {
+  const styles = useStyles(makeStyles);
+  return (
+    <>
+      <Text style={styles.label}>{copy.myDay.edit.howLong}</Text>
+      <LengthChips value={value} onChange={onChange} />
+    </>
   );
 }
 

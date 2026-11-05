@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/Button';
+import { LengthChips } from '@/components/LengthChips';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { copy } from '@/copy';
@@ -16,6 +17,8 @@ export type MomentDraft = {
   usualTime: string;
   endsAt: string | null;
   color: string | null;
+  /** Only with `timeOptional`: not at any time in particular. */
+  noTime?: boolean;
 };
 
 type Props = {
@@ -30,6 +33,17 @@ type Props = {
   onDelete: () => void;
   onClose: () => void;
   error: string | null;
+  /** Setting up, before there is anything to colour or delete. */
+  basic?: boolean;
+  /** Wake up and Bed are points in the day, not stretches of it. */
+  noLength?: boolean;
+  /** In place of "Edit moment", when this is being used for something else. */
+  title?: string;
+  /** Setting up: takes it back out, with no question asked. */
+  onRemove?: () => void;
+  /** Offers "any time" beside the time, for what doesn't need one. */
+  timeOptional?: boolean;
+  placeholder?: string;
 };
 
 /**
@@ -49,6 +63,12 @@ export function MomentSheet({
   onDelete,
   onClose,
   error,
+  basic = false,
+  noLength = false,
+  title,
+  onRemove,
+  timeOptional = false,
+  placeholder,
 }: Props) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
@@ -65,10 +85,11 @@ export function MomentSheet({
   if (draft === null) return null;
 
   const swatch = draft.color ?? momentColor({ label: draft.label, color: null });
-  const lasts = draft.endsAt !== null;
+  const length = draft.endsAt ? minutesOfDay(draft.endsAt) - minutesOfDay(draft.usualTime) : null;
 
   return (
     <Modal transparent animationType="slide" visible onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior="padding" style={styles.avoid}>
       <Pressable
         style={styles.backdrop}
         accessibilityRole="button"
@@ -85,7 +106,7 @@ export function MomentSheet({
           showsVerticalScrollIndicator={false}
         >
           <Text style={[display(30, 28), styles.title]}>
-            {draft.id === null ? copy.schedule.newMoment : copy.schedule.editMoment}
+            {title ?? (draft.id === null ? copy.schedule.newMoment : copy.schedule.editMoment)}
           </Text>
 
           <Text style={styles.label}>{copy.schedule.label}</Text>
@@ -93,14 +114,41 @@ export function MomentSheet({
             accessibilityLabel={copy.schedule.label}
             value={draft.label}
             onChangeText={(label) => onChange({ ...draft, label })}
-            placeholder={copy.schedule.labelPlaceholder}
+            placeholder={placeholder ?? copy.schedule.labelPlaceholder}
             placeholderTextColor={colors.textFaint}
             selectionColor={colors.text}
             style={styles.input}
             maxLength={40}
-            autoFocus={draft.id === null}
+            autoFocus={draft.id === null || !draft.label}
           />
 
+          {timeOptional ? (
+            <>
+              <Text style={styles.label}>{copy.schedule.starts}</Text>
+              <View style={styles.times}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: Boolean(draft.noTime) }}
+                  onPress={() => onChange({ ...draft, noTime: true, endsAt: null })}
+                  style={[styles.timeButton, styles.timeCol, draft.noTime && styles.timeOn]}
+                >
+                  <Text style={[styles.timeText, draft.noTime && styles.timeTextOn]}>{copy.onboarding.setup.todos.anyTime}</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: !draft.noTime }}
+                  accessibilityLabel={`${copy.schedule.starts}, ${formatTime(draft.usualTime)}`}
+                  onPress={() => {
+                    onChange({ ...draft, noTime: false });
+                    setPicking('start');
+                  }}
+                  style={[styles.timeButton, styles.timeCol, !draft.noTime && styles.timeOn]}
+                >
+                  <Text style={[styles.timeText, !draft.noTime && styles.timeTextOn]}>{formatTime(draft.usualTime)}</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
           <View style={styles.times}>
             <View style={styles.timeCol}>
               <Text style={styles.label}>{copy.schedule.starts}</Text>
@@ -114,7 +162,7 @@ export function MomentSheet({
               </Pressable>
             </View>
 
-            {lasts && (
+            {draft.endsAt !== null && !basic && (
               <View style={styles.timeCol}>
                 <Text style={styles.label}>{copy.schedule.ends}</Text>
                 <Pressable
@@ -128,22 +176,20 @@ export function MomentSheet({
               </View>
             )}
           </View>
+          )}
 
-          <View style={styles.switchRow}>
-            <View style={styles.switchText}>
-              <Text style={styles.rowLabel}>{copy.schedule.lasts}</Text>
-              <Text style={styles.hint}>{copy.schedule.lastsHint}</Text>
-            </View>
-            <Switch
-              accessibilityLabel={copy.schedule.lasts}
-              value={lasts}
-              onValueChange={(on) =>
-                onChange({ ...draft, endsAt: on ? laterBy(draft.usualTime, 60) : null })
-              }
-              trackColor={{ true: swatch, false: colors.border }}
-            />
-          </View>
+          {!noLength && !draft.noTime && (
+            <>
+              <Text style={styles.label}>{copy.myDay.edit.howLong}</Text>
+              <LengthChips
+                value={length}
+                onChange={(m) => onChange({ ...draft, endsAt: m === null ? null : laterBy(draft.usualTime, m) })}
+              />
+            </>
+          )}
 
+          {!basic && (
+            <>
           <Text style={styles.label}>{copy.schedule.colour}</Text>
           <View style={styles.swatches}>
             {habitColors.map((option) => {
@@ -164,6 +210,8 @@ export function MomentSheet({
               );
             })}
           </View>
+            </>
+          )}
 
           {stackedNames.length > 0 && (
             <>
@@ -176,8 +224,9 @@ export function MomentSheet({
 
           <PrimaryButton label={copy.schedule.save} busy={busy} onPress={onSave} />
           <TextButton label={copy.newHabit.cancel} onPress={onClose} />
+          {onRemove && <TextButton label={copy.onboarding.setup.remove} onPress={onRemove} />}
 
-          {draft.id !== null &&
+          {draft.id !== null && !basic &&
             (confirmingDelete ? (
               <View style={styles.danger}>
                 <Text style={styles.dangerTitle}>{copy.schedule.deleteTitle(draft.label)}</Text>
@@ -202,17 +251,23 @@ export function MomentSheet({
           value={picking === 'end' ? (draft.endsAt ?? '17:00') : draft.usualTime}
           label={picking === 'end' ? copy.schedule.ends : copy.schedule.starts}
           onChange={(value) =>
-            onChange(picking === 'end' ? { ...draft, endsAt: value } : { ...draft, usualTime: value })
+            onChange(
+              picking === 'end'
+                ? { ...draft, endsAt: value }
+                // Moving the start moves the whole stretch, so its length survives.
+                : { ...draft, usualTime: value, endsAt: length === null ? null : laterBy(value, length) },
+            )
           }
           onClose={() => setPicking(null)}
         />
       </GlassSurface>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-/** A sensible end when someone first says a moment lasts: an hour later. */
-function laterBy(time: string, minutes: number): string {
+/** The end of a stretch this long, kept inside the day the database insists on. */
+export function laterBy(time: string, minutes: number): string {
   const total = Math.min(23 * 60 + 59, minutesOfDay(time) + minutes);
   const h = String(Math.floor(total / 60)).padStart(2, '0');
   const m = String(total % 60).padStart(2, '0');
@@ -220,6 +275,7 @@ function laterBy(time: string, minutes: number): string {
 }
 
 const makeStyles = (colors: Palette) => ({
+  avoid: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
     maxHeight: '86%',
@@ -269,8 +325,8 @@ const makeStyles = (colors: Palette) => ({
     paddingHorizontal: 16,
   },
   timeText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.text },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  switchText: { flex: 1 },
+  timeOn: { backgroundColor: colors.text, borderColor: colors.text },
+  timeTextOn: { color: colors.bg },
   rowLabel: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.text },
   hint: { fontFamily: fonts.body, fontSize: 13, color: colors.textFaint, lineHeight: 18 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

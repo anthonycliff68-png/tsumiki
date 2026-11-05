@@ -38,9 +38,9 @@ export default function WelcomeRoute() {
     };
   }, []);
 
-  const done = () => {
+  const done = (firstTime: boolean) => {
     void AsyncStorage.setItem(SEEN, 'yes').catch(() => {});
-    router.replace('/(auth)/sign-in');
+    router.replace({ pathname: '/(auth)/sign-in', params: firstTime ? { first: '1' } : {} });
   };
 
   if (show !== true) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;

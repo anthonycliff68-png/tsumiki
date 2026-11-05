@@ -31,7 +31,6 @@ import {
   statusOf,
   useInstantToggle,
 } from '@/components/DayParts';
-import { EVENT_BLUE } from '@/components/DayPreview';
 import { MonthGrid, ViewSwitch, WeekList, type View3 } from '@/components/DayViews';
 import { HabitSheet, TodoSheet } from '@/components/EditSheets';
 import { FirstTimeHint } from '@/components/FirstTimeHint';
@@ -56,15 +55,18 @@ import {
   type Todo,
   type TodoPlace,
 } from '@/lib/api';
+import { useAccess } from '@/lib/access';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
 import { freshIds } from '@/lib/brainDump';
-import { useTodayEvents, type DayEvent } from '@/lib/calendar';
+import { askForCalendar, useTodayEvents, type DayEvent } from '@/lib/calendar';
 import { addDays, localDateString } from '@/lib/dates';
+import { hasAccess } from '@/lib/entitlement';
 import type { Anchor } from '@/lib/models';
 import { emojiFor } from '@/lib/onboardingDay';
 import { FREE_TODOS, openBrainDump, showUpgrade, useIsPro } from '@/lib/pro';
 import { usePull } from '@/lib/pull';
+import { laySpans, type Slot, type Span } from '@/lib/timeline';
 import { formatTime } from '@/lib/times';
 import { alpha, display, fonts, habitColors, ink, momentColor, spacing, type Palette } from '@/theme';
 
@@ -78,6 +80,14 @@ const OPEN_CARD_H = 66;
 const TAP_SETTLE_MS = 450;
 /** How long a card has to be held before it lifts and can be moved. */
 const HOLD_MS = 220;
+const EVENT_BLUE = '#4A7FD4';
+/** An hour with a length in it, drawn to scale. */
+const HOUR_H = 88;
+const PX = HOUR_H / 60;
+/** Below this a block on the timeline has room for its name only. */
+const TWO_LINES_H = 50;
+/** Tall enough for a name on two lines over its time. */
+const THREE_LINES_H = 70;
 
 const WAVE_H = 11;
 const WATER_RESERVE = 56;
@@ -154,6 +164,17 @@ export default function MyDayScreen() {
   // ever goes looking for them.
   const { data: nudges = [], refetch: refetchNudges } = useNudgesForMe(userId);
   const pull = usePull(refetchDay, refetchAnchors, refetchTodos, refetchEvents, refetchNudges);
+
+  // Setup offers the calendar without asking the phone, because it is Pro. This
+  // is where Pro arrives, so this is where it asks. iOS only ever shows it once.
+  const { access, loading: accessLoading } = useAccess();
+  const proSettled = !accessLoading && hasAccess(access);
+  useEffect(() => {
+    if (!proSettled) return;
+    void askForCalendar().then((granted) => {
+      if (granted) void refetchEvents();
+    });
+  }, [proSettled, refetchEvents]);
 
   useFocusEffect(
     useCallback(() => {
@@ -235,7 +256,28 @@ export default function MyDayScreen() {
 
   const firstHour = Math.min(Math.floor((blocks[0]?.minute ?? 9 * 60) / 60), isToday ? nowHour : 24);
   const lastMinute = Math.max(blocks[blocks.length - 1]?.minute ?? 18 * 60, isToday ? nowMinutes : 0);
-  const lastHour = Math.ceil(lastMinute / 60);
+  const slots: Slot[] = [
+    ...anchors.map((a) => ({
+      id: a.id,
+      start: minutesOf(a.usual_time),
+      minutes: a.ends_at ? minutesOf(a.ends_at) - minutesOf(a.usual_time) : null,
+    })),
+    ...(isToday ? events : []).map((e) => {
+      const start = minutesOf(e.start);
+      const end = minutesOf(e.end);
+      // One that runs past midnight shows up to midnight.
+      return { id: e.id, start, minutes: end > start ? end - start : 1440 - start };
+    }),
+    ...habits.filter((h) => placed.has(h.id)).map((h) => ({ id: h.id, start: h.sortKey, minutes: h.minutes })),
+    ...todos
+      .filter((t) => placed.has(t.id))
+      .map((t) => {
+        const anchor = anchorFor(t, anchors);
+        return { id: t.id, start: minutesOf(anchor?.usual_time ?? t.at ?? '00:00'), minutes: t.minutes };
+      }),
+  ];
+  const spans = laySpans(slots);
+  const lastHour = Math.max(Math.ceil(lastMinute / 60), ...spans.map((s) => Math.min(s.to, 23)));
   const hours = Array.from({ length: lastHour - firstHour + 1 }, (_, i) => firstHour + i);
   const hero = habits.find((h) => !h.checkedIn)?.color ?? habitColors[0];
   const doneCount = habits.filter((h) => h.checkedIn).length;
@@ -288,7 +330,8 @@ export default function MyDayScreen() {
   // own re-render.
   const order =
     blocks.map((b) => `${b.minute}:${b.anchors.map((a) => a.id)}:${b.habits.map((h) => h.id)}:${b.todos.map((t) => t.id)}`).join('|') +
-    `|${anytimeHabits.map((h) => h.id)}:${anytimeTodos.map((t) => t.id)}`;
+    `|${anytimeHabits.map((h) => h.id)}:${anytimeTodos.map((t) => t.id)}` +
+    `|${spans.map((sp) => `${sp.from}-${sp.to}:${sp.items.map((i) => `${i.id}@${i.lane}`)}`)}`;
   const [moving, setMoving] = useState(false);
   const [drawn, setDrawn] = useState(order);
   if (order !== drawn) {
@@ -398,7 +441,7 @@ export default function MyDayScreen() {
       { onSuccess: closeSheets, onError: () => setSheetError(copy.myDay.edit.saveFailed) },
     );
   };
-  const saveHabit = ({ when, days, color }: { when: TodoPlace; days: number[]; color: string }) => {
+  const saveHabit = ({ when, days, color, minutes }: { when: TodoPlace; days: number[]; color: string; minutes: number | null }) => {
     if (!editingHabit) return;
     setMoving(true);
     updateHabit.mutate(
@@ -412,12 +455,14 @@ export default function MyDayScreen() {
           : 'anchorId' in when
             ? { mode: 'after' as const, anchorId: when.anchorId }
             : { mode: 'at' as const, atTime: when.at.slice(0, 5) }),
+        // Only when it changed, so nothing else ever writes to the column.
+        ...(minutes !== editingHabit.minutes ? { durationMinutes: minutes } : {}),
       },
       { onSuccess: closeSheets, onError: () => setSheetError(copy.myDay.edit.saveFailed) },
     );
   };
 
-  const habitCard = (h: TodayHabit, now: number | null, open: boolean) => (
+  const habitCard = (h: TodayHabit, now: number | null, open: boolean, blockH?: number, range?: string, narrow?: boolean) => (
     <CalendarCard
       key={h.id}
       habit={h}
@@ -426,22 +471,166 @@ export default function MyDayScreen() {
       onToggle={() => toggle(h)}
       onEdit={() => setEditingHabit(h)}
       drag={dragFor(h.id, placeHabit(h))}
+      blockH={blockH}
+      range={range}
+      narrow={narrow}
+    />
+  );
+  const todoLine = (t: Todo, height: number, when?: string, sub?: string) => (
+    <TodoRow
+      todo={t}
+      when={freshIds.has(t.id) ? [copy.brainDump.fresh, when].filter(Boolean).join(' · ') : when}
+      shown={shown}
+      onToggle={() => todo.toggle(t)}
+      onEdit={() => setEditingTodo(t)}
+      colors={colors}
+      height={height}
+      textStyle={styles.todoText}
+      sub={sub}
     />
   );
   const todoRow = (t: Todo, height: number, when?: string) => (
     <Lift key={t.id} onTap={(x) => (x < 44 ? todo.toggle(t) : setEditingTodo(t))} drag={dragFor(t.id, placeTodo(t))}>
-      <TodoRow
-        todo={t}
-        when={freshIds.has(t.id) ? [copy.brainDump.fresh, when].filter(Boolean).join(' · ') : when}
-        shown={shown}
-        onToggle={() => todo.toggle(t)}
-        onEdit={() => setEditingTodo(t)}
-        colors={colors}
-        height={height}
-        textStyle={styles.todoText}
-      />
+      {todoLine(t, height, when)}
     </Lift>
   );
+  const anchorLine = (a: Anchor) => (
+    <Lift key={a.id} onTap={() => openMoment(a)} drag={dragFor(a.id, placeMoment(a))}>
+      <View
+        ref={register(`a${a.id}`, { kind: 'anchor', anchorId: a.id })}
+        collapsable={false}
+        style={[styles.anchorLine, hovered === `a${a.id}` && styles.anchorLineOn]}
+      >
+        <View style={[styles.tick, { backgroundColor: momentColor(a) }]} />
+        <Text style={styles.anchorEmoji}>{emojiFor(a.label)}</Text>
+        <Text numberOfLines={1} style={styles.anchorLabel}>
+          {a.label}
+        </Text>
+        <Text style={styles.anchorTime}>{clock(a.usual_time)}</Text>
+      </View>
+    </Lift>
+  );
+  const hourMark = (h: number) => {
+    const current = isToday && h === nowHour;
+    return (
+      <View style={styles.hour}>
+        <View style={[styles.hourPill, current && styles.hourNow]}>
+          <Text numberOfLines={1} style={[styles.hourText, current && { color: colors.text }]}>
+            {hourLabel(h)}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  /** "9:00 AM to 12:30 PM", from when it really ends, not the room it is given. */
+  const rangeOf = (start: number, minutes: number | null) => {
+    const at = (m: number) => clock(`${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`);
+    return minutes ? `${at(start)} to ${at(Math.min(start + minutes, 1439))}` : at(start);
+  };
+
+  /** Whatever sits in a to-scale span, in a lane, at the height it was given. */
+  const drawInSpan = (id: string, height: number, lanes: number): ReactNode => {
+    const slot = slots.find((s) => s.id === id);
+    if (!slot) return null;
+    const narrow = lanes > 1;
+    // Sharing the width, "9:00 AM to 10:30 AM" would only ever be cut off, and in
+    // a third of it so would "9:00 AM". The hour it sits against already says that.
+    const range = lanes > 2 ? '' : rangeOf(slot.start, narrow ? null : slot.minutes);
+    const roomy = height >= TWO_LINES_H;
+
+    const a = anchors.find((x) => x.id === id);
+    if (a) {
+      if (!slot.minutes && !narrow) return anchorLine(a);
+      const color = momentColor(a);
+      return (
+        <Lift key={a.id} onTap={() => openMoment(a)} drag={dragFor(a.id, placeMoment(a))}>
+          <View
+            ref={register(`a${a.id}`, { kind: 'anchor', anchorId: a.id })}
+            collapsable={false}
+            style={[
+              styles.block,
+              { height, borderLeftColor: color, backgroundColor: alpha(color, hovered === `a${a.id}` ? 0.34 : 0.2) },
+            ]}
+          >
+            <Text numberOfLines={1} style={styles.eventTitle}>{`${emojiFor(a.label)} ${a.label}`}</Text>
+            {roomy && (
+              <Text numberOfLines={1} style={styles.anchorTime}>
+                {range}
+              </Text>
+            )}
+          </View>
+        </Lift>
+      );
+    }
+
+    const e = isToday ? events.find((x) => x.id === id) : undefined;
+    if (e) {
+      return (
+        <View key={e.id} style={[styles.block, { height, borderLeftColor: EVENT_BLUE, backgroundColor: alpha(EVENT_BLUE, 0.18) }]}>
+          <Text numberOfLines={1} style={styles.eventTitle}>
+            {e.title}
+          </Text>
+          {roomy && (
+            <Text numberOfLines={1} style={styles.anchorTime}>
+              {range}
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    const h = habits.find((x) => x.id === id);
+    if (h) return habitCard(h, isToday ? nowMinutes : null, false, height, range, narrow);
+
+    const t = todos.find((x) => x.id === id);
+    if (!t) return null;
+    return (
+      // The card goes inside the Lift: clipped from outside, a held one would be cut off.
+      <Lift key={t.id} onTap={(x) => (x < 44 ? todo.toggle(t) : setEditingTodo(t))} drag={dragFor(t.id, placeTodo(t))}>
+        <View style={[styles.todoBlock, { height }]}>{todoLine(t, height - 2, undefined, roomy ? range : undefined)}</View>
+      </Lift>
+    );
+  };
+
+  const spanRow = (span: Span) => (
+    <View
+      key={span.from}
+      style={[{ height: (span.end - span.from * 60) * PX }, lifted(span.items.map((i) => i.id))]}
+    >
+      {Array.from({ length: span.to - span.from }, (_, i) => span.from + i).map((h) => (
+        <View
+          key={h}
+          ref={register(`h${h}`, { kind: 'hour', hour: h })}
+          collapsable={false}
+          style={[styles.spanHour, { top: (h - span.from) * HOUR_H }, hovered === `h${h}` && styles.hover]}
+        >
+          {hourMark(h)}
+          <View style={styles.spanRule} />
+        </View>
+      ))}
+      <View pointerEvents="box-none" style={styles.lanes}>
+        {span.items.map((item) => (
+          <View
+            key={item.id}
+            pointerEvents="box-none"
+            style={[
+              styles.lane,
+              {
+                top: (item.start - span.from * 60) * PX,
+                left: `${(item.lane / item.lanes) * 100}%`,
+                width: `${100 / item.lanes}%`,
+              },
+              carried === item.id && styles.lifted,
+            ]}
+          >
+            {drawInSpan(item.id, (item.end - item.start) * PX - 2, item.lanes)}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
   /** The row holding the carried card draws above the rows after it. */
   const lifted = (ids: string[]) => carried !== null && ids.includes(carried) && styles.lifted;
 
@@ -681,7 +870,8 @@ export default function MyDayScreen() {
                   card animates. */}
               <View>
                 {hours.map((h) => {
-                  const current = isToday && h === nowHour;
+                  const span = spans.find((sp) => h >= sp.from && h < sp.to);
+                  if (span) return h === span.from ? spanRow(span) : null;
                   const b = byHour.get(h);
                   const key = `h${h}`;
                   return (
@@ -695,28 +885,9 @@ export default function MyDayScreen() {
                         b && lifted([...b.anchors.map((x) => x.id), ...b.habits.map((x) => x.id), ...b.todos.map((x) => x.id)]),
                       ]}
                     >
-                      <View style={styles.hour}>
-                        <View style={[styles.hourPill, current && styles.hourNow]}>
-                          <Text numberOfLines={1} style={[styles.hourText, current && { color: colors.text }]}>
-                            {hourLabel(h)}
-                          </Text>
-                        </View>
-                      </View>
+                      {hourMark(h)}
                       <View style={styles.placed}>
-                        {b?.anchors.map((a) => (
-                          <Lift key={a.id} onTap={() => openMoment(a)} drag={dragFor(a.id, placeMoment(a))}>
-                            <View
-                              ref={register(`a${a.id}`, { kind: 'anchor', anchorId: a.id })}
-                              collapsable={false}
-                              style={[styles.anchorLine, hovered === `a${a.id}` && styles.anchorLineOn]}
-                            >
-                              <View style={[styles.tick, { backgroundColor: momentColor(a) }]} />
-                              <Text style={styles.anchorEmoji}>{emojiFor(a.label)}</Text>
-                              <Text style={styles.anchorLabel}>{a.label}</Text>
-                              <Text style={styles.anchorTime}>{clock(a.usual_time)}</Text>
-                            </View>
-                          </Lift>
-                        ))}
+                        {b?.anchors.map(anchorLine)}
                         {b?.events.map((e) => (
                           <View key={e.id} style={styles.event}>
                             <Text numberOfLines={1} style={styles.eventTitle}>
@@ -784,9 +955,10 @@ export default function MyDayScreen() {
         <TodoSheet
           todo={editingTodo}
           anchors={anchors}
-          onSave={({ title, when }) => {
+          onSave={({ title, when, minutes }) => {
             if (title !== editingTodo.title) todo.rename(editingTodo, title);
             todo.move(editingTodo, when);
+            if (minutes !== editingTodo.minutes) todo.setLength(editingTodo, minutes);
             closeSheets();
           }}
           onDelete={() => {
@@ -886,6 +1058,9 @@ function CalendarCard({
   onToggle,
   onEdit: edit,
   drag,
+  blockH,
+  range,
+  narrow = false,
 }: {
   habit: TodayHabit;
   nowMinutes: number | null;
@@ -893,6 +1068,11 @@ function CalendarCard({
   onToggle: () => void;
   onEdit: () => void;
   drag: Drag;
+  /** Set on a to-scale timeline: exactly this tall, with `range` for a foot. */
+  blockH?: number;
+  range?: string;
+  /** Sharing the width: the name has the top to itself and the dots drop to the foot. */
+  narrow?: boolean;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
@@ -1042,6 +1222,15 @@ function CalendarCard({
   const wet = phase === 'fill';
   const ink = wet ? colors.white : undefined;
 
+  // Its own tap, inside the card's: the dots edit, the rest checks in.
+  const dots = (
+    <GestureDetector gesture={Gesture.Tap().runOnJS(true).onEnd((_e, ok) => ok && edit())}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${habit.name}`} hitSlop={12} onPress={edit}>
+        <DotsIcon color={ink ?? colors.textFaint} />
+      </Pressable>
+    </GestureDetector>
+  );
+
   return (
     <Lift drag={drag} onTap={press}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Check in ${habit.name}`} onPress={press}>
@@ -1054,7 +1243,7 @@ function CalendarCard({
               // Width never changes mid-animation, so it is always safe to take.
               setSize((prev) => (celebrating ? { w, h: prev.h } : { w, h }));
             }}
-            style={[styles.card, { height: celebrating ? foldH : undefined }]}
+            style={[styles.card, blockH !== undefined && styles.cardBlock, { height: celebrating ? foldH : blockH }]}
           >
             {celebrating && (
               <Animated.View
@@ -1075,17 +1264,25 @@ function CalendarCard({
             <View style={[styles.bar, { backgroundColor: ink ?? habit.color }]} />
             <View style={{ flex: 1 }}>
               <View style={styles.cardTop}>
-                <Text style={[styles.cardName, ink && { color: ink }]} numberOfLines={1}>
+                <Text
+                  style={[styles.cardName, ink && { color: ink }]}
+                  numberOfLines={narrow && (blockH ?? 0) >= THREE_LINES_H ? 2 : 1}
+                >
                   {habit.name}
                   {freshIds.has(habit.id) && <Text style={styles.fresh}> {copy.brainDump.fresh}</Text>}
                 </Text>
-                {/* Its own tap, inside the card's: the dots edit, the rest checks in. */}
-                <GestureDetector gesture={Gesture.Tap().runOnJS(true).onEnd((_e, ok) => ok && edit())}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${habit.name}`} hitSlop={12} onPress={edit}>
-                    <DotsIcon color={ink ?? colors.textFaint} />
-                  </Pressable>
-                </GestureDetector>
+                {!(narrow && (blockH ?? 0) >= TWO_LINES_H) && dots}
               </View>
+              {blockH !== undefined ? (
+                blockH >= TWO_LINES_H && (
+                  <View style={styles.blockFoot}>
+                    <Text numberOfLines={1} style={[styles.whenText, styles.blockWhen, ink && { color: ink }]}>
+                      {wet ? 'Complete' : range}
+                    </Text>
+                    {narrow && dots}
+                  </View>
+                )
+              ) : (
               <View style={styles.cardFoot}>
                 <Text style={[styles.cardStatus, wet && { color: 'rgba(255,255,255,0.8)' }]}>
                   {wet ? 'Complete' : status}
@@ -1098,7 +1295,8 @@ function CalendarCard({
                   </Text>
                 </View>
               </View>
-              {open && !wet && (
+              )}
+              {open && !wet && blockH === undefined && (
                 <View style={styles.note}>
                   <Text style={styles.noteText}>Tap the card when it’s done. Hold it to move it.</Text>
                 </View>
@@ -1199,6 +1397,9 @@ const makeStyles = (colors: Palette) => ({
     borderWidth: 1,
     borderColor: colors.cardEdge,
   },
+  blockFoot: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  blockWhen: { flex: 1 },
+  cardBlock: { paddingVertical: 5, paddingLeft: 8, paddingRight: 8, gap: 8, alignItems: 'stretch' },
   bar: { width: 3, borderRadius: 2 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardName: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
@@ -1222,7 +1423,20 @@ const makeStyles = (colors: Palette) => ({
     backgroundColor: alpha(EVENT_BLUE, 0.18),
   },
   eventTitle: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
-  anchorLabel: { fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.7, textTransform: 'uppercase', color: colors.textMuted },
+  anchorLabel: { flexShrink: 1, fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.7, textTransform: 'uppercase', color: colors.textMuted },
+  spanHour: { position: 'absolute', left: 0, right: 0, height: HOUR_H, flexDirection: 'row', paddingTop: 4 },
+  spanRule: { flex: 1, height: 1, marginTop: 11, backgroundColor: colors.hairline },
+  lanes: { position: 'absolute', top: 0, bottom: 0, left: GUTTER - 6, right: 0 },
+  lane: { position: 'absolute', paddingHorizontal: 2 },
+  block: {
+    gap: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    overflow: 'hidden',
+  },
+  todoBlock: { borderRadius: 10, paddingLeft: 8, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.cardEdge },
   anchorTime: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
   todos: { paddingLeft: 4 },
   anyCard: { borderRadius: 16, paddingHorizontal: 14, paddingBottom: 4, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.cardEdge },

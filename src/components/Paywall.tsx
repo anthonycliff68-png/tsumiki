@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
+import { BrandMark } from '@/components/BrandHeader';
 import { ProCollage } from '@/components/ProCollage';
 import { APP_NAME, PRIVACY_URL, TERMS_URL } from '@/constants/brand';
 import { copy } from '@/copy';
@@ -35,12 +36,14 @@ type Props = {
   onDismiss: () => void;
   /** What the line at the bottom says. The offer and the screen you opened differ. */
   dismissLabel: string;
+  /** False where the labelled way out is the only one, so nothing skips it unnamed. */
+  closable?: boolean;
   /**
-   * The trial this Apple ID would actually get, from StoreKit. Null means they
-   * are charged straight away — because they have used their one offer, or
-   * because none is configured. Never assumed: see lib/trialOffer.ts.
+   * The trial this Apple ID would actually get on each plan, from StoreKit. Null
+   * means they are charged straight away — because they have used their one
+   * offer, or because none is configured. Never assumed: see lib/trialOffer.ts.
    */
-  trial?: TrialOffer | null;
+  trial?: { annual: TrialOffer | null; monthly: TrialOffer | null };
 };
 
 /**
@@ -59,7 +62,7 @@ type Props = {
  * "Delete my account" lives on You. It used to be here because this screen
  * could be a wall; nobody is locked out any more, so You is always reachable.
  */
-export function Paywall({ access, offering, busy, error, onSubscribe, onRestore, onDismiss, dismissLabel, trial }: Props) {
+export function Paywall({ access, offering, busy, error, onSubscribe, onRestore, onDismiss, dismissLabel, closable = true, trial }: Props) {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<Plan>('annual');
 
@@ -92,16 +95,12 @@ export function Paywall({ access, offering, busy, error, onSubscribe, onRestore,
   const y = packages.annual?.product.price ?? 29.99;
   const saving = Math.round((1 - y / (m * 12)) * 100);
 
-  // The trial is on the yearly plan only, and the button says what will
-  // happen. "Start free trial" to somebody who is about to be charged $29.99
-  // is the single worst thing this screen could do, so the words come from
-  // StoreKit's answer and never from a constant.
-  const planTrial = plan === 'annual' ? trial : null;
-  const cta = planTrial
-    ? copy.paywall.startTrial(planTrial.days)
-    : plan === 'lifetime'
-      ? copy.paywall.buyLifetime
-      : copy.paywall.subscribe;
+  // The line under the button says what will happen. "Start 3 days free" to
+  // somebody who is about to be charged $29.99 is the single worst thing this
+  // screen could do, so the words come from StoreKit's answer and never from a
+  // constant.
+  const planTrial = plan === 'lifetime' ? null : (trial?.[plan] ?? null);
+  const cta = copy.paywall.subscribe;
 
   return (
     <View style={s.root}>
@@ -120,12 +119,14 @@ export function Paywall({ access, offering, busy, error, onSubscribe, onRestore,
       </Svg>
 
       <ScrollView
-        contentContainerStyle={[s.body, { paddingTop: insets.top + 218, paddingBottom: insets.bottom + spacing.lg }]}
+        style={s.scroll}
+        contentContainerStyle={[s.body, { paddingTop: insets.top + 218 }]}
         showsVerticalScrollIndicator={false}
       >
         <ProCollage top={insets.top} />
 
         <View style={s.word}>
+          <BrandMark markOnly />
           <Text style={[display(58, 54), s.text]}>{APP_NAME}</Text>
           <Text style={[display(27), s.text, s.proBadge]}>{copy.paywall.pro}</Text>
         </View>
@@ -170,7 +171,10 @@ export function Paywall({ access, offering, busy, error, onSubscribe, onRestore,
             {error}
           </Text>
         )}
+      </ScrollView>
 
+      {/* Fixed at the bottom, so the choice is on screen at any text size. */}
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom - 18, spacing.md) }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${cta}, ${price} ${per}`}
@@ -179,16 +183,6 @@ export function Paywall({ access, offering, busy, error, onSubscribe, onRestore,
           onPress={() => onSubscribe(chosen, plan)}
           style={({ pressed }) => [s.cta, (pressed || busy) && s.dim]}
         >
-          <Svg width="100%" height={56} style={StyleSheet.absoluteFill}>
-            <Defs>
-              <LinearGradient id="ctaGrad" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor={habitColors[5]} />
-                <Stop offset="0.5" stopColor={habitColors[1]} />
-                <Stop offset="1" stopColor={habitColors[4]} />
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width="100%" height="56" rx="28" fill="url(#ctaGrad)" />
-          </Svg>
           <Text style={s.ctaLabel}>{busy ? copy.paywall.subscribing : cta}</Text>
         </Pressable>
 
@@ -203,17 +197,24 @@ export function Paywall({ access, offering, busy, error, onSubscribe, onRestore,
               : copy.paywall.terms}
         </Text>
 
-        <Link label={dismissLabel} onPress={onDismiss} disabled={busy} strong />
+        <Pressable
+          accessibilityRole="button"
+          onPress={onDismiss}
+          disabled={busy}
+          style={({ pressed }) => [s.dismiss, pressed && s.dim]}
+        >
+          <Text style={s.dismissLabel}>{dismissLabel}</Text>
+        </Pressable>
         <View style={s.legal}>
           <Link label={copy.paywall.termsLink} onPress={() => void Linking.openURL(TERMS_URL)} />
           <Text style={s.faint}>·</Text>
           <Link label={copy.paywall.privacyLink} onPress={() => void Linking.openURL(PRIVACY_URL)} />
         </View>
-      </ScrollView>
+      </View>
 
       {/* Fixed over the cards, so the way out never scrolls away. */}
       <View style={[s.top, { top: insets.top + spacing.sm }]}>
-        <Chip label="✕" accessibilityLabel={copy.paywall.close} onPress={onDismiss} disabled={busy} round />
+        {closable ? <Chip label="✕" accessibilityLabel={copy.paywall.close} onPress={onDismiss} disabled={busy} round /> : <View />}
         <Chip label={copy.paywall.restore} onPress={onRestore} disabled={busy} />
       </View>
     </View>
@@ -231,11 +232,11 @@ function Chip({ label, accessibilityLabel, onPress, disabled, round }: { label: 
   );
 }
 
-function Link({ label, onPress, disabled, strong }: { label: string; onPress: () => void; disabled?: boolean; strong?: boolean }) {
+function Link({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} hitSlop={8}
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8}
       style={({ pressed }) => [s.link, pressed && s.dim]}>
-      <Text style={strong ? s.linkStrong : s.faint}>{label}</Text>
+      <Text style={s.faint}>{label}</Text>
     </Pressable>
   );
 }
@@ -243,12 +244,14 @@ function Link({ label, onPress, disabled, strong }: { label: string; onPress: ()
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: c.bg, overflow: 'hidden' },
   backdrop: { position: 'absolute', top: 0, height: BD_H, width: BD_W, left: (W - BD_W) * 0.56 },
-  body: { paddingHorizontal: spacing.xl },
+  scroll: { flex: 1 },
+  body: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
+  footer: { paddingHorizontal: spacing.xl },
   text: { color: c.text },
   word: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   proBadge: { letterSpacing: 0.5, borderWidth: 2.5, borderColor: c.text, borderRadius: 9, paddingHorizontal: 8, paddingTop: 4, paddingBottom: 2 },
-  sub: { fontFamily: fonts.body, fontSize: 16, color: '#D9D4CB', textAlign: 'center', marginTop: 10, marginBottom: 16 },
-  feats: { gap: 11, paddingHorizontal: 4 },
+  sub: { fontFamily: fonts.body, fontSize: 16, color: '#D9D4CB', textAlign: 'center', marginTop: 8, marginBottom: 12 },
+  feats: { gap: 8, paddingHorizontal: 4 },
   feat: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   featText: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 16, color: c.text },
   featNote: { fontFamily: fonts.body, fontSize: 12.5, color: '#8E887E' },
@@ -256,7 +259,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     padding: 5,
-    marginTop: 20,
+    marginTop: 14,
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
@@ -279,13 +282,14 @@ const s = StyleSheet.create({
   },
   segPrice: { fontFamily: fonts.bodyBold, fontSize: 21, marginTop: 6, color: c.textMuted, fontVariant: ['tabular-nums'] },
   segSub: { fontFamily: fonts.body, fontSize: 11, marginTop: 2, color: '#8E887E' },
-  cta: { height: 56, marginTop: 16, alignItems: 'center', justifyContent: 'center' },
+  cta: { height: 56, marginTop: 4, alignItems: 'center', justifyContent: 'center', borderRadius: 28, backgroundColor: habitColors[5] },
   dim: { opacity: 0.7 },
   ctaLabel: { fontFamily: fonts.bodyBold, fontSize: 16.5, letterSpacing: 0.6, color: '#FFFFFF' },
   terms: { fontFamily: fonts.body, fontSize: 12, lineHeight: 17, color: c.textFaint, textAlign: 'center', marginTop: 9 },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: habitColors[1], textAlign: 'center', marginTop: 12 },
   link: { alignSelf: 'center', paddingVertical: 6 },
-  linkStrong: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.text, marginTop: 14 },
+  dismiss: { height: 44, marginTop: 4, alignItems: 'center', justifyContent: 'center' },
+  dismissLabel: { fontFamily: fonts.body, fontSize: 14, color: c.textMuted },
   faint: { fontFamily: fonts.body, fontSize: 11.5, color: '#6F6A63' },
   legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 2 },
   top: { position: 'absolute', left: 22, right: 22, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

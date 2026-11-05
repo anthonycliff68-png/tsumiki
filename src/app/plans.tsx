@@ -19,11 +19,14 @@ import { usePaywallActions } from '@/lib/paywallActions';
  * who cannot approve a subscription they are unable to open.
  */
 export default function PlansScreen() {
-  // The offer shown once after onboarding says what dismissing it does. Opened
-  // from You it is just a screen you came to look at, so the way out says so.
+  // Saying no leads to Free, wherever the paywall was opened from. Only somebody
+  // who already has Pro just goes back.
   const { first, then } = useLocalSearchParams<{ first?: string; then?: string }>();
-  const { access } = useAccess();
-  const isPro = hasAccess(access);
+  const { access, loading } = useAccess();
+  // useAccess lets everyone in while it loads, which is no reason to take
+  // "Continue to Tsumiki Free" away from somebody who is on Free.
+  const isPro = !loading && hasAccess(access);
+  const offeringFree = first === '1' && !isPro;
 
   // Seeing it here is being offered it. Without this the tabs would push the
   // same screen again the moment setting up finished, which is the thing this
@@ -63,17 +66,15 @@ export default function PlansScreen() {
           if (done) leave();
         });
       }}
-      // The annual plan is what the screen opens on. The paywall swaps this
-      // itself when somebody switches to monthly.
-      trial={trial.annual}
+      trial={trial}
       onRestore={() => {
         void bringBack().then((found) => {
           if (found) leave();
         });
       }}
       // Always a way out: there is no wall behind this any more, only Free.
-      // At the end of setting up it says what saying no gets you.
-      dismissLabel={first === '1' && !isPro ? copy.paywall.continueFree : copy.paywall.back}
+      dismissLabel={isPro ? copy.paywall.back : copy.paywall.continueFree}
+      closable={!offeringFree}
       onDismiss={leave}
     />
   );

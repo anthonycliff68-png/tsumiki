@@ -103,19 +103,19 @@ Manually release this version — so you choose the moment it goes live.
 Leave the username and password fields EMPTY and put this in the notes.
 
 ## Notes to reviewer
-Tsumiki does not use passwords. To sign in, tap "Sign in with Apple" on the
-first screen and use any Apple ID, including a test account. This creates a
-fresh account and takes you straight into onboarding.
+No demo account is needed. On the first screen tap "Let's build my day", then
+"Sign up with Apple", and use any Apple ID, including a test account. This
+creates a fresh account and takes you straight into onboarding.
 
-The email option sends a six-digit code to the address you enter, so it needs
-an inbox you control; Sign in with Apple avoids that entirely and is the
+The email option ("Use email instead") sends a six-digit code to the address
+you enter, so it needs an inbox you control; Sign in with Apple avoids that entirely and is the
 quickest way in.
 
 WHAT TO TRY
 1. Sign in with Apple.
 2. Setup asks for your wake and bed times, the moments of your day, a first
    habit, the calendar and to-dos. It ends on the plans screen. Tap "Continue
-   with Free".
+   to Tsumiki Free".
 3. My Day shows habits, moments and to-dos on one timeline. Tap a habit to check
    it in. Press and hold anything to move it. Swipe sideways for Week and Month.
 4. The middle button in the dock adds a brain dump, to-do, habit or note.

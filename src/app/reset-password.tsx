@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { BrandMark } from '@/components/BrandHeader';
 import { PrimaryButton } from '@/components/Button';
 import { Field } from '@/components/Field';
 import { Body, Display, Screen } from '@/components/Screen';
@@ -104,6 +105,7 @@ export default function ResetPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <BrandMark />
           <View style={styles.topRow}>
             <Pressable accessibilityRole="button" onPress={() => goBack()} style={styles.pill}>
               <Text style={styles.pillText}>{copy.newHabit.cancel}</Text>
