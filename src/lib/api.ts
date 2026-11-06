@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import * as StoreReview from 'expo-store-review';
 import { Platform } from 'react-native';
 
 import { EVERY_DAY } from '@/data/defaults';
@@ -11,6 +12,7 @@ import type { Enums } from '@/lib/database.types';
 import { dayComplete } from '@/lib/crewWeek';
 import { copy } from '@/copy';
 import { personName } from '@/lib/models';
+import { readyForReview } from '@/lib/review';
 import type { Anchor, CrewRole, Habit, ReactionKind, ScheduleMode } from '@/lib/models';
 import { supabase } from '@/lib/supabase';
 import { habitColors } from '@/theme';
@@ -269,6 +271,7 @@ export function useCheckIn(userId: string | undefined) {
       // not.
       void queryClient.invalidateQueries({ queryKey: ['crew'] });
       void queryClient.invalidateQueries({ queryKey: ['crews'] });
+      if (userId) void askForReview(userId, 'checkin');
     },
   });
 }
@@ -1960,6 +1963,35 @@ export function useAddFromDump(userId: string | undefined) {
       for (const key of ['todos', 'notes', 'noteFolders', 'habits', 'today']) {
         void queryClient.invalidateQueries({ queryKey: [key] });
       }
+      if (userId) void askForReview(userId, 'dump');
     },
   });
+}
+
+/**
+ * Apple's rating pop-up, asked once per device, after a moment that went well.
+ * The wait lets My Day settle behind it. Any failure just means no pop-up.
+ */
+async function askForReview(userId: string, why: 'dump' | 'checkin') {
+  try {
+    if (await AsyncStorage.getItem('review-asked')) return;
+    const { data: auth } = await supabase.auth.getSession();
+    let checkinDays: string[] = [];
+    if (why === 'checkin') {
+      const { data } = await supabase
+        .from('checkins')
+        .select('local_date')
+        .eq('user_id', userId)
+        .order('local_date', { ascending: false })
+        .limit(50);
+      checkinDays = (data ?? []).map((r) => r.local_date);
+    }
+    const accountCreated = auth.session?.user.created_at ?? '';
+    if (!readyForReview({ why, accountCreated, now: Date.now(), checkinDays })) return;
+    if (!(await StoreReview.hasAction())) return;
+    await AsyncStorage.setItem('review-asked', 'yes');
+    setTimeout(() => void StoreReview.requestReview().catch(() => {}), 1500);
+  } catch {
+    // No pop-up is fine.
+  }
 }
