@@ -58,6 +58,10 @@ describe('openedLabel', () => {
     assert.equal(openedLabel(new Date(2026, 10, 17, 9, 0).getTime(), now), 'Tue');
     assert.equal(openedLabel(new Date(2026, 9, 26, 9, 0).getTime(), now), 'Oct 26');
   });
+  it('never says today\'s own weekday, and a time ahead of the clock is just now', () => {
+    assert.equal(openedLabel(new Date(2026, 10, 14, 18, 0).getTime(), now), 'Nov 14');
+    assert.equal(openedLabel(new Date(2026, 10, 22, 9, 0).getTime(), now), 'Just now');
+  });
 });
 
 describe('splitCapture', () => {
@@ -81,6 +85,20 @@ describe('openedSections', () => {
     assert.deepEqual(
       openedSections(notes, opened, now).map((s) => [s.section, s.notes.map((n) => n.id)]),
       [['today', ['today']], ['yesterday', ['openedYesterday']], ['week', ['tue']], ['earlier', ['old']]],
+    );
+  });
+  it('keeps one section each when a time is ahead of the clock or a week back to the weekday', () => {
+    const now = new Date(2026, 10, 21, 15, 0);
+    const notes = ['ahead', 'now', 'lastSat', 'sun'].map((id) => ({ id, createdAt: new Date(2026, 0, 1).toISOString() }));
+    const opened = {
+      ahead: new Date(2026, 10, 22, 9).getTime(),
+      now: new Date(2026, 10, 21, 14).getTime(),
+      lastSat: new Date(2026, 10, 14, 18).getTime(),
+      sun: new Date(2026, 10, 15, 9).getTime(),
+    };
+    assert.deepEqual(
+      openedSections(notes, opened, now).map((s) => [s.section, s.notes.map((n) => n.id)]),
+      [['today', ['ahead', 'now']], ['week', ['sun']], ['earlier', ['lastSat']]],
     );
   });
 });

@@ -53,19 +53,22 @@ export function byOpened<T extends { id: string; createdAt: string }>(notes: rea
 export function openedLabel(at: number, now: Date = new Date()): string {
   const mins = (now.getTime() - at) / 60000;
   if (mins < 60) return 'Just now';
+  const days = daysAgo(at, now);
   const date = new Date(at);
-  if (localDateString(date) === localDateString(now)) return `${Math.floor(mins / 60)}h`;
-  if (localDateString(date) === localDateString(daysBefore(now, 1))) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
-  if (mins < 7 * 24 * 60) return date.toLocaleDateString('en-US', { weekday: 'short' });
+  if (days === 0) return `${Math.floor(mins / 60)}h`;
+  if (days === 1) return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (days < 7) return date.toLocaleDateString('en-US', { weekday: 'short' });
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function daysBefore(now: Date, days: number): Date {
-  const d = new Date(now);
-  d.setDate(d.getDate() - days);
-  return d;
+/**
+ * Calendar days from `at` back to now: 0 today, 1 yesterday. Counted by
+ * midnights (rounded, so a 23 or 25 hour day still counts as one), and a time
+ * ahead of the clock counts as today rather than landing above it.
+ */
+function daysAgo(at: number, now: Date): number {
+  const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.max(0, Math.round((midnight(now) - midnight(new Date(at))) / 86400000));
 }
 
 export type OpenedSection = 'today' | 'yesterday' | 'week' | 'earlier';
@@ -77,10 +80,8 @@ export function openedSections<T extends { id: string; createdAt: string }>(
   now: Date = new Date(),
 ): { section: OpenedSection; notes: T[] }[] {
   const sectionOf = (at: number): OpenedSection => {
-    const day = localDateString(new Date(at));
-    if (day === localDateString(now)) return 'today';
-    if (day === localDateString(daysBefore(now, 1))) return 'yesterday';
-    return now.getTime() - at < 7 * 24 * 60 * 60000 ? 'week' : 'earlier';
+    const days = daysAgo(at, now);
+    return days === 0 ? 'today' : days === 1 ? 'yesterday' : days < 7 ? 'week' : 'earlier';
   };
   const out: { section: OpenedSection; notes: T[] }[] = [];
   for (const note of byOpened(notes, opened)) {

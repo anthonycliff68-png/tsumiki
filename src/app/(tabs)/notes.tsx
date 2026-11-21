@@ -32,19 +32,14 @@ export default function NotesScreen() {
   const { data: folders = [] } = useNoteFolders(userId);
   const { data: notes = [] } = useNotes(userId);
   const { data: opened = {} } = useOpened();
-  const markOpened = useMarkOpened();
   const createFolder = useCreateFolder(userId);
-  const save = useSaveNote(userId);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [saveTo, setSaveTo] = useState<string | null>(null);
 
+  // Each folder's colour worked out once: loud() is a search, and every row asks.
   const inbox = loud(habitColors[0] ?? '');
-  const colorOf = (folderId: string | null) => {
-    const folder = folders.find((f) => f.id === folderId);
-    return folder ? loud(folder.color) : inbox;
-  };
+  const tint = new Map(folders.map((f) => [f.id, loud(f.color)]));
+  const colorOf = (folderId: string | null) => (folderId && tint.get(folderId)) || inbox;
   const count = (folderId: string | null) => notes.filter((n) => n.folderId === folderId).length;
   const q = query.trim().toLowerCase();
   const matches = q ? byOpened(notes.filter((n) => `${n.title}\n${n.body}`.toLowerCase().includes(q)), opened) : [];
@@ -71,23 +66,6 @@ export default function NotesScreen() {
       if (name?.trim()) createFolder.mutate({ name });
     });
 
-  const capture = () => {
-    const { title, body } = splitCapture(draft);
-    if (!title) return;
-    save.mutate(
-      { title, body, folderId: saveTo },
-      {
-        onSuccess: (id) => {
-          markOpened(id);
-          setDraft('');
-          setSaveTo(null);
-          Keyboard.dismiss();
-        },
-        onError: () => Alert.alert(copy.notes.saveFailed),
-      },
-    );
-  };
-
   const tiles = (
     <>
       <FolderTile
@@ -104,7 +82,7 @@ export default function NotesScreen() {
           strip={strip}
           name={folder.name}
           emoji={folder.emoji}
-          color={loud(folder.color)}
+          color={colorOf(folder.id)}
           count={count(folder.id)}
           onPress={() => router.push({ pathname: '/notes/[folderId]', params: { folderId: folder.id } })}
         />
@@ -161,47 +139,10 @@ export default function NotesScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.capture}>
-            <TextInput
-              accessibilityLabel={copy.notes.capture}
-              placeholder={copy.notes.capture}
-              placeholderTextColor={colors.textFaint}
-              value={draft}
-              onChangeText={setDraft}
-              multiline
-              style={[styles.captureInput, { borderColor: alpha(colors.text, draft ? 0.9 : 0.3) }]}
-            />
-            {draft.trim() ? (
-              <>
-                <Text style={styles.label}>{copy.notes.saveTo}</Text>
-                <View style={styles.chips}>
-                  {[{ id: null, name: copy.notes.inbox }, ...folders].map((f) => (
-                    <Pressable
-                      key={f.id ?? 'inbox'}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: saveTo === f.id }}
-                      onPress={() => setSaveTo(f.id)}
-                      style={[
-                        styles.chip,
-                        { backgroundColor: colorOf(f.id) },
-                        saveTo === f.id && { borderColor: colors.text },
-                      ]}
-                    >
-                      <Text style={styles.chipText}>{f.name}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={capture}
-                  disabled={save.isPending}
-                  style={({ pressed }) => [styles.save, { backgroundColor: colors.text }, pressed && { opacity: 0.8 }]}
-                >
-                  <Text style={[styles.saveText, { color: colors.bg }]}>{copy.notes.save}</Text>
-                </Pressable>
-              </>
-            ) : null}
-          </View>
+          <Capture
+            userId={userId}
+            choices={[{ id: null, name: copy.notes.inbox }, ...folders].map((f) => ({ ...f, color: colorOf(f.id) }))}
+          />
 
           <Reveal index={0} style={styles.list}>
             <Text style={styles.label}>
@@ -223,6 +164,7 @@ export default function NotesScreen() {
 
           <Reveal index={1} style={styles.list}>
             {notes.length === 0 && <Text style={styles.meta}>{copy.notes.empty}</Text>}
+            {/* ponytail: every note is drawn, about 0.25 s for 200 in a dev build. Past several hundred, move to a SectionList. */}
             {sections.map(({ section, notes: inSection }) => (
               <View key={section} style={styles.list}>
                 <Text style={styles.label}>{copy.notes.sections[section]}</Text>
@@ -233,6 +175,81 @@ export default function NotesScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/**
+ * The write-first box. Its own component so a keystroke redraws this box, not
+ * every note below it (with a thousand notes that was most of a second a letter).
+ */
+function Capture({ userId, choices }: { userId: string | undefined; choices: { id: string | null; name: string; color: string }[] }) {
+  const styles = useStyles(makeStyles);
+  const colors = useTheme();
+  const save = useSaveNote(userId);
+  const markOpened = useMarkOpened();
+  const [draft, setDraft] = useState('');
+  const [saveTo, setSaveTo] = useState<string | null>(null);
+  // iOS doesn't re-measure a multiline input cleared from code, so a two-line
+  // note left a blank line under the box. A new key after each save starts it fresh.
+  const [saved, setSaved] = useState(0);
+
+  const capture = () => {
+    const { title, body } = splitCapture(draft);
+    if (!title) return;
+    save.mutate(
+      { title, body, folderId: saveTo },
+      {
+        onSuccess: (id) => {
+          markOpened(id);
+          setDraft('');
+          setSaveTo(null);
+          setSaved((n) => n + 1);
+          Keyboard.dismiss();
+        },
+        onError: () => Alert.alert(copy.notes.saveFailed),
+      },
+    );
+  };
+
+  return (
+    <View style={styles.capture}>
+      <TextInput
+        key={saved}
+        accessibilityLabel={copy.notes.capture}
+        placeholder={copy.notes.capture}
+        placeholderTextColor={colors.textFaint}
+        value={draft}
+        onChangeText={setDraft}
+        multiline
+        style={[styles.captureInput, { borderColor: alpha(colors.text, draft ? 0.9 : 0.3) }]}
+      />
+      {draft.trim() ? (
+        <>
+          <Text style={styles.label}>{copy.notes.saveTo}</Text>
+          <View style={styles.chips}>
+            {choices.map((f) => (
+              <Pressable
+                key={f.id ?? 'inbox'}
+                accessibilityRole="button"
+                accessibilityState={{ selected: saveTo === f.id }}
+                onPress={() => setSaveTo(f.id)}
+                style={[styles.chip, { backgroundColor: f.color }, saveTo === f.id && { borderColor: colors.text }]}
+              >
+                <Text style={styles.chipText}>{f.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={capture}
+            disabled={save.isPending}
+            style={({ pressed }) => [styles.save, { backgroundColor: colors.text }, pressed && { opacity: 0.8 }]}
+          >
+            <Text style={[styles.saveText, { color: colors.bg }]}>{copy.notes.save}</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </View>
   );
 }
 
