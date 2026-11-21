@@ -115,6 +115,7 @@ function RootNavigator() {
           <Stack.Screen name="note/[id]" />
           <Stack.Screen name="brain-dump" options={{ presentation: 'modal' }} />
           <Stack.Screen name="nudge/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="focus/[id]" />
           <Stack.Screen name="invite/[id]" options={{ presentation: 'modal' }} />
           {/* Signed in only: a purchase has to belong to an account, and Free behind it needs one too. */}
           <Stack.Screen name="plans" />

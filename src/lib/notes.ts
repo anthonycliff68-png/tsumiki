@@ -42,3 +42,58 @@ export function groupByDay<T extends { createdAt: string }>(notes: T[], now: Dat
   }
   return groups;
 }
+
+/** Last opened first; a note never opened on this phone falls back to when it was written. */
+export function byOpened<T extends { id: string; createdAt: string }>(notes: readonly T[], opened: Record<string, number>): T[] {
+  const at = (n: T) => opened[n.id] ?? Date.parse(n.createdAt);
+  return [...notes].sort((a, b) => at(b) - at(a));
+}
+
+/** "Just now", "2h", "9:40 AM" (yesterday: the section already says so), "Tue", or "Oct 26" once it's over a week. */
+export function openedLabel(at: number, now: Date = new Date()): string {
+  const mins = (now.getTime() - at) / 60000;
+  if (mins < 60) return 'Just now';
+  const date = new Date(at);
+  if (localDateString(date) === localDateString(now)) return `${Math.floor(mins / 60)}h`;
+  if (localDateString(date) === localDateString(daysBefore(now, 1))) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+  if (mins < 7 * 24 * 60) return date.toLocaleDateString('en-US', { weekday: 'short' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function daysBefore(now: Date, days: number): Date {
+  const d = new Date(now);
+  d.setDate(d.getDate() - days);
+  return d;
+}
+
+export type OpenedSection = 'today' | 'yesterday' | 'week' | 'earlier';
+
+/** Notes last opened first, cut into Today, Yesterday, This week and Earlier; empty sections left out. */
+export function openedSections<T extends { id: string; createdAt: string }>(
+  notes: readonly T[],
+  opened: Record<string, number>,
+  now: Date = new Date(),
+): { section: OpenedSection; notes: T[] }[] {
+  const sectionOf = (at: number): OpenedSection => {
+    const day = localDateString(new Date(at));
+    if (day === localDateString(now)) return 'today';
+    if (day === localDateString(daysBefore(now, 1))) return 'yesterday';
+    return now.getTime() - at < 7 * 24 * 60 * 60000 ? 'week' : 'earlier';
+  };
+  const out: { section: OpenedSection; notes: T[] }[] = [];
+  for (const note of byOpened(notes, opened)) {
+    const section = sectionOf(opened[note.id] ?? Date.parse(note.createdAt));
+    const last = out[out.length - 1];
+    if (last?.section === section) last.notes.push(note);
+    else out.push({ section, notes: [note] });
+  }
+  return out;
+}
+
+/** A quick note: the first line is its title, the rest its body. */
+export function splitCapture(text: string): { title: string; body: string } {
+  const [first = '', ...rest] = text.trim().split('\n');
+  return { title: first.trim(), body: rest.join('\n').trim() };
+}

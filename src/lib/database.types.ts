@@ -43,6 +43,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          emoji: string | null
           ends_at: string | null
           id: string
           is_default: boolean
@@ -54,6 +55,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          emoji?: string | null
           ends_at?: string | null
           id?: string
           is_default?: boolean
@@ -65,6 +67,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          emoji?: string | null
           ends_at?: string | null
           id?: string
           is_default?: boolean
@@ -136,6 +139,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      brain_dumps: {
+        Row: {
+          created_at: string
+          id: string
+          transcript: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          transcript: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          transcript?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       checkins: {
         Row: {
@@ -327,9 +351,11 @@ export type Database = {
           created_at: string
           days_of_week: number[]
           duration_minutes: number | null
+          emoji: string | null
           habit_id: string
           id: string
           mode: Database["public"]["Enums"]["schedule_mode"]
+          note: string | null
           user_id: string
         }
         Insert: {
@@ -338,9 +364,11 @@ export type Database = {
           created_at?: string
           days_of_week?: number[]
           duration_minutes?: number | null
+          emoji?: string | null
           habit_id: string
           id?: string
           mode: Database["public"]["Enums"]["schedule_mode"]
+          note?: string | null
           user_id: string
         }
         Update: {
@@ -349,9 +377,11 @@ export type Database = {
           created_at?: string
           days_of_week?: number[]
           duration_minutes?: number | null
+          emoji?: string | null
           habit_id?: string
           id?: string
           mode?: Database["public"]["Enums"]["schedule_mode"]
+          note?: string | null
           user_id?: string
         }
         Relationships: [
@@ -482,6 +512,78 @@ export type Database = {
             columns: ["crew_id"]
             isOneToOne: false
             referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_folders: {
+        Row: {
+          color: string
+          created_at: string
+          emoji: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          body: string
+          created_at: string
+          dump_id: string | null
+          folder_id: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          dump_id?: string | null
+          folder_id?: string | null
+          id?: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          dump_id?: string | null
+          folder_id?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_dump_id_fkey"
+            columns: ["dump_id"]
+            isOneToOne: false
+            referencedRelation: "brain_dumps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "note_folders"
             referencedColumns: ["id"]
           },
         ]
@@ -808,97 +910,40 @@ export type Database = {
           },
         ]
       }
-      brain_dumps: {
+      todo_steps: {
         Row: {
           created_at: string
+          done_on: string | null
           id: string
-          transcript: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          transcript: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          transcript?: string
-          user_id?: string
-        }
-        Relationships: [
-        ]
-      }
-      note_folders: {
-        Row: {
-          color: string
-          created_at: string
-          emoji: string | null
-          id: string
-          name: string
-          user_id: string
-        }
-        Insert: {
-          color: string
-          created_at?: string
-          emoji?: string | null
-          id?: string
-          name: string
-          user_id?: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          emoji?: string | null
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: [
-        ]
-      }
-      notes: {
-        Row: {
-          body: string
-          created_at: string
-          dump_id: string | null
-          folder_id: string | null
-          id: string
+          position: number
           title: string
+          todo_id: string
           user_id: string
         }
         Insert: {
-          body?: string
           created_at?: string
-          dump_id?: string | null
-          folder_id?: string | null
+          done_on?: string | null
           id?: string
+          position: number
           title: string
-          user_id?: string
+          todo_id: string
+          user_id: string
         }
         Update: {
-          body?: string
           created_at?: string
-          dump_id?: string | null
-          folder_id?: string | null
+          done_on?: string | null
           id?: string
+          position?: number
           title?: string
+          todo_id?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notes_dump_id_fkey"
-            columns: ["dump_id"]
+            foreignKeyName: "todo_steps_todo_id_fkey"
+            columns: ["todo_id"]
             isOneToOne: false
-            referencedRelation: "brain_dumps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notes_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "note_folders"
+            referencedRelation: "todos"
             referencedColumns: ["id"]
           },
         ]
@@ -907,36 +952,45 @@ export type Database = {
         Row: {
           anchor_id: string | null
           at_time: string | null
+          color: string | null
           created_at: string
           day: string
           done_on: string | null
           duration_minutes: number | null
+          emoji: string | null
           id: string
           moment_mode: string
+          note: string | null
           title: string
           user_id: string
         }
         Insert: {
           anchor_id?: string | null
           at_time?: string | null
+          color?: string | null
           created_at?: string
           day: string
           done_on?: string | null
           duration_minutes?: number | null
+          emoji?: string | null
           id?: string
           moment_mode?: string
+          note?: string | null
           title: string
           user_id: string
         }
         Update: {
           anchor_id?: string | null
           at_time?: string | null
+          color?: string | null
           created_at?: string
           day?: string
           done_on?: string | null
           duration_minutes?: number | null
+          emoji?: string | null
           id?: string
           moment_mode?: string
+          note?: string | null
           title?: string
           user_id?: string
         }

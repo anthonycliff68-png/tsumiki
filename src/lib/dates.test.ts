@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatFullDate, formatWeekday } from './dates.ts';
+import { daysFrom, formatFullDate, formatWeekday } from './dates.ts';
 
 /** Local noon, so no timezone can tip the date either way. */
 const on = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12);
@@ -40,5 +40,19 @@ describe('the weekday', () => {
   it('spells it out in full', () => {
     assert.equal(formatWeekday(on(2026, 10, 5)), 'Monday');
     assert.equal(formatWeekday(on(2026, 10, 11)), 'Sunday');
+  });
+});
+
+describe('days from one date to another', () => {
+  it('counts calendar days, whatever the time of day', () => {
+    const afternoon = new Date(2026, 10, 6, 14, 23);
+    assert.equal(daysFrom(afternoon, new Date(2026, 10, 6)), 0);
+    assert.equal(daysFrom(afternoon, new Date(2026, 10, 7)), 1);
+    assert.equal(daysFrom(afternoon, new Date(2026, 10, 5)), -1);
+    assert.equal(daysFrom(new Date(2026, 10, 6, 0, 5), new Date(2026, 11, 6, 23)), 30);
+  });
+
+  it('is not thrown by a clock change', () => {
+    assert.equal(daysFrom(new Date(2026, 2, 7, 23), new Date(2026, 2, 9, 1)), 2);
   });
 });

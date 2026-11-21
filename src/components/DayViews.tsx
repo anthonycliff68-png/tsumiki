@@ -1,4 +1,4 @@
-// My Day's Week and Month views, and the switch between them and Day.
+// My Day's month pull-down.
 //
 // Habits only for now. Calendar events join these once the calendar is
 // connected (read-only, expo-calendar) — see docs/redesign-plan.md.
@@ -9,7 +9,7 @@ import type { HabitInput } from '@/lib/stats';
 import { isDue } from '@/lib/stats';
 import { useStyles, useTheme } from '@/lib/appearance';
 import { addDays, localDateString } from '@/lib/dates';
-import { alpha, fonts, radii, type Palette } from '@/theme';
+import { alpha, fonts, type Palette } from '@/theme';
 
 /** Done over due for one day, across every habit, from the history. */
 export function rateOn(history: readonly HabitInput[], date: Date, today: string): number | null {
@@ -20,29 +20,6 @@ export function rateOn(history: readonly HabitInput[], date: Date, today: string
   return due.filter((h) => h.checkedOn.includes(key)).length / due.length;
 }
 
-export type View3 = 'Day' | 'Week' | 'Month';
-
-/** Day / Week / Month. */
-export function ViewSwitch({ value, onChange }: { value: View3; onChange: (v: View3) => void }) {
-  const styles = useStyles(makeStyles);
-  return (
-    <View style={styles.switch}>
-      {(['Day', 'Week', 'Month'] as const).map((v) => (
-        <Pressable
-          key={v}
-          accessibilityRole="button"
-          accessibilityState={{ selected: v === value }}
-          onPress={() => onChange(v)}
-          style={[styles.switchItem, v === value && styles.switchOn]}
-        >
-          <Text style={[styles.switchText, v === value && styles.switchTextOn]}>{v}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-/** A small ring for how much of a day's habits got done. */
 function DayRing({ rate, size, color, track }: { rate: number | null; size: number; color: string; track: string }) {
   const r = size / 2 - 2;
   const c = 2 * Math.PI * r;
@@ -66,77 +43,25 @@ function DayRing({ rate, size, color, track }: { rate: number | null; size: numb
   );
 }
 
-/** The week as a list, a day at a time: how much of its habits got done. */
-export function WeekList({
-  days,
-  today,
-  history,
-  todosLeft,
-  onPick,
-}: {
-  days: Date[];
-  today: Date;
-  history: readonly HabitInput[];
-  /** Today's open to-dos. */
-  todosLeft: number;
-  onPick: (d: Date) => void;
-}) {
-  const styles = useStyles(makeStyles);
-  const colors = useTheme();
-  const todayKey = localDateString(today);
-  return (
-    <View style={{ gap: 10 }}>
-      {days.map((d) => {
-        const key = localDateString(d);
-        const isToday = key === todayKey;
-        const rate = rateOn(history, d, todayKey);
-        return (
-          <Pressable
-            key={key}
-            accessibilityRole="button"
-            onPress={() => onPick(d)}
-            style={[styles.weekDay, isToday && { borderColor: alpha(colors.text, 0.35) }]}
-          >
-            <View style={styles.weekDate}>
-              <Text style={styles.weekDow}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
-              <Text style={styles.weekNum}>{d.getDate()}</Text>
-            </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <View style={styles.weekBarTrack}>
-                <View style={[styles.weekBar, { width: `${Math.round((rate ?? 0) * 100)}%` }]} />
-              </View>
-              <Text style={styles.weekBarText}>
-                {rate === null ? 'Habits ahead' : `${Math.round(rate * 100)}% of habits`}
-                {isToday && todosLeft > 0 ? ` · ${todosLeft} ${todosLeft === 1 ? 'to-do' : 'to-dos'} left` : ''}
-              </Text>
-            </View>
-            {isToday && (
-              <View style={styles.todayTag}>
-                <Text style={styles.todayTagText}>Today</Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 /** The month as a grid, a ring per day for its habits. Tapping a day opens it. */
 export function MonthGrid({
   month,
   today,
+  shown,
   history,
   onPick,
 }: {
   month: Date;
   today: Date;
+  /** The day My Day is showing: its cell is the shaded one. Today keeps the bold number. */
+  shown: Date;
   history: readonly HabitInput[];
   onPick: (d: Date) => void;
 }) {
   const styles = useStyles(makeStyles);
   const colors = useTheme();
   const todayKey = localDateString(today);
+  const shownKey = localDateString(shown);
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const start = addDays(first, -first.getDay());
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
@@ -164,7 +89,7 @@ export function MonthGrid({
                   accessibilityRole="button"
                   accessibilityLabel={d.toDateString()}
                   onPress={() => onPick(d)}
-                  style={[styles.cell, isToday && styles.cellOn]}
+                  style={[styles.cell, key === shownKey && styles.cellOn]}
                 >
                   <View style={styles.cellRing}>
                     <DayRing
@@ -199,36 +124,6 @@ export function MonthGrid({
 }
 
 const makeStyles = (colors: Palette) => ({
-  switch: {
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: radii.chip,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardEdge,
-  },
-  switchItem: { flex: 1, height: 36, borderRadius: radii.chip, alignItems: 'center', justifyContent: 'center' },
-  switchOn: { backgroundColor: colors.text },
-  switchText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
-  switchTextOn: { color: colors.bg },
-  weekDay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardEdge,
-  },
-  weekDate: { width: 40, alignItems: 'center' },
-  weekDow: { fontFamily: fonts.body, fontSize: 12, color: colors.textFaint },
-  weekNum: { fontFamily: fonts.bodyMedium, fontSize: 20, color: colors.text },
-  weekBarTrack: { height: 6, borderRadius: 3, backgroundColor: alpha(colors.overlay, 0.08), overflow: 'hidden' },
-  weekBar: { height: 6, borderRadius: 3, backgroundColor: colors.success },
-  weekBarText: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-  todayTag: { paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: 'center', backgroundColor: colors.raised },
-  todayTagText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.text },
   monthCard: {
     paddingVertical: 12,
     paddingHorizontal: 6,

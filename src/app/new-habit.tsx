@@ -11,6 +11,7 @@ import { PrimaryButton, TextButton } from '@/components/Button';
 import { CheckIcon } from '@/components/icons';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
+import { dayChoices } from '@/lib/dayLook';
 import { copy } from '@/copy';
 import { EVERY_DAY, describeDays, formatTime, formatTimeGutter } from '@/data/defaults';
 import {
@@ -220,7 +221,7 @@ export default function NewHabitScreen() {
         <View style={styles.section}>
           <Text style={styles.label}>{copy.newHabit.color}</Text>
           <View style={styles.swatches}>
-            {habitColors.map((swatch) => (
+            {dayChoices(color).map((swatch) => (
               <Pressable
                 key={swatch}
                 accessibilityRole="button"

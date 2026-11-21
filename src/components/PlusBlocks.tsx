@@ -34,9 +34,12 @@ export function PlusBlocks({ blocks }: { blocks: string[] }) {
     ).start();
   }, [open, rise]);
 
-  const go = (to: () => void) => () => {
+  // Run the pick once the menu has gone: iOS won't show a new sheet (the
+  // To-do one) while this one is still fading out, and dropped it.
+  const after = useRef<(() => void) | null>(null);
+  const go = (to: () => void) => {
+    after.current = to;
     setOpen(false);
-    to();
   };
 
   /** Up from the dock with a little turn, the way a block lands on a stack. */
@@ -70,14 +73,23 @@ export function PlusBlocks({ blocks }: { blocks: string[] }) {
         ))}
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+        onDismiss={() => {
+          after.current?.();
+          after.current = null;
+        }}
+      >
         <Pressable accessibilityLabel={copy.dock.closeAdd} style={styles.backdrop} onPress={() => setOpen(false)} />
         <View style={[styles.menu, { paddingBottom: insets.bottom + 84 }]} pointerEvents="box-none">
           <Animated.View style={tumble(0)}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`${copy.dock.brainDump}. ${copy.dock.brainDumpBody}`}
-              onPress={go(() => openBrainDump(isPro))}
+              onPress={() => go(() => openBrainDump(isPro))}
               style={({ pressed }) => [styles.dump, pressed && { opacity: 0.9 }]}
             >
               <View style={styles.dumpHead}>
@@ -92,7 +104,7 @@ export function PlusBlocks({ blocks }: { blocks: string[] }) {
               <Animated.View key={t.label} style={[styles.tileWrap, tumble(i + 1)]}>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={go(t.onPress)}
+                  onPress={() => go(t.onPress)}
                   style={({ pressed }) => [
                     styles.tile,
                     { backgroundColor: alpha(t.color, 0.9) },

@@ -177,6 +177,10 @@ export type TodayHabit = {
   daysOfWeek: number[];
   /** How long it takes, or null for no length. */
   minutes: number | null;
+  /** Your own note on it, on your schedule (a crew shares the habit). */
+  note: string | null;
+  /** Null = guessed from the name, '' = none. */
+  emoji: string | null;
 };
 
 type ScheduleRow = {
@@ -184,6 +188,8 @@ type ScheduleRow = {
   at_time: string | null;
   days_of_week: number[];
   duration_minutes?: number | null;
+  note?: string | null;
+  emoji?: string | null;
   habits: { id: string; name: string; color: string; crew_id: string | null; archived_at: string | null } | null;
   anchors: { id: string; label: string; usual_time: string } | null;
 };
@@ -236,6 +242,8 @@ export function useToday(userId: string | undefined, date: Date = new Date()) {
             sortKey: minutesOfDay(time),
             daysOfWeek: row.days_of_week,
             minutes: row.duration_minutes ?? null,
+            note: row.note ?? null,
+            emoji: row.emoji ?? null,
           };
         })
         .sort((a, b) => a.sortKey - b.sortKey);
@@ -312,6 +320,9 @@ export type HabitInput = {
   daysOfWeek?: number[];
   /** Left out, the length stays as it is. Null clears it. */
   durationMinutes?: number | null;
+  /** Left out, they stay as they are. */
+  note?: string | null;
+  emoji?: string | null;
 };
 
 /** A habit plus the caller's own schedule for it, for the edit form. */
@@ -345,6 +356,8 @@ function scheduleFields(input: HabitInput) {
     at_time: input.mode === 'at' ? (input.atTime ?? null) : null,
     days_of_week: input.daysOfWeek ?? EVERY_DAY,
     ...(input.durationMinutes !== undefined ? { duration_minutes: input.durationMinutes } : {}),
+    ...(input.note !== undefined ? { note: input.note } : {}),
+    ...(input.emoji !== undefined ? { emoji: input.emoji } : {}),
   };
 }
 
@@ -435,7 +448,18 @@ export type Todo = {
   day: string;
   /** How long it takes, or null for no length. */
   minutes: number | null;
+  /** Its own colour, or null for the one picked from its id. */
+  color: string | null;
+  note: string | null;
+  /** Null = guessed from the title, '' = none. */
+  emoji: string | null;
+  /** In order. */
+  steps: Step[];
 };
+
+export type Step = { id: string; title: string; position: number; done: boolean };
+
+type StepRow = { id: string; title: string; position: number; done_on: string | null };
 
 type TodoRow = {
   id: string;
@@ -446,7 +470,13 @@ type TodoRow = {
   anchor_id: string | null;
   at_time: string | null;
   duration_minutes?: number | null;
+  color?: string | null;
+  note?: string | null;
+  emoji?: string | null;
+  todo_steps?: StepRow[];
 };
+
+const asStep = (row: StepRow): Step => ({ id: row.id, title: row.title, position: row.position, done: row.done_on !== null });
 
 const asTodo = (row: TodoRow, shown: string): Todo => ({
   id: row.id,
@@ -456,6 +486,10 @@ const asTodo = (row: TodoRow, shown: string): Todo => ({
   at: row.moment_mode === 'at' ? row.at_time : null,
   day: row.day,
   minutes: row.duration_minutes ?? null,
+  color: row.color ?? null,
+  note: row.note ?? null,
+  emoji: row.emoji ?? null,
+  steps: (row.todo_steps ?? []).map(asStep).sort((a, b) => a.position - b.position),
 });
 
 /**
@@ -471,7 +505,7 @@ export function useTodos(userId: string | undefined, date: Date = new Date()) {
       const { data, error } = await supabase
         .from('todos')
         // All columns, for the same reason as the day's habits.
-        .select('*')
+        .select('*, todo_steps(id, title, position, done_on)')
         .eq('user_id', userId ?? '')
         .lte('day', shown)
         .or(`done_on.is.null,done_on.gte.${shown}`)
@@ -490,6 +524,9 @@ const newId = () =>
   });
 
 export type TodoPlace = { anchorId: string } | { at: string } | 'any';
+
+const withSteps = (list: Todo[], todoId: string, change: (steps: Step[]) => Step[]) =>
+  list.map((t) => (t.id === todoId ? { ...t, steps: change(t.steps) } : t));
 
 /**
  * Every to-do change, answered on screen at once: the cache is written first
@@ -549,6 +586,46 @@ export function useTodoActions(userId: string | undefined, date: Date = new Date
       apply(
         (list) => list.filter((t) => t.id !== todo.id),
         () => supabase.from('todos').delete().eq('id', todo.id),
+      ),
+    edit: (todo: Todo, patch: Partial<Pick<Todo, 'color' | 'note' | 'emoji'>>) =>
+      apply(
+        (list) => list.map((t) => (t.id === todo.id ? { ...t, ...patch } : t)),
+        () => supabase.from('todos').update(patch).eq('id', todo.id),
+      ),
+    addStep: (todo: Todo, title: string) => {
+      if (!userId) return;
+      const id = newId();
+      const position = Math.max(-1, ...todo.steps.map((s) => s.position)) + 1;
+      apply(
+        (list) => withSteps(list, todo.id, (steps) => [...steps, { id, title, position, done: false }]),
+        () => supabase.from('todo_steps').insert({ id, todo_id: todo.id, user_id: userId, title, position }),
+      );
+    },
+    toggleStep: (todo: Todo, step: Step) =>
+      apply(
+        (list) => withSteps(list, todo.id, (steps) => steps.map((s) => (s.id === step.id ? { ...s, done: !s.done } : s))),
+        () => supabase.from('todo_steps').update({ done_on: step.done ? null : shown }).eq('id', step.id),
+      ),
+    renameStep: (todo: Todo, step: Step, title: string) =>
+      apply(
+        (list) => withSteps(list, todo.id, (steps) => steps.map((s) => (s.id === step.id ? { ...s, title } : s))),
+        () => supabase.from('todo_steps').update({ title }).eq('id', step.id),
+      ),
+    removeStep: (todo: Todo, step: Step) =>
+      apply(
+        (list) => withSteps(list, todo.id, (steps) => steps.filter((s) => s.id !== step.id)),
+        () => supabase.from('todo_steps').delete().eq('id', step.id),
+      ),
+    reorderSteps: (todo: Todo, ids: string[]) =>
+      apply(
+        (list) =>
+          withSteps(list, todo.id, (steps) =>
+            ids.flatMap((id, position) => steps.filter((s) => s.id === id).map((s) => ({ ...s, position }))),
+          ),
+        () =>
+          Promise.all(ids.map((id, position) => supabase.from('todo_steps').update({ position }).eq('id', id))).then(
+            (results) => ({ error: results.find((r) => r.error)?.error ?? null }),
+          ),
       ),
     move: (todo: Todo, place: TodoPlace) => {
       const anchorId = place !== 'any' && 'anchorId' in place ? place.anchorId : null;
@@ -1242,6 +1319,8 @@ export type AnchorInput = {
   endsAt?: string | null;
   /** Null means the app keeps deriving one from the label. */
   color?: string | null;
+  /** Left out, it stays. Null = guessed from the label, '' = none. */
+  emoji?: string | null;
 };
 
 /**
@@ -1290,6 +1369,7 @@ export function useCreateAnchor(userId: string | undefined) {
           ends_at: input.endsAt ?? null,
           color: input.color ?? null,
           sort_order: minutesOfDay(input.usualTime),
+          ...(input.emoji !== undefined ? { emoji: input.emoji } : {}),
         })
         .select()
         .single();
@@ -1315,6 +1395,7 @@ export function useUpdateAnchor(userId: string | undefined) {
           ends_at: input.endsAt ?? null,
           color: input.color ?? null,
           sort_order: minutesOfDay(input.usualTime),
+          ...(input.emoji !== undefined ? { emoji: input.emoji } : {}),
         })
         .eq('id', id);
       if (error) throw error;

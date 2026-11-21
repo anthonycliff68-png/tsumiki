@@ -1,19 +1,13 @@
-// The pieces Home and My Day share: header buttons and icons, a habit's
-// status, crew faces, the to-do row, and the instant check-in.
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+// Small pieces My Day shares: header buttons and icons, and the instant check-in.
+import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { Avatar } from '@/components/Avatar';
 import { formatTime } from '@/lib/times';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { useCheckIn, useCrew, useMyProfile, useUndoCheckIn, type TodayHabit, type Todo } from '@/lib/api';
-import { addDays, localDateString } from '@/lib/dates';
-import { useAuth } from '@/lib/auth';
-import { CheckIcon } from '@/components/icons';
+import { useCheckIn, useUndoCheckIn, type TodayHabit, type Todo } from '@/lib/api';
+import { localDateString } from '@/lib/dates';
 import { useTheme } from '@/lib/appearance';
-import { fonts } from '@/theme';
 import type { Anchor } from '@/lib/models';
 
 function Stroke({ d, size = 20, color, width = 1.8 }: { d: string; size?: number; color: string; width?: number }) {
@@ -35,6 +29,8 @@ export const CalendarIcon = (p: P) => (
 );
 export const ClockIcon = (p: P) => <Stroke {...p} d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7.5V12l3 2" />;
 export const BackIcon = (p: P) => <Stroke {...p} d="M19 12H5M11 6l-6 6 6 6" />;
+export const ChevronIcon = (p: P) => <Stroke {...p} d="M6 9l6 6 6-6" />;
+export const MoonIcon = (p: P) => <Stroke {...p} d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />;
 export const DotsIcon = ({ color }: { color: string }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24">
     <Path d="M5 12h.01M12 12h.01M19 12h.01" stroke={color} strokeWidth={3.2} strokeLinecap="round" />
@@ -82,196 +78,9 @@ export function RoundButton({
 /** "9:21 AM". */
 export const clock = formatTime;
 
-export type Status = 'Up next' | 'Upcoming' | 'Missed' | 'Complete' | 'Anytime';
-
-/** The app's own rule: past its moment and open is missed; one habit is up next. */
-export function statusOf(habit: TodayHabit, nowMinutes: number | null, upNextId?: string): Status {
-  if (habit.checkedIn) return 'Complete';
-  if (habit.mode === 'any' || !habit.time) return 'Anytime';
-  if (habit.id === upNextId) return 'Up next';
-  if (nowMinutes !== null && habit.sortKey < nowMinutes) return 'Missed';
-  return 'Upcoming';
-}
-
-/** "Upcoming · after lunch" — the anchor rides with the status. */
-export function statusLine(habit: TodayHabit, status: Status): string {
-  return habit.mode === 'after' && habit.anchorLabel
-    ? `${status} · after ${habit.anchorLabel.toLowerCase()}`
-    : status;
-}
-
-/** Crew faces, or just yours when it is a solo habit. */
-export function Faces({ habit, ring, size = 26 }: { habit: TodayHabit; ring: string; size?: number }) {
-  const { session } = useAuth();
-  const { data: me } = useMyProfile(session?.user.id);
-  const { data: crew } = useCrew(habit.crewId ?? undefined);
-  const people =
-    habit.crewId && crew
-      ? crew.members.map((m) => ({ id: m.userId, name: m.displayName, color: m.avatarColor }))
-      : me
-        ? [{ id: me.id, name: me.display_name, color: me.avatar_color }]
-        : [];
-  return (
-    <View style={{ flexDirection: 'row' }}>
-      {people.slice(0, 4).map((p, i) => (
-        <View key={p.id} style={{ marginLeft: i === 0 ? 0 : -size * 0.27 }}>
-          <Avatar name={p.name} color={p.color} size={size} ringColor={ring} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-
 /** The moment a to-do hangs off, if it still exists. */
 export function anchorFor(todo: Todo, anchors: readonly Anchor[]): Anchor | undefined {
   return todo.anchorId ? anchors.find((a) => a.id === todo.anchorId) : undefined;
-}
-
-/** "From yesterday", or "Since Oct 20" when it has been longer. */
-function carriedLabel(day: string, shown: string): string | null {
-  if (day >= shown) return null;
-  const [y, m, d] = shown.split('-').map(Number);
-  if (localDateString(addDays(new Date(y ?? 0, (m ?? 1) - 1, d ?? 1), -1)) === day) return 'From yesterday';
-  const [dy, dm, dd] = day.split('-').map(Number);
-  return `Since ${new Date(dy ?? 0, (dm ?? 1) - 1, dd ?? 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-}
-
-/** A to-do: a round check, the title, and when. */
-export function TodoRow({
-  todo,
-  when,
-  onToggle,
-  onEdit,
-  colors,
-  textStyle,
-  height = 44,
-  shown = localDateString(),
-  sub,
-}: {
-  todo: Todo;
-  /** A second line under the title, for a to-do with room for one. */
-  sub?: string;
-  /** The day on screen, for the carried-over tag. */
-  shown?: string;
-  when?: string;
-  onToggle: () => void;
-  /** Tapping the words edits; the circle still ticks. Omitted, the whole row ticks. */
-  onEdit?: () => void;
-  colors: { text: string; textMuted: string; textFaint: string; bg: string; raised: string };
-  textStyle?: StyleProp<TextStyle>;
-  height?: number;
-}) {
-  const carried = carriedLabel(todo.day, shown);
-  // Ticking fills the circle and draws the line through the words, the same
-  // short strike a habit gets; unticking runs it back.
-  const done = useRef(new Animated.Value(todo.done ? 1 : 0)).current;
-  const [textW, setTextW] = useState(0);
-  useEffect(() => {
-    Animated.timing(done, { toValue: todo.done ? 1 : 0, duration: 180, useNativeDriver: false }).start();
-  }, [todo.done, done]);
-  const circle = (
-    <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.textFaint }}>
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: -1.5,
-          left: -1.5,
-          right: -1.5,
-          bottom: -1.5,
-          borderRadius: 10,
-          backgroundColor: colors.text,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: done,
-          transform: [{ scale: done.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
-        }}
-      >
-        <CheckIcon size={12} color={colors.bg} strokeWidth={3.4} />
-      </Animated.View>
-    </View>
-  );
-  const words = (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <View style={{ flexShrink: 1, justifyContent: 'center' }}>
-        <View style={{ justifyContent: 'center' }}>
-        <Text
-          numberOfLines={1}
-          onLayout={(e) => setTextW(e.nativeEvent.layout.width)}
-          style={[
-            { fontFamily: fonts.body, fontSize: 15, color: colors.text },
-            textStyle,
-            todo.done && { color: colors.textFaint },
-          ]}
-        >
-          {todo.title}
-        </Text>
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: 0,
-            height: 1,
-            backgroundColor: colors.textFaint,
-            width: done.interpolate({ inputRange: [0, 1], outputRange: [0, textW] }),
-          }}
-        />
-        </View>
-        {sub !== undefined && (
-          <Text numberOfLines={1} style={{ fontFamily: fonts.body, fontSize: 12, color: colors.textFaint }}>
-            {sub}
-          </Text>
-        )}
-      </View>
-      {carried && !todo.done && (
-        <View style={{ paddingHorizontal: 7, height: 20, borderRadius: 10, justifyContent: 'center', backgroundColor: colors.raised }}>
-          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 11, color: colors.textMuted }}>{carried}</Text>
-        </View>
-      )}
-    </View>
-  );
-  const whenText = when !== undefined && (
-    <Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.textFaint }}>{when}</Text>
-  );
-
-  if (onEdit) {
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: height }}>
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: todo.done }}
-          accessibilityLabel={todo.title}
-          onPress={onToggle}
-          hitSlop={8}
-          style={{ width: 44, height: Math.max(height, 44), justifyContent: 'center', marginLeft: -12, paddingLeft: 12 }}
-        >
-          {circle}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Edit ${todo.title}`}
-          onPress={onEdit}
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: height }}
-        >
-          {words}
-          {whenText}
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: todo.done }}
-      accessibilityLabel={todo.title}
-      onPress={onToggle}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: height }}
-    >
-      {circle}
-      {words}
-      {whenText}
-    </Pressable>
-  );
 }
 
 /**

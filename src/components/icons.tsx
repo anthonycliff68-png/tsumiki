@@ -47,6 +47,11 @@ export function NotesIcon(props: IconProps) {
   return <StrokeIcon {...props} d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />;
 }
 
+/** A magnifier: search. */
+export function SearchIcon(props: IconProps) {
+  return <StrokeIcon {...props} d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM16 16l4.5 4.5" />;
+}
+
 /** Two people: the crews tab. */
 export function CrewsIcon(props: IconProps) {
   return (

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
@@ -9,6 +9,7 @@ import { useStyles, useTheme } from '@/lib/appearance';
 import { useAuth } from '@/lib/auth';
 import { goBack } from '@/lib/back';
 import { dayHeading, parseNoteBody } from '@/lib/notes';
+import { useMarkOpened } from '@/lib/opened';
 import { alpha, display, fonts, habitColors, radii, spacing, type Palette } from '@/theme';
 
 /**
@@ -27,6 +28,10 @@ export default function NoteScreen() {
   const remove = useDeleteNote();
 
   const isNew = id === 'new';
+  const markOpened = useMarkOpened();
+  useEffect(() => {
+    if (!isNew) markOpened(id);
+  }, [id, isNew, markOpened]);
   const note = notes.find((n) => n.id === id);
   const [editing, setEditing] = useState(isNew);
   const [title, setTitle] = useState(note?.title ?? '');

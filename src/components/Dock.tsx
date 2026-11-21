@@ -206,7 +206,8 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
     const selected = index === tabIndex;
     // colors.text, not colors.white: the tab row sits on the dock, which is
     // pale on a light ground, and white on pale is not a label.
-    const color = lit ? accent : colors.textInactive;
+    // textMuted, not textInactive: the mid grey vanished over bright cards.
+    const color = lit ? accent : colors.textMuted;
 
     const onPress = () => {
       const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -233,13 +234,17 @@ export function Dock({ state, navigation }: BottomTabBarProps) {
       {/* Clear, not the everyday material: "regular" carries its own dimming,
           and the dock sits over the bleed — dimming the one thing the screen
           is coloured by turned the whole bar into a brown panel. */}
+      {/* A wash of the page colour over the clear glass, and a hairline you can
+          see: with bright cards scrolling behind it, the bare clear glass let
+          them through so strongly that the tab words were lost in them. */}
       <GlassSurface
         blurFallback
         variant="clear"
+        tint={alpha(colors.bg, 0.7)}
         style={[
           styles.tabBar,
           {
-            borderColor: alpha(accent, 0.22),
+            borderColor: alpha(colors.text, 0.32),
             backgroundColor: LIQUID_GLASS ? 'transparent' : colors.glass,
           },
         ]}

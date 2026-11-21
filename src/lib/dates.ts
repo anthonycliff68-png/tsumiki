@@ -52,3 +52,9 @@ export function addDays(date: Date, days: number): Date {
   next.setDate(next.getDate() + days);
   return next;
 }
+
+/** Calendar days from one date to another, ignoring the time of day on both. Rounded, so a clock change can't tip it. */
+export function daysFrom(from: Date, to: Date): number {
+  const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.round((start(to) - start(from)) / 86_400_000);
+}

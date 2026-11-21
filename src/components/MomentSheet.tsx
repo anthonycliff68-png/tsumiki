@@ -5,6 +5,7 @@ import { PrimaryButton, TextButton } from '@/components/Button';
 import { LengthChips } from '@/components/LengthChips';
 import { TimePickerSheet } from '@/components/TimePickerSheet';
 import { useStyles, useTheme } from '@/lib/appearance';
+import { dayChoices } from '@/lib/dayLook';
 import { copy } from '@/copy';
 import { formatTime } from '@/data/defaults';
 import { minutesOfDay } from '@/lib/dates';
@@ -192,7 +193,7 @@ export function MomentSheet({
             <>
           <Text style={styles.label}>{copy.schedule.colour}</Text>
           <View style={styles.swatches}>
-            {habitColors.map((option) => {
+            {dayChoices(swatch).map((option) => {
               const picked = swatch === option;
               return (
                 <Pressable
